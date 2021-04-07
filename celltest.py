@@ -1,9 +1,25 @@
 import LayoutClasses as lc
 import os
-import gdspy
 import numpy as np
 
-lib = gdspy.GdsLibrary('testfile',units=1e-6)
+import phidl.geometry as pg
+
+from phidl import quickplot as qp
+
+import gdspy
+#
+idt=lc.IDT(name="hello")
+#
+cell=idt.draw()
+
+lib=gdspy.GdsLibrary("cell")
+
+lib.add(cell)
+
+gdspy.LayoutViewer(lib)
+
+# r=pg.ring()
+#
 # idt=lc.IDT(name='IDT')
 # cell=idt.draw()
 
@@ -44,7 +60,7 @@ lib = gdspy.GdsLibrary('testfile',units=1e-6)
 #
 # cell.add(cell_box)
 
-res=lc.BaseLFEResonator(name='ress')
+# res=lc.BaseLFEResonator(name='ress')
 
 # pit=lc.EtchPit()
 
@@ -55,33 +71,33 @@ res=lc.BaseLFEResonator(name='ress')
 # res.etchpit.etch_margin.y=2
 #
 # res.etchpit.x=40
-
-cell=res.draw()
-
-probe=lc.GSProbe(name='probe')
-
-# cell.add(probe.draw())
-
-res_marker_lines=res.get_anchor_lines()
-
-probe.bottom_marker=res_marker_lines[0]
-
-probe.top_marker=res_marker_lines[1]
-
-cell=lc.LayoutTool().merge_cells(cell,probe.draw())
-# busline=res.etchpit.get_anchor_lines()
-
-# cell.add(gdspy.Rectangle((busline[0].p1-lc.Point(0,20)).get_coord(),\
-    # (busline[0].p2).get_coord()))
-
-lib.add(cell)
-
-outname=lib.name+'.gds'
-
-if os.path.exists(outname):
-
-    os.remove(outname)
-
-# lib.write_gds(outname)
-# gdspy.GdsWriter(lib.name+'.gds')
-gdspy.LayoutViewer(lib)
+#
+# cell=res.draw()
+#
+# probe=lc.GSProbe(name='probe')
+#
+# # cell.add(probe.draw())
+#
+# res_marker_lines=res.get_anchor_lines()
+#
+# probe.bottom_marker=res_marker_lines[0]
+#
+# probe.top_marker=res_marker_lines[1]
+#
+# cell=lc.LayoutTool().merge_cells(cell,probe.draw())
+# # busline=res.etchpit.get_anchor_lines()
+#
+# # cell.add(gdspy.Rectangle((busline[0].p1-lc.Point(0,20)).get_coord(),\
+#     # (busline[0].p2).get_coord()))
+#
+# lib.add(cell)
+#
+# outname=lib.name+'.gds'
+#
+# if os.path.exists(outname):
+#
+#     os.remove(outname)
+#
+# # lib.write_gds(outname)
+# # gdspy.GdsWriter(lib.name+'.gds')
+# gdspy.LayoutViewer(lib)

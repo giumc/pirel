@@ -1,5 +1,4 @@
 import numpy as np
-import gdspy
 
 class LayoutDefault:
 
@@ -45,8 +44,8 @@ class LayoutDefault:
         self.GSProbepad_size = Point(80,80)
         self.GSProberouting_width = 80
         self.GSProbelayer = self.layerTop
-        self.GSProbebottom_marker = Line(Point(20,100),Point(120,100))
-        self.GSProbetop_marker = Line(Point(20,220), Point(120,320))
+        # self.GSProbebottom_marker = Line(Point(20,100),Point(120,100))
+        # self.GSProbetop_marker = Line(Point(20,220), Point(120,320))
         self.GSProberouting = True
         self.GSProbespacing = Point(20,30)
 
@@ -61,20 +60,6 @@ class LayoutTool:
 
         return Point(dx,dy)
 
-    def merge_cells(self,*args,name="merged"):
-
-        cell_out=gdspy.Cell(name)
-
-        for cell in args:
-
-            ref_cell=gdspy.CellReference(cell)
-
-            cell_out.add(ref_cell)
-
-        cell_out.flatten()
-
-        return cell_out
-
 class Point:
 
     def __init__(self,x,y):
@@ -84,38 +69,40 @@ class Point:
 
     def get_coord(self):
 
-        return np.array([self.x,self.y])
+        return (self.x,self.y)
 
-    def __add__(self,x0):
+    def __add__(self,p):
 
-        if not isinstance(x0,Point):
+        if not isinstance(p,Point):
 
             error("cannote add Point to non Point")
 
-        x=self.get_coord()
-        y=x+x0.get_coord()
+        x1=self.x+p.x
+        y1=self.y+p.y
 
-        return Point(y[0],y[1])
+        return Point(x1,y1)
 
-    def __sub__(self,x0):
+    def __sub__(self,p):
 
-        if not isinstance(x0,Point):
+        if not isinstance(p,Point):
 
             raise Exception("cannote sub Point to non Point")
 
-        x=self.get_coord()
+        x1=self.x-p.x
 
-        y=x-x0.get_coord()
+        y1=self.y-p.y
 
-        return Point(y[0], y[1])
+        return Point(x1,y1)
 
     def __floordiv__(self,x0):
 
         if isinstance(x0,int) or isinstance(x0,float):
 
-            pmid=self.get_coord()/x0
+            p=self.get_coord()
+            x1=p.x/x0
+            y1=p.y/x0
 
-            return Point(pmid[0],pmid[1])
+            return Point(x1,y1)
         else:
 
             raise Exception("Division Point/x0 is not possible here")
@@ -126,22 +113,3 @@ class Point:
         # return f"{self.x}"
 
     __radd__ = __add__
-
-class Line:
-
-    def __init__(self,p1,p2):
-
-        if not isinstance(p1,Point) or not isinstance(p2,Point):
-
-            raise Exception("Line(p1,p2) needs two Points")
-
-        self.p1 = p1
-        self.p2 = p2
-
-    def get_mid_point(self):
-        midp=(self.p1+self.p2).get_coord()/2
-        return Point(midp[0],midp[1])
-
-    def move(self,dp):
-
-        return Line(self.p1+dp,self.p2+dp)
