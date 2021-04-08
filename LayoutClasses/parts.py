@@ -1,17 +1,10 @@
-
 from phidl.device_layout import Device, Port, DeviceReference
-
 import phidl.geometry as pg
-
-from phidl import quickplot as qp
-
+from phidl import quickplot2 as qp
 import gdspy
-
-import numpy as np
-
 from abc import ABC, abstractmethod
-
-from tools import LayoutDefault,LayoutTool,Point
+from tools import *
+import matplotlib.pyplot as plt
 
 class LayoutPart(ABC) :
 
@@ -29,11 +22,8 @@ class LayoutPart(ABC) :
 
     def test(self):
 
-        lib=gdspy.GdsLibrary('hi')
-        lib.add(self.draw())
-        gdspy.LayoutViewer(lib)
-        input()
-        exit()
+        gdspy.LayoutViewer(\
+        gdspy.GdsLibrary("test").add(self.draw()))
 
 class IDT(LayoutPart) :
 
@@ -64,24 +54,40 @@ class IDT(LayoutPart) :
 
         rect.move(origin=(0,0),destination=o.get_coord())
 
-        rect2=pg.copy(rect).move(origin=o.get_coord(),\
-                destination=(o+Point(self.pitch,self.y_offset)).get_coord())
+        unitcell=Device(name=self.name)
 
-        rect.add(rect2)
+        r1=unitcell << rect
+        unitcell.absorb(r1)
+        r2 = unitcell << rect
 
-        cell_tot=pg.connector(midpoint=(self.pitch/2*self.n,self.y+self.y_offset/2),\
-            width=self.pitch*(self.n+self.coverage))
+        r2.move(origin=o.get_coord(),\
+        destination=(o+Point(self.pitch,self.y_offset)).get_coord())
 
-        # cell.name=self.name
+        unitcell.absorb(r2)
 
-        cell_tot.add_array(rect,columns=self.n,rows=1,\
+        cell=Device()
+
+        cell.name=self.name
+
+        cell.add_array(unitcell,columns=self.n,rows=1,\
             spacing=(self.pitch*2,0))
 
-        cell_tot.flatten()
+        cell.flatten()
 
-        cell_tot.name=self.name
+        totx=self.pitch*(self.n*2-1)-self.pitch*(1-self.coverage)
 
-        return cell_tot
+        midx=totx/2
+
+        finger_dist=Point(self.pitch*1,\
+        self.y+self.y_offset)
+
+        cell.add_port(Port(name=self.name,\
+        midpoint=(o+\
+        Point(midx,0)).get_coord(),\
+        width=totx,
+        orientation=-90))
+
+        return cell
 
     def get_finger_size(self):
 
@@ -90,271 +96,356 @@ class IDT(LayoutPart) :
         dx=self.pitch*self.coverage
 
         return Point(dx,dy)
-#
-# class Bus(LayoutPart) :
-#
-#     def __init__(self,*args,**kwargs):
-#
-#         ld=LayoutDefault()
-#
-#         super().__init__(*args,**kwargs)
-#
-#         self.size=ld.Bussize
-#         self.distance=ld.distance
-#         self.origin = ld.origin
-#         self.layer = ld.layerTop
-#
-#     def draw(self):
-#
-#         o=self.origin
-#
-#         r1=gdspy.Rectangle(o.get_coord(),\
-#                 (o+self.size).get_coord(),\
-#                 layer=self.layer)
-#
-#         r2 = gdspy.copy(r1,self.distance.x,self.distance.y);
-#
-#         cell=gdspy.Cell(self.name)
-#
-#         cell.add([r1,r2])
-#
-#         return cell
-#
-#     def get_anchor_lines(self):
-#
-#         o=self.origin
-#
-#         l1=Line(o,o+Point(self.size.x,0))
-#         l2=Line(o+self.distance+Point(0,self.size.y),o+self.distance+self.size)
-#
-#         return [l1,l2]
-#
-# class EtchPit(LayoutPart) :
-#
-#     def __init__(self,*args,**kwargs):
-#
-#         ld=LayoutDefault()
-#
-#         super().__init__(*args,**kwargs)
-#
-#         self.active_area=ld.EtchPitactive_area
-#
-#         self.origin=ld.origin
-#
-#         self.x=ld.EtchPit_x
-#
-#         self.anchor_etch=ld.EtchPitanchor_etch
-#
-#         self.anchor_size=ld.EtchPitanchor_size
-#
-#         self.layer=ld.layerEtch
-#
-#         self.etch_margin=ld.EtchPitetch_margin
-#
-#     def draw(self):
-#
-#         b_main=Bus(self.name+"Main Etch Pit");
-#
-#         b_main.origin=self.origin
-#
-#         b_main.layer=self.layer
-#
-#         b_main.size=Point(self.x,self.active_area.y+2*self.etch_margin.y)
-#
-#         b_main.distance=Point(self.active_area.x+self.x+2*self.etch_margin.x,0)
-#
-#         main_etch=b_main.draw()
-#
-#         if self.anchor_etch:
-#
-#             anchor_etch_size=self.get_anchor_etch_size()
-#
-#             o=b_main.origin-Point(0,anchor_etch_size.y)
-#
-#             b_anchor_down=Bus(self.name+"anchor_down")
-#
-#             b_anchor_down.layer=self.layer
-#
-#             b_anchor_down.origin=o
-#
-#             b_anchor_down.size=anchor_etch_size
-#
-#             b_anchor_down.distance=Point(\
-#                 2*self.x+2*self.etch_margin.x+self.active_area.x-anchor_etch_size.x,0)
-#
-#             anchor_etch_down=b_anchor_down.draw()
-#
-#             anchor_etch_up=anchor_etch_down.copy(b_anchor_down.name+"up",\
-#                 translation=Point(0,anchor_etch_size.y+b_main.size.y).get_coord())
-#
-#             etch=main_etch.add(anchor_etch_up)
-#
-#             etch=main_etch.add(anchor_etch_down)
-#
-#             etch.flatten()
-#
-#         else:
-#
-#             etch=main_etch.flatten()
-#
-#         etch.name=self.name
-#
-#         return etch
-#
-#     def get_anchor_lines(self):
-#
-#         o=self.origin
-#         p1=o+Point(self.x+self.etch_margin.x,self.etch_margin.y)
-#         p2=p1+Point(self.active_area.x,0)
-#
-#         p3=p1+Point(0,self.active_area.y)
-#         p4=p3+Point(self.active_area.x,0)
-#
-#         if self.anchor_etch:
-#
-#             dx=-self.x+(self.get_anchor_etch_size()).x
-#             dy= 0
-#
-#             p1=p1+Point(dx,dy)
-#             p2=p2+Point(-dx,dy)
-#             p3=p1+Point(dx,-dy)
-#             p4=p2+Point(-dx,-dy)
-#
-#         return [Line(p1,p2), Line(p3,p4)]
-#
-#     def get_anchor_etch_size(self):
-#
-#         return Point((self.active_area.x+2*self.x-self.anchor_size.x)/2,\
-#             self.anchor_size.y)
-#
-# class BaseLFEResonator(LayoutPart):
-#
-#     def __init__(self,*args,**kwargs):
-#
-#         super().__init__(*args,**kwargs)
-#
-#         self.idt=IDT(name='ResIDT')
-#
-#         self.bus=Bus(name='ResBus')
-#
-#         self.etchpit=EtchPit(name='ResEtchPit')
-#
-#         self.anchor=Bus(name='ResAnchor')
-#
-#         self.anchor.size=self.etchpit.anchor_size
-#
-#     def draw(self):
-#
-#         idt_cell=self.idt.draw()
-#
-#         self.bus.origin=self.idt.origin-Point(0,self.bus.size.y)
-#
-#         self.bus.size=Point(2*self.idt.pitch*(self.idt.n-1)+(1+self.idt.coverage)*self.idt.pitch,\
-#             self.bus.size.y)
-#
-#         self.bus.distance=Point(0,self.bus.size.y+self.idt.y+self.idt.y_offset)
-#
-#         bus_cell = self.bus.draw()
-#
-#         self.etchpit.etch_margin.x=self.idt.pitch*(1-self.idt.coverage)/2
-#
-#         self.etchpit.origin=self.bus.origin-Point(self.etchpit.x+self.etchpit.etch_margin.x,\
-#             self.etchpit.etch_margin.y)
-#
-#         self.etchpit.active_area=LayoutTool().get_size(bus_cell)
-#
-#         self.etchpit.anchor_size=self.anchor.size-Point(0,self.etchpit.etch_margin.y)
-#
-#         etchpit_cell = self.etchpit.draw()
-#
-#         self.anchor.origin = (self.etchpit.get_anchor_lines()[0]).p1-\
-#         Point(0,self.anchor.size.y)
-#
-#         self.anchor.distance=Point(0,self.anchor.size.y+self.etchpit.active_area.y)
-#
-#         anchor_cell=self.anchor.draw()
-#
-#         cell=LayoutTool().merge_cells(idt_cell,bus_cell,etchpit_cell,anchor_cell,name=self.name)
-#
-#         return cell
-#         # cell.flatten()
-#
-#     def set_origin(self,p=Point(0,0)):
-#
-#         self.origin=p;
-#         self.idt.origin=p;
-#
-#     def get_anchor_lines(self):
-#
-#         pit_lines=self.etchpit.get_anchor_lines()
-#
-#         anchor_lines=[pit_lines[0].move(Point(0,-self.anchor.size.y)),\
-#                     pit_lines[1].move(Point(0,self.anchor.size.y))]
-#
-#         return anchor_lines
-#
-# class GSProbe(LayoutPart):
-#
-#     def __init__(self,*args,**kwargs):
-#
-#         ld=LayoutDefault()
-#
-#         super().__init__(*args,**kwargs)
-#
-#         self.pitch = ld.GSProbepitch
-#
-#         self.pad_size = ld.GSProbepad_size
-#
-#         self.routing = ld.GSProberouting
-#
-#         self.routing_width = ld.GSProberouting_width
-#
-#         self.layer = ld.GSProbelayer
-#
-#         self.dut = ld.GSProbedut
-#
-#         self.spacing = ld.GSProbespacing
-#
-#     def draw_pads(self):
-#
-#         bus_aux=Bus(name=self.name+"bus_aux")
-#
-#         bus_aux.origin=self.origin
-#
-#         bus_aux.size=self.pad_size
-#
-#         bus_aux.layer=self.layer
-#
-#         bus_aux.distance=Point(self.pitch,0)
-#
-#         return bus_aux.draw()
-#
-#     def draw(self):
-#
-#         if self.routing:
-#
-#             dut_anchor_lines= self.dut.get_anchor_lines()
-#
-#             bottom_mid_point=dut_anchor_lines[0].get_mid_point()
-#
-#             self.origin =bottom_mid_point-\
-#                 Point(self.pad_size.x/2+self.pitch,self.pad_size.y+self.spacing.y)
-#
-#             cell_pads=self.draw_pads()
-#
-#             cell_pads.add(gdspy.Rectangle(\
-#             (bottom_mid_point-Point(self.routing_width/2,self.spacing.y)).get_coord(),\
-#             (bottom_mid_point+Point(self.routing_width/2,0)).get_coord(),\
-#             layer=self.layer))
-#
-#             if self.dut.get_area().x/2>self.pitch:
-#
-#             return cell_pads
-#
-#         else:
-#
-#             return self.draw_pads()
-#
-#     def get_anchor_lines(self):
-#
-#         return self.dut.get_anchor_lines()
+
+class Bus(LayoutPart) :
+
+    def __init__(self,*args,**kwargs):
+
+        ld=LayoutDefault()
+
+        super().__init__(*args,**kwargs)
+
+        self.size=ld.Bussize
+        self.distance=ld.distance
+        self.origin = ld.origin
+        self.layer = ld.layerTop
+
+    def draw(self):
+
+        o=self.origin
+
+        pad=pg.rectangle(size=self.size.get_coord(),\
+        layer=self.layer).move(origin=(0,0),\
+        destination=o.get_coord())
+
+
+        cell=Device(name=self.name)
+
+        r1=cell<<pad
+        cell.absorb(r1)
+        r2=cell <<pad
+
+        r2.move(origin=o.get_coord(),\
+        destination=(o+self.distance).get_coord())
+        cell.absorb(r2)
+        cell.add_port(name=self.name,\
+        midpoint=(o+Point(self.size.x/2,self.size.y)).get_coord(),\
+        width=self.size.x,\
+        orientation=90)
+
+        return cell
+
+class EtchPit(LayoutPart) :
+
+    def __init__(self,*args,**kwargs):
+
+        ld=LayoutDefault()
+
+        super().__init__(*args,**kwargs)
+
+        self.active_area=ld.EtchPitactive_area
+
+        self.origin=ld.origin
+
+        self.x=ld.EtchPit_x
+
+        self.layer=ld.EtchPitlayer
+
+    def draw(self):
+
+        o=self.origin
+
+        b_main=Bus()
+
+        b_main.origin=o
+
+        b_main.layer=self.layer
+
+        b_main.size=Point(self.x,self.active_area.y)
+
+        b_main.distance=Point(self.active_area.x+self.x,0)
+
+        main_etch=b_main.draw()
+
+        etch=Device()
+
+        etch.absorb(etch<<main_etch)
+
+        port_up=Port(self.name+'up',\
+        midpoint=(o+Point(self.x+self.active_area.x/2,0)).get_coord(),\
+        width=self.active_area.x,\
+        orientation=90)
+
+        port_down=Port(self.name+'down',\
+        midpoint=(o+Point(self.x+self.active_area.x/2,0)).get_coord(),\
+        width=self.active_area.x,\
+        orientation=-90)
+
+        # if self.anchor_etch:
+        #
+        #     anchor_etch_size=self.anchor_etch_size
+        #
+        #     o=b_main.origin-Point(0,anchor_etch_size.y)
+        #
+        #     b_anchor_down=Bus(self.name+"Bottom")
+        #
+        #     b_anchor_down.layer=self.layer
+        #
+        #     b_anchor_down.origin=o
+        #
+        #     b_anchor_down.size=anchor_etch_size
+        #
+        #     b_anchor_down.distance=\
+        #     Point(self.x*2+self.active_area.x-anchor_etch_size.x,0)
+        #
+        #     anchor_etch_down=b_anchor_down.draw()
+        #
+        #     etch.absorb(etch<<anchor_etch_down)
+        #
+        #     anchor_etch_up=etch<<anchor_etch_down
+        #
+        #     anchor_etch_up.move(\
+        #     origin=o.get_coord(),\
+        #     destination=(o+Point(0,anchor_etch_size.y+b_main.size.y)).get_coord())
+        #
+        #     etch.absorb(anchor_etch_up)
+        #
+        #     box_size=Point().from_iter(main_etch.size)
+        #
+        #     port_up=Port(self.name+'up',\
+        #     midpoint=(o+Point(self.x+self.active_area.x/2,0)).get_coord(),\
+        #     width=box_size.x-2*anchor_etch_size.x,\
+        #     orientation=90)
+        #
+        #     port_down=Port(name=self.name+'down',\
+        #     midpoint=(o+Point(self.x+self.active_area.x/2,0)).get_coord(),\
+        #     width=box_size.x-2*anchor_etch_size.x,\
+        #     orientation=-90)
+        #
+        etch.add_port(port_up)
+        etch.add_port(port_down)
+        # # else:
+        #
+        #     # etch=main_etch.flatten()
+        #
+        # etch.name=self.name
+        #
+        return etch
+
+class Anchor(LayoutPart):
+
+    def __init__(self,*args,**kwargs):
+
+        ld=LayoutDefault()
+
+        super().__init__(*args,**kwargs)
+
+        self.size=ld.Anchorsize
+        self.etch_margin=ld.Anchoretch_margin
+        self.etch_x=ld.Anchoretch_x
+        self.x_offset=ld.Anchoretchx_offset
+        self.layer=ld.Anchorlayer
+        self.etch_layer=ld.Anchoretch_layer
+
+    def draw(self):
+
+        o=self.origin
+
+        anchor=pg.rectangle(\
+            size=self.size.get_coord(),\
+            layer=self.layer)
+
+        etch_size_mid=Point(\
+        (self.etch_x-2*self.etch_margin.x-self.size.x)/2,\
+        self.size.y-self.etch_margin.y)
+
+        offset=Point(self.x_offset,0)
+
+        etch_sx=pg.rectangle(\
+            size=(etch_size_mid-offset).get_coord(),\
+            layer=self.etch_layer)
+
+        etch_dx=pg.rectangle(\
+            size=(etch_size_mid+offset).get_coord(),\
+            layer=self.etch_layer)
+
+        cell=Device(name=self.name)
+
+        cell.absorb((cell<<etch_sx).move(origin=(0,0),\
+        destination=o.get_coord()))
+
+        anchor_transl=o+Point(etch_sx.size[0]+self.etch_margin.x,0)
+
+        cell.absorb((cell<<anchor).move(origin=(0,0),\
+        destination=anchor_transl.get_coord()))
+
+        etchdx_transl=anchor_transl+Point(anchor.size[0]+self.etch_margin.x,0)
+        cell.absorb((cell<<etch_dx).move(origin=(0,0),\
+        destination=etchdx_transl.get_coord()))
+
+        cell.add_port(name=self.name,\
+        midpoint=(anchor_transl+Point(self.size.x/2,self.size.y)).get_coord(),\
+        width=self.size.x,\
+        orientation=90)
+
+        return cell
+
+class LFERes(LayoutPart):
+
+    def __init__(self,*args,**kwargs):
+
+        super().__init__(*args,**kwargs)
+
+        ld=LayoutDefault()
+
+        self.idt=IDT(name='ResIDT')
+
+        self.bus=Bus(name='ResBus')
+
+        self.etchpit=EtchPit(name='ResEtchPit')
+
+        self.anchor=Anchor(name='ResAnchor')
+
+    def draw(self):
+
+        o=self.origin
+
+        self.idt.origin=o
+
+        idt_cell=self.idt.draw()
+
+        cell=Device(name=self.name)
+
+        idt_ref=cell<<idt_cell
+
+        self.bus.size=Point(\
+            2*self.idt.pitch*(self.idt.n-1)+(self.idt.coverage)*self.idt.pitch,\
+            self.bus.size.y)
+
+        self.bus.distance=Point(\
+            self.idt.pitch,self.bus.size.y+self.idt.y+self.idt.y_offset)
+
+        bus_cell = self.bus.draw()
+
+        bus_ref= cell<<bus_cell
+
+        ports=cell.get_ports()
+
+        bus_ref.connect(port=ports[1],\
+        destination=ports[0])
+
+        cell.absorb(idt_ref)
+
+        self.etchpit.active_area=Point().from_iter(cell.size)+\
+        Point(self.idt.pitch*(1-self.idt.coverage),self.anchor.etch_margin.y*2)
+
+        etch_cell=self.etchpit.draw()
+
+        etch_ref=cell<<etch_cell
+
+        ports=cell.get_ports()
+        etch_ref.connect(ports[2],\
+        destination=ports[0])
+
+        etch_ref.move(origin=etch_ref.center,\
+        destination=(Point().from_iter(etch_ref.center)+\
+            Point(self.idt.pitch/2,-self.anchor.size.y/2-self.anchor.etch_margin.y)).get_coord())
+
+        cell.absorb(bus_ref)
+
+        self.anchor.etch_x=self.etchpit.x*2+self.etchpit.active_area.x
+
+        anchor_cell=self.anchor.draw()
+
+        anchor_bottom=cell<<anchor_cell
+
+        ports=cell.get_ports()
+
+        anchor_bottom.connect(ports[2],
+        destination=ports[1],overlap=self.anchor.etch_margin.y)
+        anchor_bottom.move(origin=(0,0),\
+        destination=(-self.anchor.x_offset,0))
+
+        anchor_top=(cell<<anchor_cell)
+        anchor_top.move(origin=anchor_top.center,\
+        destination=anchor_bottom.center)
+        anchor_pivot=ports[2]
+
+        anchor_top.rotate(angle=180,center=ports[1].center)
+        anchor_top.move(origin=(0,0),\
+        destination=(0,self.etchpit.active_area.y))
+
+        cell.absorb(etch_ref)
+
+        ports=cell.get_ports()
+        ports[0].rotate(180,center=ports[0].center)
+        ports[1].rotate(180,center=ports[1].center)
+
+        cell.absorb(anchor_top)
+        cell.absorb(anchor_bottom)
+
+        cell_out=join(cell)
+        cell_out.add_port(Port(name=self.name+"Top",\
+        midpoint=(Point().from_iter(ports[1].center)+\
+        Point(0,self.anchor.size.y)).get_coord(),\
+        width=self.anchor.size.x),\
+        orientation=-90)
+
+        cell_out.add_port(Port(name=self.name+"Bottom",\
+        midpoint=(Point().from_iter(ports[0].center)-\
+        Point(0,self.anchor.size.y)).get_coord(),\
+        width=self.anchor.size.x),\
+        orientation=90)
+
+        return cell_out
+
+class FBERes(LFERes):
+
+    def __init__(self,*args,**kwargs):
+
+        super().__init__(*args,**kwargs)
+        ld=LayoutDefault()
+        self.platelayer=ld.FBEResplatelayer
+
+    def draw(self):
+
+        cell=LFERes.draw(self)
+
+        plate=pg.rectangle(size=self.etchpit.active_area.get_coord(),\
+        layer=self.platelayer)
+
+        plate_ref=cell<<plate
+
+        transl_rel=Point(self.etchpit.x,self.anchor.size.y-self.anchor.etch_margin.y)
+        lr_cell=get_corners(cell)[0]
+        lr_plate=get_corners(plate_ref)[0]
+        plate_ref.move(origin=lr_plate.get_coord(),\
+        destination=(lr_plate+lr_cell+transl_rel).get_coord())
+
+        cell.absorb(plate_ref)
+
+        return cell
+
+class Via(LayoutPart):
+
+    def __init__(self):
+
+        ld=LayoutDefault()
+
+        self.layer=ld.Vialayer
+        self.__type=ld.Viatype
+        self.size=ld.Viasize
+
+    @property
+        def type(self):
+            return self.__type
+    @type.setter
+        def type(self,string):
+
+            if not (string=='circle' or string=='rectangle'):
+
+                raise Exception("Vias can be only 'circle' or 'rectangle' for now")
+
+            else:
+
+                self.__type=string

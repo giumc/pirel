@@ -1,5 +1,7 @@
 import numpy as np
 
+import phidl.geometry as pg
+
 class LayoutDefault:
 
     def __init__(self):
@@ -19,10 +21,10 @@ class LayoutDefault:
 
         self.IDT_y = 200
         self.IDTpitch = 8
-        self.IDTcoverage = 0.5
-        self.IDTy_offset = 4
+        self.IDTcoverage = 0.7
+        self.IDTy_offset = 10
         self.IDTlayer = self.layerTop
-        self.IDTn = 40
+        self.IDTn = 4
 
         #Bus
 
@@ -33,12 +35,18 @@ class LayoutDefault:
 
         self.EtchPit_x=20
         self.EtchPitactive_area=Point(self.Bussize.x,self.IDT_y+self.IDTy_offset+2*self.Bussize.y)
-        self.EtchPitanchor_etch=True
-        self.EtchPitetch_margin=Point(1,1)
-        # self.EtchPitanchor_size=Point(self.EtchPit_x+self.EtchPitetch_margin.x+\
-        #     self.EtchPitactive_area.x/4,2*self.Bussize.y)
-        self.EtchPitanchor_size=Point(self.EtchPitactive_area.x/2,40)
+        self.EtchPitlayer=self.layerEtch
 
+        #Anchor
+        self.Anchorsize=Point(self.IDTpitch*self.IDTn/4,2*self.Bussize.y)
+        self.Anchoretch_margin=Point(4,4)
+        self.Anchoretch_x=self.EtchPit_x
+        self.Anchoretchx_offset=self.IDTpitch/2
+        self.Anchorlayer=self.IDTlayer
+        self.Anchoretch_layer=self.EtchPitlayer
+
+        #FBERes
+        self.FBEResplatelayer=self.layerBottom
         #GSProbe
         self.GSProbepitch = 150
         self.GSProbepad_size = Point(80,80)
@@ -49,23 +57,18 @@ class LayoutDefault:
         self.GSProberouting = True
         self.GSProbespacing = Point(20,30)
 
-class LayoutTool:
+        #Via
 
-    def get_size(self,cell):
-
-        bounds=cell.get_bounding_box()
-
-        dx = bounds[1,0]-bounds[0,0]
-        dy = bounds[1,1]-bounds[0,1]
-
-        return Point(dx,dy)
+        self.Vialayer=self.layerVias
+        self.Viatype='circle'
+        self.Viasize=5
 
 class Point:
 
-    def __init__(self,x,y):
+    def __init__(self,x=0,y=0):
 
-        self.x=x;
-        self.y=y;
+        self.x=x
+        self.y=y
 
     def get_coord(self):
 
@@ -75,7 +78,7 @@ class Point:
 
         if not isinstance(p,Point):
 
-            error("cannote add Point to non Point")
+            raise Exception("cannote add Point to non Point")
 
         x1=self.x+p.x
         y1=self.y+p.y
@@ -98,12 +101,14 @@ class Point:
 
         if isinstance(x0,int) or isinstance(x0,float):
 
-            p=self.get_coord()
+            p=self
             x1=p.x/x0
             y1=p.y/x0
 
             return Point(x1,y1)
         else:
+
+
 
             raise Exception("Division Point/x0 is not possible here")
 
@@ -113,3 +118,64 @@ class Point:
         # return f"{self.x}"
 
     __radd__ = __add__
+
+    def from_iter(self,l):
+
+        if not len(l)==2:
+
+            raise Exception("Point can be built from iterable of length 2 only")
+
+        self.x=l[0]
+        self.y=l[1]
+
+        return self
+
+    def __mul__(self,x0):
+
+        if isinstance(x0,int) or isinstance(x0,float):
+
+            x1=self.x*x0
+            y1=self.y*x0
+
+            return Point(x1,y1)
+
+        else:
+
+            raise Exception("Division Point/x0 is not possible here")
+
+
+    __rmul__=__mul__
+
+def add_compass(device):
+
+    bound_cell=pg.compass(size=device.size).move(\
+    origin=(0,0),destination=device.center)
+
+    ports=port=bound_cell.get_ports()
+
+    device.add_port(port=ports[0],name=device.name+'N')
+    device.add_port(port=ports[1],name=device.name+'S')
+    device.add_port(port=ports[2],name=device.name+'E')
+    device.add_port(port=ports[3],name=device.name+'W')
+
+    # return device
+
+def print_ports(device):
+
+    for i,p in enumerate(device.get_ports()):
+
+        print(i,p,'\n')
+
+def join(device):
+
+    return pg.union(device,by_layer=True)
+
+def get_corners(device):
+
+    bbox=device.bbox
+    ll=Point(bbox[0,0],bbox[0,1])
+    lr=Point(bbox[1,0],bbox[0,1])
+    ul=Point(bbox[0,0],bbox[1,1])
+    ur=Point(bbox[1,0],bbox[1,1])
+
+    return ll,lr,ul,ur
