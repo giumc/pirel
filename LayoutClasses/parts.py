@@ -1,10 +1,13 @@
 from phidl.device_layout import Device, Port, DeviceReference
 import phidl.geometry as pg
-from phidl import quickplot2 as qp
+from phidl import set_quickplot_options
+from phidl import quickplot as qp
 import gdspy
 from abc import ABC, abstractmethod
 from tools import *
 import matplotlib.pyplot as plt
+
+import warnings
 
 class LayoutPart(ABC) :
 
@@ -21,9 +24,14 @@ class LayoutPart(ABC) :
         pass
 
     def test(self):
+        set_quickplot_options(blocking=True)
+        qp(self.draw())
+        return
 
-        gdspy.LayoutViewer(\
-        gdspy.GdsLibrary("test").add(self.draw()))
+    def test_gds(self):
+        lib=gdspy.GdsLibrary('test')
+        lib.add(self.draw())
+        gdspy.LayoutViewer(lib)
 
 class IDT(LayoutPart) :
 
@@ -388,14 +396,14 @@ class LFERes(LayoutPart):
         cell_out.add_port(Port(name=self.name+"Top",\
         midpoint=(Point().from_iter(ports[1].center)+\
         Point(0,self.anchor.size.y)).get_coord(),\
-        width=self.anchor.size.x),\
-        orientation=-90)
+        width=self.anchor.size.x,\
+        orientation=-90))
 
         cell_out.add_port(Port(name=self.name+"Bottom",\
         midpoint=(Point().from_iter(ports[0].center)-\
         Point(0,self.anchor.size.y)).get_coord(),\
-        width=self.anchor.size.x),\
-        orientation=90)
+        width=self.anchor.size.x,\
+        orientation=90))
 
         return cell_out
 
@@ -428,8 +436,9 @@ class FBERes(LFERes):
 
 class Via(LayoutPart):
 
-    def __init__(self):
+    def __init__(self,*args,**kwargs):
 
+        super().__init__(*args,**kwargs)
         ld=LayoutDefault()
 
         self.layer=ld.Vialayer
@@ -437,10 +446,11 @@ class Via(LayoutPart):
         self.size=ld.Viasize
 
     @property
-        def type(self):
-            return self.__type
+    def type(self):
+        return self.__type
+
     @type.setter
-        def type(self,string):
+    def type(self,string):
 
             if not (string=='circle' or string=='rectangle'):
 
@@ -449,3 +459,155 @@ class Via(LayoutPart):
             else:
 
                 self.__type=string
+
+    def draw(self):
+
+        if self.type=='rectangle':
+
+            if isinstance(self.size,Point):
+
+                cell=pg.rectangle(size=self.size.get_coord(),\
+                    layer=self.layer)
+
+            elif isinstance(self.size,int) or isinstance(self.size,float):
+
+                cell=pg.rectangle(size=(self.size,self.size),\
+                    layer=self.layer)
+
+            else:
+
+                raise Exception("Via.size has to be Point or int/float")
+
+        elif self.type=='circle':
+
+            if isinstance(self.size,Point):
+
+                cell=pg.circle(radius=self.size.x,\
+                layer=self.layer)
+
+            elif isinstance(self.size,int) or isinstance(self.size,float):
+
+                cell=pg.circle(radius=self.size,\
+                layer=self.layer)
+
+            else:
+
+                raise Exception("Via.size has to be Point or int/float")
+
+        else:
+
+            raise Exception("Something went wrong,abort")
+
+        cell.move(origin=(0,0),\
+            destination=self.origin.get_coord())
+
+        cell.name=self.name
+
+        cell.add_port(Port(name=self.name,\
+        midpoint=cell.center,\
+        width=cell.xmax-cell.xmin,\
+        orientation=90))
+
+        return cell
+
+class GSProbe(LayoutPart):
+
+    def __init__(self,*args,**kwargs):
+
+        super().__init__(*args,**kwargs)
+
+        ld=LayoutDefault()
+
+        self.layer=ld.GSProbelayer
+        self.pitch=ld.GSProbepitch
+        self.size=ld.GSProbesize
+
+    def draw(self):
+
+        name=self.name
+
+        o=self.origin
+
+        pad_x=self.size.x
+
+        if pad_x>self.pitch*2/3:
+
+            pad_x=self.pitch*2/3
+
+            warnings.warn("Pad size too large, capped to pitch*2/3")
+
+        pad_cell=pg.rectangle(size=(pad_x,self.size.y),\
+        layer=self.layer)
+
+        pad_cell.move(origin=(0,0),\
+        destination=o.get_coord())
+
+        cell=Device(name=self.name)
+
+        dp=Point(self.pitch,0)
+        pad_gnd_sx=cell<<pad_cell
+        pad_sig=cell<<pad_cell
+        pad_sig.move(origin=o.get_coord(),\
+        destination=(o+dp).get_coord())
+
+        cell.add_port(Port(name=self.name,\
+        midpoint=(o+self.size+Point(self.pitch*3/4,0)).get_coord(),\
+        width=100,\
+        orientation=90))
+
+        return cell
+        # signal_ref.move(origin=(0,0),\
+        # destination=(o+Point(ground_pads.size.x)
+
+class GSGProbe(LayoutPart):
+
+    def __init__(self,*args,**kwargs):
+
+        super().__init__(*args,**kwargs)
+
+        ld=LayoutDefault()
+
+        self.layer=ld.GSGProbelayer
+        self.pitch=ld.GSGProbepitch
+        self.size=ld.GSGProbesize
+
+    def draw(self):
+
+        name=self.name
+
+        o=self.origin
+
+        pad_x=self.size.x
+
+        if pad_x>self.pitch*2/3:
+
+            pad_x=self.pitch*2/3
+
+            warnings.warn("Pad size too large, capped to pitch*2/3")
+
+        pad_cell=pg.rectangle(size=(pad_x,self.size.y),\
+        layer=self.layer)
+
+        pad_cell.move(origin=(0,0),\
+        destination=o.get_coord())
+
+        cell=Device(name=self.name)
+
+        dp=Point(self.pitch,0)
+        pad_gnd_sx=cell<<pad_cell
+        pad_sig=cell<<pad_cell
+        pad_sig.move(origin=o.get_coord(),\
+        destination=(o+dp).get_coord())
+
+        pad_gnd_dx=cell<<pad_cell
+        pad_gnd_dx.move(origin=o.get_coord(),\
+        destination=(o+dp*2).get_coord())
+
+        cell.add_port(Port(name=self.name,\
+        midpoint=(o+self.size+Point(self.pitch*3/4,0)).get_coord(),\
+        width=100,\
+        orientation=90))
+
+        return cell
+        # signal_ref.move(origin=(0,0),\
+        # destination=(o+Point(ground_pads.size.x)

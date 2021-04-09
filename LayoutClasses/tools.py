@@ -63,6 +63,17 @@ class LayoutDefault:
         self.Viatype='circle'
         self.Viasize=5
 
+        #GSGProbe
+
+        self.GSGProbelayer=self.layerTop
+        self.GSGProbepitch=200
+        self.GSGProbesize=Point(100,100)
+
+        self.GSProbelayer=self.GSGProbelayer
+        self.GSProbepitch=self.GSGProbepitch
+        self.GSProbesize=self.GSGProbesize
+
+
 class Point:
 
     def __init__(self,x=0,y=0):

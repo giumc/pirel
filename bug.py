@@ -1,5 +1,9 @@
+from phidl import quickplot as qp, set_quickplot_options
 import phidl.geometry as pg
-from phidl import quickplot as qp
-import matplotlib.pyplot as plt
-r=pg.rectangle()
-qp(r)
+
+
+print('start')
+qp(pg.compass())
+print('middle')
+qp(pg.snspd())
+print('end')
