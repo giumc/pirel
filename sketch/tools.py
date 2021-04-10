@@ -73,7 +73,6 @@ class LayoutDefault:
         self.GSProbepitch=self.GSGProbepitch
         self.GSProbesize=self.GSGProbesize
 
-
 class Point:
 
     def __init__(self,x=0,y=0):
@@ -128,6 +127,10 @@ class Point:
         return f"Point : x={self.x} y ={self.y}"
         # return f"{self.x}"
 
+    def __call__(self):
+
+        return (self.x,self.y)
+
     __radd__ = __add__
 
     def from_iter(self,l):
@@ -179,7 +182,7 @@ def print_ports(device):
 
 def join(device):
 
-    return pg.union(device,by_layer=True)
+    return pg.union(device,by_layer=True, precision=0.001)
 
 def get_corners(device):
 

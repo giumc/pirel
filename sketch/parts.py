@@ -6,8 +6,21 @@ import gdspy
 from abc import ABC, abstractmethod
 from tools import *
 import matplotlib.pyplot as plt
-
 import warnings
+
+def save_cell(fun):
+
+    def wrapper(fun):
+
+        cell=fun()
+
+        # self.cell=cell
+
+        print(cell.name)
+
+        return cell
+
+    return wrapper
 
 class LayoutPart(ABC) :
 
@@ -18,6 +31,16 @@ class LayoutPart(ABC) :
         self.name=name
 
         self.origin=ld.origin
+
+        self.cell=Device()
+
+    def __init_subclass__(self):
+
+        super().__init_subclass__()
+
+        import pdb; pdb.set_trace()
+
+        self.draw=save_cell(self.draw)
 
     @abstractmethod
     def draw(self):
@@ -60,7 +83,7 @@ class IDT(LayoutPart) :
         rect=pg.rectangle(size=(self.coverage*self.pitch,self.y),\
             layer=self.layer)
 
-        rect.move(origin=(0,0),destination=o.get_coord())
+        rect.move(origin=(0,0),destination=o())
 
         unitcell=Device(name=self.name)
 
@@ -68,8 +91,8 @@ class IDT(LayoutPart) :
         unitcell.absorb(r1)
         r2 = unitcell << rect
 
-        r2.move(origin=o.get_coord(),\
-        destination=(o+Point(self.pitch,self.y_offset)).get_coord())
+        r2.move(origin=o(),\
+        destination=(o+Point(self.pitch,self.y_offset))())
 
         unitcell.absorb(r2)
 
@@ -91,7 +114,7 @@ class IDT(LayoutPart) :
 
         cell.add_port(Port(name=self.name,\
         midpoint=(o+\
-        Point(midx,0)).get_coord(),\
+        Point(midx,0))(),\
         width=totx,
         orientation=-90))
 
@@ -122,9 +145,9 @@ class Bus(LayoutPart) :
 
         o=self.origin
 
-        pad=pg.rectangle(size=self.size.get_coord(),\
+        pad=pg.rectangle(size=self.size(),\
         layer=self.layer).move(origin=(0,0),\
-        destination=o.get_coord())
+        destination=o())
 
 
         cell=Device(name=self.name)
@@ -133,11 +156,13 @@ class Bus(LayoutPart) :
         cell.absorb(r1)
         r2=cell <<pad
 
-        r2.move(origin=o.get_coord(),\
-        destination=(o+self.distance).get_coord())
+        r2.move(origin=o(),\
+        destination=(o+self.distance)())
+
         cell.absorb(r2)
+
         cell.add_port(name=self.name,\
-        midpoint=(o+Point(self.size.x/2,self.size.y)).get_coord(),\
+        midpoint=(o+Point(self.size.x/2,self.size.y))(),\
         width=self.size.x,\
         orientation=90)
 
@@ -180,64 +205,18 @@ class EtchPit(LayoutPart) :
         etch.absorb(etch<<main_etch)
 
         port_up=Port(self.name+'up',\
-        midpoint=(o+Point(self.x+self.active_area.x/2,0)).get_coord(),\
+        midpoint=(o+Point(self.x+self.active_area.x/2,0))(),\
         width=self.active_area.x,\
         orientation=90)
 
         port_down=Port(self.name+'down',\
-        midpoint=(o+Point(self.x+self.active_area.x/2,0)).get_coord(),\
+        midpoint=(o+Point(self.x+self.active_area.x/2,0))(),\
         width=self.active_area.x,\
         orientation=-90)
 
-        # if self.anchor_etch:
-        #
-        #     anchor_etch_size=self.anchor_etch_size
-        #
-        #     o=b_main.origin-Point(0,anchor_etch_size.y)
-        #
-        #     b_anchor_down=Bus(self.name+"Bottom")
-        #
-        #     b_anchor_down.layer=self.layer
-        #
-        #     b_anchor_down.origin=o
-        #
-        #     b_anchor_down.size=anchor_etch_size
-        #
-        #     b_anchor_down.distance=\
-        #     Point(self.x*2+self.active_area.x-anchor_etch_size.x,0)
-        #
-        #     anchor_etch_down=b_anchor_down.draw()
-        #
-        #     etch.absorb(etch<<anchor_etch_down)
-        #
-        #     anchor_etch_up=etch<<anchor_etch_down
-        #
-        #     anchor_etch_up.move(\
-        #     origin=o.get_coord(),\
-        #     destination=(o+Point(0,anchor_etch_size.y+b_main.size.y)).get_coord())
-        #
-        #     etch.absorb(anchor_etch_up)
-        #
-        #     box_size=Point().from_iter(main_etch.size)
-        #
-        #     port_up=Port(self.name+'up',\
-        #     midpoint=(o+Point(self.x+self.active_area.x/2,0)).get_coord(),\
-        #     width=box_size.x-2*anchor_etch_size.x,\
-        #     orientation=90)
-        #
-        #     port_down=Port(name=self.name+'down',\
-        #     midpoint=(o+Point(self.x+self.active_area.x/2,0)).get_coord(),\
-        #     width=box_size.x-2*anchor_etch_size.x,\
-        #     orientation=-90)
-        #
         etch.add_port(port_up)
         etch.add_port(port_down)
-        # # else:
-        #
-        #     # etch=main_etch.flatten()
-        #
-        # etch.name=self.name
-        #
+
         return etch
 
 class Anchor(LayoutPart):
@@ -260,7 +239,7 @@ class Anchor(LayoutPart):
         o=self.origin
 
         anchor=pg.rectangle(\
-            size=self.size.get_coord(),\
+            size=self.size(),\
             layer=self.layer)
 
         etch_size_mid=Point(\
@@ -270,29 +249,29 @@ class Anchor(LayoutPart):
         offset=Point(self.x_offset,0)
 
         etch_sx=pg.rectangle(\
-            size=(etch_size_mid-offset).get_coord(),\
+            size=(etch_size_mid-offset)(),\
             layer=self.etch_layer)
 
         etch_dx=pg.rectangle(\
-            size=(etch_size_mid+offset).get_coord(),\
+            size=(etch_size_mid+offset)(),\
             layer=self.etch_layer)
 
         cell=Device(name=self.name)
 
         cell.absorb((cell<<etch_sx).move(origin=(0,0),\
-        destination=o.get_coord()))
+        destination=o()))
 
         anchor_transl=o+Point(etch_sx.size[0]+self.etch_margin.x,0)
 
         cell.absorb((cell<<anchor).move(origin=(0,0),\
-        destination=anchor_transl.get_coord()))
+        destination=anchor_transl()))
 
         etchdx_transl=anchor_transl+Point(anchor.size[0]+self.etch_margin.x,0)
         cell.absorb((cell<<etch_dx).move(origin=(0,0),\
-        destination=etchdx_transl.get_coord()))
+        destination=etchdx_transl()))
 
         cell.add_port(name=self.name,\
-        midpoint=(anchor_transl+Point(self.size.x/2,self.size.y)).get_coord(),\
+        midpoint=(anchor_transl+Point(self.size.x/2,self.size.y))(),\
         width=self.size.x,\
         orientation=90)
 
@@ -344,6 +323,7 @@ class LFERes(LayoutPart):
 
         cell.absorb(idt_ref)
 
+
         self.etchpit.active_area=Point().from_iter(cell.size)+\
         Point(self.idt.pitch*(1-self.idt.coverage),self.anchor.etch_margin.y*2)
 
@@ -357,7 +337,7 @@ class LFERes(LayoutPart):
 
         etch_ref.move(origin=etch_ref.center,\
         destination=(Point().from_iter(etch_ref.center)+\
-            Point(self.idt.pitch/2,-self.anchor.size.y/2-self.anchor.etch_margin.y)).get_coord())
+            Point(self.idt.pitch/2,-self.bus.size.y-self.anchor.etch_margin.y))())
 
         cell.absorb(bus_ref)
 
@@ -395,15 +375,17 @@ class LFERes(LayoutPart):
         cell_out=join(cell)
         cell_out.add_port(Port(name=self.name+"Top",\
         midpoint=(Point().from_iter(ports[1].center)+\
-        Point(0,self.anchor.size.y)).get_coord(),\
+        Point(0,self.anchor.size.y))(),\
         width=self.anchor.size.x,\
         orientation=-90))
 
         cell_out.add_port(Port(name=self.name+"Bottom",\
         midpoint=(Point().from_iter(ports[0].center)-\
-        Point(0,self.anchor.size.y)).get_coord(),\
+        Point(0,self.anchor.size.y))(),\
         width=self.anchor.size.x,\
         orientation=90))
+
+
 
         return cell_out
 
@@ -419,7 +401,7 @@ class FBERes(LFERes):
 
         cell=LFERes.draw(self)
 
-        plate=pg.rectangle(size=self.etchpit.active_area.get_coord(),\
+        plate=pg.rectangle(size=self.etchpit.active_area(),\
         layer=self.platelayer)
 
         plate_ref=cell<<plate
@@ -427,10 +409,12 @@ class FBERes(LFERes):
         transl_rel=Point(self.etchpit.x,self.anchor.size.y-self.anchor.etch_margin.y)
         lr_cell=get_corners(cell)[0]
         lr_plate=get_corners(plate_ref)[0]
-        plate_ref.move(origin=lr_plate.get_coord(),\
-        destination=(lr_plate+lr_cell+transl_rel).get_coord())
+        plate_ref.move(origin=lr_plate(),\
+        destination=(lr_plate+lr_cell+transl_rel)())
 
         cell.absorb(plate_ref)
+
+
 
         return cell
 
@@ -466,7 +450,7 @@ class Via(LayoutPart):
 
             if isinstance(self.size,Point):
 
-                cell=pg.rectangle(size=self.size.get_coord(),\
+                cell=pg.rectangle(size=self.size(),\
                     layer=self.layer)
 
             elif isinstance(self.size,int) or isinstance(self.size,float):
@@ -499,7 +483,7 @@ class Via(LayoutPart):
             raise Exception("Something went wrong,abort")
 
         cell.move(origin=(0,0),\
-            destination=self.origin.get_coord())
+            destination=self.origin())
 
         cell.name=self.name
 
@@ -508,7 +492,25 @@ class Via(LayoutPart):
         width=cell.xmax-cell.xmin,\
         orientation=90))
 
+
+
         return cell
+
+class TFERes(LFERes):
+
+    def __init__(self,*args,**kwargs):
+
+        super().__init__(*args,**kwargs)
+
+    def draw(self):
+
+        cell=LFERes.draw(self)
+
+        # idt_ref=cell<<self.idt.cell
+        # idt_ref.move(origin=self.idt.origin,\
+        # destination=(50,30))
+
+        return self.idt.cell
 
 class GSProbe(LayoutPart):
 
@@ -540,24 +542,22 @@ class GSProbe(LayoutPart):
         layer=self.layer)
 
         pad_cell.move(origin=(0,0),\
-        destination=o.get_coord())
+        destination=o())
 
         cell=Device(name=self.name)
 
         dp=Point(self.pitch,0)
         pad_gnd_sx=cell<<pad_cell
         pad_sig=cell<<pad_cell
-        pad_sig.move(origin=o.get_coord(),\
-        destination=(o+dp).get_coord())
+        pad_sig.move(origin=o(),\
+        destination=(o+dp)())
 
         cell.add_port(Port(name=self.name,\
-        midpoint=(o+self.size+Point(self.pitch*3/4,0)).get_coord(),\
-        width=100,\
+        midpoint=(o+Point(pad_x/2+self.pitch,self.size.y))(),\
+        width=pad_x,\
         orientation=90))
 
         return cell
-        # signal_ref.move(origin=(0,0),\
-        # destination=(o+Point(ground_pads.size.x)
 
 class GSGProbe(LayoutPart):
 
@@ -589,25 +589,31 @@ class GSGProbe(LayoutPart):
         layer=self.layer)
 
         pad_cell.move(origin=(0,0),\
-        destination=o.get_coord())
+        destination=o())
 
         cell=Device(name=self.name)
 
         dp=Point(self.pitch,0)
         pad_gnd_sx=cell<<pad_cell
         pad_sig=cell<<pad_cell
-        pad_sig.move(origin=o.get_coord(),\
-        destination=(o+dp).get_coord())
+        pad_sig.move(origin=o(),\
+        destination=(o+dp)())
 
         pad_gnd_dx=cell<<pad_cell
-        pad_gnd_dx.move(origin=o.get_coord(),\
-        destination=(o+dp*2).get_coord())
+        pad_gnd_dx.move(origin=o(),\
+        destination=(o+dp*2)())
 
         cell.add_port(Port(name=self.name,\
-        midpoint=(o+self.size+Point(self.pitch*3/4,0)).get_coord(),\
-        width=100,\
+        midpoint=(o+Point(pad_x/2+self.pitch,self.size.y))(),\
+        width=pad_x,\
         orientation=90))
 
+
+
         return cell
-        # signal_ref.move(origin=(0,0),\
-        # destination=(o+Point(ground_pads.size.x)
+
+class OnePortRouting(LayoutPart):
+
+    def __init__(self,*args,**kwargs):
+
+        super().__init__(self,*args,**kwargs)
