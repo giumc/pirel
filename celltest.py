@@ -29,6 +29,16 @@ import matplotlib.pyplot as plt
 # tfe.add_text(location='bottom')
 # tfe.add_text(location='top')
 # sketch.check_cell(tfe.cell)
-# sketch.Routing(side='right').test()
 
-sketch.DUT("hi").test()
+# r=sketch.Routing(side='left')
+#
+# frame=r.draw_frame()
+# routing=r.draw()
+# routing<<frame
+# sketch.check_cell(routing)
+
+d=sketch.DUT("hi")
+d.dut.idt.n=4
+d.dut.anchor.etch_choice=False
+d.routing_width=80
+d.test()

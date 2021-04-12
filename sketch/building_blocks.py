@@ -488,61 +488,81 @@ class Routing(LayoutPart):
 
             if not(destination.orientation==source.orientation):
 
-                    raise Exception("Routing error: non-hindered routing needs +90 -> -90 oriented ports")
-
-            source=self._add_taper(cell,source)
-            destination=self._add_taper(cell,destination)
-
-            source.name='source'
-            destination.name='destination'
-
-            p0=Point().from_iter(source.midpoint)
+                raise Exception("Routing error: non-hindered routing needs +90 -> -90 oriented ports")
 
             ll,lr,ul,ur=get_corners(bbox)
 
-            center_box=Point().from_iter(bbox.center)
+            if source.x>ll.x and source.x<lr.x: #source tucked inside clearance
+                # print('tucked')
+                if self.side=='auto':
 
-            y_overtravel=ll.y-p0.y-self.trace_width
+                    source=self._add_taper(cell,source)
+                    destination=self._add_taper(cell,destination)
 
-            #left path
-            p1=p0+Point(0,y_overtravel)
-            p2=ll-Point(self.trace_width,self.trace_width)
-            p3=p2+Point(0,2*self.trace_width+bbox.ysize+y_overtravel)
-            p4=Point(destination.x,p3.y)
-            p5=Point(destination.x,destination.y)
-            # p6=Point(destination.x,destination.y)
+                elif self.side=='left':
 
-            list_points_lx=[p0(),p1(),p2(),p3(),p4(),p5()]
+                    source=self._add_ramp_lx(cell,source)
+                    destination=self._add_ramp_lx(cell,destination)
 
-            path_lx=pp.smooth(points=list_points_lx)
+                elif self.side=='right':
 
-            p1=p0+Point(0,y_overtravel)
-            p2=lr+Point(self.trace_width,-self.trace_width)
-            p3=p2+Point(0,2*self.trace_width+bbox.ysize+y_overtravel)
-            p4=Point(destination.x,p3.y)
-            p5=Point(destination.x,destination.y)
+                    source=self._add_ramp_rx(cell,source)
+                    destination=self._add_ramp_rx(cell,destination)
 
-            list_points_rx=[p0(),p1(),p2(),p3(),p4(),p5()]
+                source.name='source'
+                destination.name='destination'
 
-            path_rx=pp.smooth(points=list_points_rx)
+                p0=Point().from_iter(source.midpoint)
 
-            if self.side=='auto':
+                center_box=Point().from_iter(bbox.center)
 
-                if path_lx.length()<path_rx.length():
+                y_overtravel=ll.y-p0.y-self.trace_width
+                #left path
+                p1=p0+Point(0,y_overtravel)
+                p2=ll-Point(self.trace_width,self.trace_width)
+                p3=p2+Point(0,2*self.trace_width+bbox.ysize)
+                p4=Point(destination.x,p3.y)
+                p5=Point(destination.x,destination.y)
+                # p6=Point(destination.x,destination.y)
 
-                    path=path_lx
+                list_points_lx=[p0(),p1(),p2(),p3(),p4(),p5()]
 
-                else:
+                path_lx=pp.smooth(points=list_points_lx)
 
-                    path=path_rx
+                p1=p0+Point(0,y_overtravel)
+                p2=lr+Point(self.trace_width,-self.trace_width)
+                p3=p2+Point(0,2*self.trace_width+bbox.ysize)
+                p4=Point(destination.x,p3.y)
+                p5=Point(destination.x,destination.y)
 
-            elif self.side=='left':
+                list_points_rx=[p0(),p1(),p2(),p3(),p4(),p5()]
 
-                path=path_lx
+                path_rx=pp.smooth(points=list_points_rx)
 
-            elif self.side=='right':
+            else:
 
-                path=path_rx
+                # print('untucked')
+                source=self._add_taper(cell,source)
+                destination=self._add_taper(cell,destination)
+                source.name='source'
+                destination.name='destination'
+
+                p0=Point().from_iter(source.midpoint)
+
+                ll,lr,ul,ur=get_corners(bbox)
+
+                y_overtravel=ll.y-p0.y
+
+                center_box=Point().from_iter(bbox.center)
+
+                #left path
+                p1=Point(p0.x,ul.y+self.trace_width)
+                p2=Point(destination.x,p1.y)
+                p3=Point(destination.x,destination.y)
+
+                list_points=[p0(),p1(),p2(),p3()]
+
+                path=pp.smooth(points=list_points)
 
         else:
 
@@ -567,40 +587,58 @@ class Routing(LayoutPart):
 
         if not(port.width==self.trace_width):
 
-            if self.side=='auto':
+            taper=pg.taper(length=port.width,\
+            width1=port.width,width2=self.trace_width,\
+            layer=self.layer)
 
-                taper=pg.taper(length=port.width,\
-                width1=port.width,width2=self.trace_width,\
-                layer=self.layer)
+            taper_ref=cell<<taper
 
-                taper_ref=cell<<taper
+            taper_port=taper.ports[1]
 
-                taper_port=taper.ports[1]
+            taper_port.orientation=taper_port.orientation+180
+            taper_ref.connect(taper_port,
+            port)
 
-                taper_port.orientation=taper_port.orientation+180
-                taper_ref.connect(taper_port,
-                port)
+            taper_ref.rotate(angle=180,center=port.center)
 
-                taper_ref.rotate(angle=180,center=port.center)
+            port=taper_ref.ports[2]
 
-            if self.side=='left':
+            cell.absorb(taper_ref)
 
-                taper=pg.ramp(length=port.width,\
-                width1=port.width,width2=self.trace_width,\
-                layer=self.layer)
+            del taper
 
-                taper_ref=cell<<taper
+        return port
 
-                taper_port=taper.ports[1]
+    def _add_ramp_lx(self,cell,port):
 
-                taper_port.orientation=taper_port.orientation+180
+        if not(port.width==self.trace_width):
 
-                taper_ref.connect(taper_port,
-                port)
+            taper=pg.ramp(length=port.width,\
+            width1=port.width,width2=self.trace_width,\
+            layer=self.layer)
 
-                taper_ref.rotate(angle=180,center=port.center)
+            taper_ref=cell<<taper
 
-            if self.side=='right':
+            taper_port=taper.ports[1]
+
+            taper_port.orientation=taper_port.orientation+180
+
+            taper_ref.connect(taper_port,
+            port)
+
+            taper_ref.rotate(angle=180,center=port.center)
+
+            port=taper_ref.ports[2]
+
+            cell.absorb(taper_ref)
+
+            del taper
+
+        return port
+
+    def _add_ramp_rx(self,cell,port):
+
+            if not(port.width==self.trace_width):
 
                 taper=pg.ramp(length=port.width,\
                 width1=port.width,width2=self.trace_width,\
@@ -617,16 +655,21 @@ class Routing(LayoutPart):
                 taper_ref.connect(taper_port,
                 port)
 
-            port=taper_ref.ports[2]
+                port=taper_ref.ports[2]
 
-            cell.absorb(taper_ref)
+                cell.absorb(taper_ref)
 
-            del taper
-
-            return port
-        else:
+                del taper
 
             return port
+
+    def draw_with_frame(self):
+
+        cell_frame=self.draw_frame()
+
+        cell_frame.add(self.draw())
+
+        return cell_frame
 
 class GSProbe(LayoutPart):
 

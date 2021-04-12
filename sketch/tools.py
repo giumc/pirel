@@ -29,7 +29,7 @@ class LayoutDefault:
         self.IDTcoverage = 0.7
         self.IDTy_offset = 10
         self.IDTlayer = self.layerTop
-        self.IDTn = 4
+        self.IDTn = 40
 
         #Bus
 
@@ -57,8 +57,6 @@ class LayoutDefault:
         self.GSProbepad_size = Point(80,80)
         self.GSProberouting_width = 80
         self.GSProbelayer = self.layerTop
-        # self.GSProbebottom_marker = Line(Point(20,100),Point(120,100))
-        # self.GSProbetop_marker = Line(Point(20,220), Point(120,320))
         self.GSProberouting = True
         self.GSProbespacing = Point(20,30)
 
@@ -84,24 +82,23 @@ class LayoutDefault:
 
         #Routing
 
-        self.Routingwidth=50
-        self.Routingtrace_width=150
+        self.Routingtrace_width=80
         self.Routingclearance=(Point(0,250)(),Point(300,550)())
         self.Routinglayer=self.layerTop
-        self.Routingports=(Port(name='1',midpoint=(150,0),\
+        self.Routingports=(Port(name='1',midpoint=(450,0),\
             width=50,orientation=90),\
                 Port(name='2',midpoint=(100,550),\
                 width=50,orientation=90))
 
         #DUT
-        self.DUTrouting_width=self.Routingwidth
+        self.DUTrouting_width=self.Routingtrace_width
 
 class Point:
 
     def __init__(self,x=0,y=0):
 
-        self.x=x
-        self.y=y
+        self.x=np.around(np.single(x),decimals=2)
+        self.y=np.around(np.single(y),decimals=2)
 
     def get_coord(self):
 

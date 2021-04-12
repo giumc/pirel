@@ -11,8 +11,6 @@ class LFERes(LayoutPart):
 
         super().__init__(*args,**kwargs)
 
-
-
         self.layer=ld.IDTlayer
 
         self.idt=IDT(name='ResIDT')
@@ -259,26 +257,26 @@ class DUT(LayoutPart):
 
         ports=cell.get_ports()
         probe_ref.connect(ports[2],\
-        destination=ports[1],overlap=-cell.ysize/4)
+        destination=ports[1],overlap=-self.routing_width*3)
         ports=cell.get_ports()
         dut_port_bottom=ports[1]
         dut_port_top=ports[0]
 
         bbox=device.bbox
-        print_ports(cell)
+
         if isinstance(self.probe,GSGProbe):
 
             probe_port_lx=ports[3]
             probe_port_center=ports[2]
             probe_port_rx=ports[4]
             routing_lx=self._route(bbox,probe_port_lx,dut_port_top,side='left')
-            # routing_c=self._route(bbox,probe_port_center,dut_port_bottom)
-            # routing_rx=self._route(bbox,probe_port_rx,dut_port_top,side='right')
-            # cell<<routing_lx
-            # cell<<routing_c
-            # cell<<routing_rx
+            routing_c=self._route(bbox,probe_port_center,dut_port_bottom)
+            routing_rx=self._route(bbox,probe_port_rx,dut_port_top,side='right')
+            cell<<routing_lx
+            cell<<routing_c
+            cell<<routing_rx
 
-        return routing_lx
+        return cell
 
     def _route(self,bbox,p1,p2,*args,**kwargs):
 
@@ -287,5 +285,7 @@ class DUT(LayoutPart):
         routing.clearance=bbox
         routing.trace_width=self.routing_width
         routing.ports=(p1,p2)
-
-        return routing.draw_frame()
+        cell=routing.draw()
+        del routing
+        return cell
+        # return routing.draw_frame()
