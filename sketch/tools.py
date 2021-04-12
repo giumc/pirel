@@ -85,13 +85,16 @@ class LayoutDefault:
         #Routing
 
         self.Routingwidth=50
-        self.Routingtrace_width=100
+        self.Routingtrace_width=150
         self.Routingclearance=(Point(0,250)(),Point(300,550)())
         self.Routinglayer=self.layerTop
         self.Routingports=(Port(name='1',midpoint=(150,0),\
             width=50,orientation=90),\
-                Port(name='2',midpoint=(150,250),\
-                width=50,orientation=-90))
+                Port(name='2',midpoint=(100,550),\
+                width=50,orientation=90))
+
+        #DUT
+        self.DUTrouting_width=self.Routingwidth
 
 class Point:
 
@@ -217,4 +220,3 @@ def check_cell(device):
 
     set_quickplot_options(blocking=True)
     qp(device)
-    return
