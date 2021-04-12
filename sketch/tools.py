@@ -2,6 +2,11 @@ import numpy as np
 
 import phidl.geometry as pg
 
+from phidl.device_layout import Port
+
+from phidl import set_quickplot_options
+from phidl import quickplot as qp
+
 class LayoutDefault:
 
     def __init__(self):
@@ -44,7 +49,7 @@ class LayoutDefault:
         self.Anchoretchx_offset=self.IDTpitch/2
         self.Anchorlayer=self.IDTlayer
         self.Anchoretch_layer=self.EtchPitlayer
-
+        self.Anchoretch_choice=True
         #FBERes
         self.FBEResplatelayer=self.layerBottom
         #GSProbe
@@ -72,6 +77,21 @@ class LayoutDefault:
         self.GSProbelayer=self.GSGProbelayer
         self.GSProbepitch=self.GSGProbepitch
         self.GSProbesize=self.GSGProbesize
+
+        #TFERes
+
+        self.TFEResbottomlayer=self.layerBottom
+
+        #Routing
+
+        self.Routingwidth=50
+        self.Routingtrace_width=100
+        self.Routingclearance=(Point(0,250)(),Point(300,550)())
+        self.Routinglayer=self.layerTop
+        self.Routingports=(Port(name='1',midpoint=(150,0),\
+            width=50,orientation=90),\
+                Port(name='2',midpoint=(150,250),\
+                width=50,orientation=-90))
 
 class Point:
 
@@ -157,7 +177,6 @@ class Point:
 
             raise Exception("Division Point/x0 is not possible here")
 
-
     __rmul__=__mul__
 
 def add_compass(device):
@@ -193,3 +212,9 @@ def get_corners(device):
     ur=Point(bbox[1,0],bbox[1,1])
 
     return ll,lr,ul,ur
+
+def check_cell(device):
+
+    set_quickplot_options(blocking=True)
+    qp(device)
+    return

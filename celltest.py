@@ -8,13 +8,8 @@ from phidl import quickplot as qp
 
 import matplotlib.pyplot as plt
 
-# def test(self):
-#
-#     qp(self.draw())
-#     plt.pause(100)
-
 # idt=sketch.IDT("hey").test()
-
+# exec(open("decorate_abstract_method.py").read())
 # bus=sketch.Bus("hey")
 # test(bus)
 
@@ -34,7 +29,7 @@ import matplotlib.pyplot as plt
 # res.anchor.x_offset=0
 # res.test()
 
-res=sketch.FBERes('ress').test()
+# res=sketch.FBERes('ress').test()
 
 # via=sketch.Via('viass')
 # via.type='circle'
@@ -50,4 +45,9 @@ res=sketch.FBERes('ress').test()
 # gs.pitch=100
 # gs.test()
 
-# tfe=sketch.TFERes("hi").test()
+# tfe=sketch.TFERes("hi")
+# tfe.draw()
+# tfe.add_text(location='bottom')
+# tfe.add_text(location='top')
+# sketch.check_cell(tfe.cell)
+sketch.Routing().test()
