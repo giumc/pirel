@@ -247,34 +247,45 @@ class DUT(LayoutPart):
         dut=self.dut
         probe=self.probe
 
-        device=dut.draw()
-        probe=probe.draw()
+        device_cell=dut.draw()
+        probe_cell=probe.draw()
 
         cell=Device(name=self.name)
 
-        cell<<device
-        probe_ref=cell<<probe
+        cell<<device_cell
+        probe_ref=cell<<probe_cell
 
         ports=cell.get_ports()
+
         probe_ref.connect(ports[2],\
         destination=ports[1],overlap=-self.routing_width*3)
+
         ports=cell.get_ports()
+
         dut_port_bottom=ports[1]
         dut_port_top=ports[0]
 
-        bbox=device.bbox
+        bbox=device_cell.bbox
 
         if isinstance(self.probe,GSGProbe):
 
             probe_port_lx=ports[3]
             probe_port_center=ports[2]
             probe_port_rx=ports[4]
+
             routing_lx=self._route(bbox,probe_port_lx,dut_port_top,side='left')
             routing_c=self._route(bbox,probe_port_center,dut_port_bottom)
             routing_rx=self._route(bbox,probe_port_rx,dut_port_top,side='right')
-            cell<<routing_lx
+            routing_tot=pg.boolean(routing_lx,routing_rx,'or',layer=probe.layer)
+
+            cell<<routing_tot
             cell<<routing_c
-            cell<<routing_rx
+
+        del probe_cell,device_cell,routing_lx,routing_rx,routing_c,routing_tot
+
+        cell.flatten()
+        join(cell)
+        self.cell=cell
 
         return cell
 

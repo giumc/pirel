@@ -24,11 +24,11 @@ import matplotlib.pyplot as plt
 
 # gs=sketch.GSProbe("probs").test()
 
-# tfe=sketch.TFERes("hi")
-# tfe.draw()
-# tfe.add_text(location='bottom')
-# tfe.add_text(location='top')
-# sketch.check_cell(tfe.cell)
+tfe=sketch.TFERes("hi")
+tfe.draw()
+tfe.add_text(location='bottom')
+tfe.add_text(location='top')
+sketch.check_cell(tfe.cell)
 
 # r=sketch.Routing(side='left')
 #
@@ -37,8 +37,8 @@ import matplotlib.pyplot as plt
 # routing<<frame
 # sketch.check_cell(routing)
 
-d=sketch.DUT("hi")
-d.dut.idt.n=4
-d.dut.anchor.etch_choice=False
-d.routing_width=80
-d.test()
+# d=sketch.DUT("hi")
+# d.dut.idt.n=8
+# d.dut.anchor.etch_choice=False
+# d.routing_width=120
+# d.test()

@@ -38,7 +38,7 @@ class LayoutDefault:
 
         #EtchPit
 
-        self.EtchPit_x=20
+        self.EtchPit_x=self.Bussize.x/4
         self.EtchPitactive_area=Point(self.Bussize.x,self.IDT_y+self.IDTy_offset+2*self.Bussize.y)
         self.EtchPitlayer=self.layerEtch
 
@@ -201,7 +201,7 @@ def print_ports(device):
 
 def join(device):
 
-    return pg.union(device,by_layer=True, precision=0.001)
+    return pg.union(device,by_layer=True, precision=0.1)
 
 def get_corners(device):
 

@@ -523,12 +523,11 @@ class Routing(LayoutPart):
                 p3=p2+Point(0,2*self.trace_width+bbox.ysize)
                 p4=Point(destination.x,p3.y)
                 p5=Point(destination.x,destination.y)
-                # p6=Point(destination.x,destination.y)
 
                 list_points_lx=[p0(),p1(),p2(),p3(),p4(),p5()]
 
                 path_lx=pp.smooth(points=list_points_lx)
-
+                #right path
                 p1=p0+Point(0,y_overtravel)
                 p2=lr+Point(self.trace_width,-self.trace_width)
                 p3=p2+Point(0,2*self.trace_width+bbox.ysize)
@@ -538,6 +537,24 @@ class Routing(LayoutPart):
                 list_points_rx=[p0(),p1(),p2(),p3(),p4(),p5()]
 
                 path_rx=pp.smooth(points=list_points_rx)
+
+                if self.side=='auto':
+
+                    if path_lx.length()<path_rx.length():
+
+                        path=path_lx
+
+                    else:
+
+                        path=path_rx
+
+                elif self.side=='left':
+
+                    path=path_lx
+
+                elif self.side=='right':
+
+                    path=path_rx
 
             else:
 
@@ -572,7 +589,7 @@ class Routing(LayoutPart):
 
         x.add(layer=self.layer,width=self.trace_width)
 
-        path_cell=x.extrude(path)
+        path_cell=x.extrude(path,simplify=5)
 
         cell.absorb(cell<<path_cell)
         del path_cell
