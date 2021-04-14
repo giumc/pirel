@@ -17,6 +17,8 @@ from copy import copy,deepcopy
 import matplotlib.pyplot as plt
 import warnings
 
+from pandas import DataFrame
+
 ld=LayoutDefault()
 
 class LayoutPart(ABC) :
@@ -82,12 +84,19 @@ class LayoutPart(ABC) :
 
         self.cell=cell
 
-    def __set__(self,value):
+    def get_data_table(self):
 
-        import pdb; pdb.set_trace()
-        if not isinstance(value,LayoutPart):
+        return DataFrame({
+        'Type':"LayoutPart"},index=[self.name])
 
-            raise Exception ("Cannot set to non LayoutPart object")
+    @staticmethod
+    def _add_columns(d1,d2):
+
+        for cols in d2.columns:
+
+            d1[cols]=d2[cols].iat[0]
+
+        return d1
 
 class IDT(LayoutPart) :
 
@@ -163,6 +172,18 @@ class IDT(LayoutPart) :
 
         return Point(dx,dy)
 
+    def get_data_table(self):
+
+        t=LayoutPart.get_data_table(self)
+        t["Type"]="IDT",
+        t["Length"]=self.y,
+        t["Pitch"]=self.pitch,
+        t["Offset"]=self.y_offset,
+        t["Coverage"]=self.coverage,
+        t["N_fingers"]=self.n
+
+        return t
+
 class Bus(LayoutPart) :
 
     def __init__(self,*args,**kwargs):
@@ -204,11 +225,17 @@ class Bus(LayoutPart) :
 
         return cell
 
+    def get_data_table(self):
+
+        t=LayoutPart.get_data_table(self)
+        t["Type"]="Bus"
+        t["Size"]=self.size
+        t["Distance"]=self.distance
+        return t
+
 class EtchPit(LayoutPart) :
 
     def __init__(self,*args,**kwargs):
-
-
 
         super().__init__(*args,**kwargs)
 
@@ -259,11 +286,18 @@ class EtchPit(LayoutPart) :
 
         return etch
 
+    def get_data_table(self):
+
+        t=LayoutPart.get_data_table(self)
+        t["Type"]="EtchPit"
+        t["ActiveArea"]=self.active_area
+        t["Width"]=self.x
+
+        return t
+
 class Anchor(LayoutPart):
 
     def __init__(self,*args,**kwargs):
-
-
 
         super().__init__(*args,**kwargs)
 
@@ -334,12 +368,23 @@ class Anchor(LayoutPart):
 
         return cell
 
+    def get_data_table(self):
+
+        t=LayoutPart.get_data_table(self)
+        t["Size"]=self.size
+        t["Type"]="Anchor"
+        t["EtchMargin"]=self.etch_margin
+        t["EtchChoice"]=self.etch_choice
+        t["EtchWidth"]=self.etch_x
+        t["Offset"]=self.x_offset
+
+        return t
+
 class Via(LayoutPart):
 
     def __init__(self,*args,**kwargs):
 
         super().__init__(*args,**kwargs)
-
 
         self.layer=ld.Vialayer
         self.__type=ld.Viatype
@@ -412,6 +457,15 @@ class Via(LayoutPart):
 
         return cell
 
+    def get_data_table(self):
+
+        t=LayoutPart.get_data_table(self)
+        t["Type"]="Via"
+        t["Shape"]=self.type
+        t["Size"]=self.size
+
+        return t
+
 class Routing(LayoutPart):
 
     def __init__(self,side='auto',*args,**kwargs):
@@ -421,7 +475,7 @@ class Routing(LayoutPart):
         self.trace_width=ld.Routingtrace_width
         self.clearance=ld.Routingclearance
         self.ports=ld.Routingports
-        self.side=side
+        self.side='auto'
 
     def draw_frame(self):
 
@@ -688,13 +742,23 @@ class Routing(LayoutPart):
 
         return cell_frame
 
+    def get_data_table(self):
+
+        t=LayoutPart.get_data_table(self)
+        t["TraceWidth"]=self.trace_width
+        t["Type"]="Routing"
+        t["Clearance"]=self.clearance
+        t["Etch_Choice"]=self.etch_choice
+        t["Etch_Width"]=self.etch_x
+        t["Offset"]=self.x_offset
+
+        return t
+
 class GSProbe(LayoutPart):
 
     def __init__(self,*args,**kwargs):
 
         super().__init__(*args,**kwargs)
-
-
 
         self.layer=ld.GSProbelayer
         self.pitch=ld.GSProbepitch
@@ -741,6 +805,15 @@ class GSProbe(LayoutPart):
         self.cell=cell
 
         return cell
+
+    def get_data_table(self):
+
+        t=LayoutPart.get_data_table(self)
+        t["Size"]=self.size
+        t["Type"]="GSProbe"
+        t["Pitch"]=self.pitch
+
+        return t
 
 class GSGProbe(LayoutPart):
 
@@ -804,3 +877,62 @@ class GSGProbe(LayoutPart):
         self.cell=cell
 
         return cell
+
+    def get_data_table(self):
+
+        t=LayoutPart.get_data_table(self)
+        t["Size"]=self.size
+        t["Type"]="GSGProbe"
+        t["Pitch"]=self.pitch
+
+        return t
+
+class GSGProbe_LargePad(GSGProbe):
+
+    def __init__(self,*args,**kwargs):
+
+        super().__init__(*args,**kwargs)
+
+        self.groundsize=ld.GSGProbe_LargePadground_size
+
+    def draw(self):
+
+        cell=GSGProbe.draw(self)
+
+        groundpad_new=pg.rectangle(size=(self.groundsize,self.groundsize),\
+        layer=self.layer)
+
+        groundpad_lx=cell<<groundpad_new
+
+        port_lx=cell.get_ports()[1]
+
+        groundpad_lx.move(origin=groundpad_new.bbox[1],\
+        destination=(Point().from_iter(port_lx.midpoint)+Point(port_lx.width/2,0))())
+
+        groundpad_rx=cell<<groundpad_new
+
+        port_rx=cell.get_ports()[2]
+
+        _,_,ur,_=get_corners(groundpad_new)
+        groundpad_rx.move(origin=ur(),\
+        destination=(Point().from_iter(port_rx.midpoint)-Point(port_rx.width/2,0))())
+
+        port_c=cell.get_ports()[0]
+
+        cell.absorb(groundpad_lx)
+        cell.absorb(groundpad_rx)
+        join(cell)
+
+        self.cell=cell
+
+        return cell
+
+    def get_data_table(self):
+
+        t=LayoutPart.get_data_table(self)
+        t["Size"]=self.size
+        t["Type"]="GSProbe"
+        t["Pitch"]=self.pitch
+        t["GroundPadSize"]=self.groundsize
+
+        return t

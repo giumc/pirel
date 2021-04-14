@@ -5,6 +5,8 @@ from tools import *
 
 ld=LayoutDefault()
 
+import pandas as pd
+
 class LFERes(LayoutPart):
 
     def __init__(self,*args,**kwargs):
@@ -13,13 +15,13 @@ class LFERes(LayoutPart):
 
         self.layer=ld.IDTlayer
 
-        self.idt=IDT(name='ResIDT')
+        self.idt=IDT(name=self.name+'IDT')
 
-        self.bus=Bus(name='ResBus')
+        self.bus=Bus(name=self.name+'Bus')
 
-        self.etchpit=EtchPit(name='ResEtchPit')
+        self.etchpit=EtchPit(name=self.name+'EtchPit')
 
-        self.anchor=Anchor(name='ResAnchor')
+        self.anchor=Anchor(name=self.name+'Anchor')
 
     def draw(self):
 
@@ -124,6 +126,30 @@ class LFERes(LayoutPart):
 
         return cell_out
 
+    def get_data_table(self):
+
+        t_res=self.idt.get_data_table().drop(columns='Type')
+        t_res=t_res.rename(columns=lambda x: "IDT"+x)
+
+        t_bus=self.bus.get_data_table().drop(columns=['Type','Distance'])
+        t_bus=t_bus.rename(columns=lambda x: "Bus"+x)
+
+        t=self._add_columns(t_res,t_bus)
+
+        t_etch=self.etchpit.get_data_table().drop(columns=['Type','ActiveArea'])
+        t_etch=t_etch.rename(columns=lambda x: "Etch"+x)
+
+        t=self._add_columns(t,t_etch)
+
+        t_anchor=self.anchor.get_data_table().drop(columns=['Type','EtchWidth','Offset','EtchChoice'])
+        t_anchor=t_anchor.rename(columns=lambda x: "Anchor"+x)
+
+        t=self._add_columns(t,t_anchor)
+
+        t.index=[self.name]
+
+        return t
+
 class FBERes(LFERes):
 
     def __init__(self,*args,**kwargs):
@@ -203,7 +229,7 @@ class TFERes(LFERes):
 
         anchor_ref=cell<<anchor_bottom.draw()
         anchor_ref.rotate(angle=180)
-        # print_ports(cell)
+
         ports=cell.get_ports()
         anchor_ref.connect(ports[2],ports[0])
 

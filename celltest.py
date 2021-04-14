@@ -14,21 +14,24 @@ import matplotlib.pyplot as plt
 
 # anchor=sketch.Anchor("an").test()
 
-# res=sketch.LFERes('ress').test()
+# res=sketch.LFERes('ress')
+# res.test()
+# print(res.get_data_table().to_string())
 
 # res=sketch.FBERes('ress').test()
 
-# via=sketch.Via('viass').test()
+# via=sketchB.Via('viass').test()
 
-# gsg=sketch.GSGProbe("probs").test()
+# gsgB=sketch.GSGProbe("probs").test()
 
 # gs=sketch.GSProbe("probs").test()
 
-tfe=sketch.TFERes("hi")
-tfe.draw()
-tfe.add_text(location='bottom')
-tfe.add_text(location='top')
-sketch.check_cell(tfe.cell)
+tfe=sketch.TFERes("")
+print(tfe.get_data_table().to_string())
+# tfe.draw()
+# tfe.add_text(location='bottom')
+# tfe.add_text(location='top')
+# sketch.check_cell(tfe.cell)
 
 # r=sketch.Routing(side='left')
 #
@@ -37,6 +40,7 @@ sketch.check_cell(tfe.cell)
 # routing<<frame
 # sketch.check_cell(routing)
 
+# sketch.GSGProbe_LargePad().test()
 # d=sketch.DUT("hi")
 # d.dut.idt.n=8
 # d.dut.anchor.etch_choice=False

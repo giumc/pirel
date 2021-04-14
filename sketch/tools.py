@@ -46,7 +46,7 @@ class LayoutDefault:
         self.Anchorsize=Point(self.IDTpitch*self.IDTn/4,2*self.Bussize.y)
         self.Anchoretch_margin=Point(4,4)
         self.Anchoretch_x=self.EtchPit_x
-        self.Anchoretchx_offset=self.IDTpitch/2
+        self.Anchoretchx_offset=0
         self.Anchorlayer=self.IDTlayer
         self.Anchoretch_layer=self.EtchPitlayer
         self.Anchoretch_choice=True
@@ -92,6 +92,9 @@ class LayoutDefault:
 
         #DUT
         self.DUTrouting_width=self.Routingtrace_width
+
+        #GSGProbe_LargePad
+        self.GSGProbe_LargePadground_size=200
 
 class Point:
 
@@ -144,7 +147,7 @@ class Point:
 
     def __repr__(self):
 
-        return f"Point : x={self.x} y ={self.y}"
+        return f"P: x={self.x} y ={self.y}"
         # return f"{self.x}"
 
     def __call__(self):
