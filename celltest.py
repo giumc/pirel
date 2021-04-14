@@ -26,8 +26,8 @@ import matplotlib.pyplot as plt
 
 # gs=sketch.GSProbe("probs").test()
 
-tfe=sketch.TFERes("")
-print(tfe.get_data_table().to_string())
+tfe=sketch.TFERes("hi").test()
+# print(tfe.get_data_table().to_string())
 # tfe.draw()
 # tfe.add_text(location='bottom')
 # tfe.add_text(location='top')
