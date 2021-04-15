@@ -320,7 +320,7 @@ class Anchor(LayoutPart):
 
         etch_size_mid=Point(\
         (self.etch_x-2*self.etch_margin.x-self.size.x)/2,\
-        self.size.y-self.etch_margin.y)
+        self.size.y-2*self.etch_margin.y)
 
         offset=Point(self.x_offset,0)
 
@@ -335,14 +335,14 @@ class Anchor(LayoutPart):
             layer=self.etch_layer)
 
         etch_sx_ref=(cell<<etch_sx).move(origin=(0,0),\
-        destination=o())
+        destination=(o+Point(0,self.etch_margin.y))())
 
         anchor_transl=o+Point(etch_sx.size[0]+self.etch_margin.x,0)
 
         anchor_ref=(cell<<anchor).move(origin=(0,0),\
         destination=anchor_transl())
 
-        etchdx_transl=anchor_transl+Point(anchor.size[0]+self.etch_margin.x,0)
+        etchdx_transl=anchor_transl+Point(anchor.size[0]+self.etch_margin.x,self.etch_margin.y)
 
         etch_dx_ref=(cell<<etch_dx).move(origin=(0,0),\
         destination=etchdx_transl())
