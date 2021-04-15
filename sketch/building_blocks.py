@@ -496,6 +496,7 @@ class Routing(LayoutPart):
         ll,_,_,ur=get_corners(bbox)
 
         source=self.ports[0]
+
         destination=self.ports[1]
 
         if source.y>destination.y:
@@ -521,21 +522,13 @@ class Routing(LayoutPart):
 
             p0=Point().from_iter(source.midpoint)
 
-            if distance.x==0:
+            p1=p0+Point(0,distance.y/3)
 
-                p1=p0+distance
+            p2=p1+Point(distance.x,distance.y/3)
 
-                list_points=np.array([p0(), p1()])
+            p3=p2+Point(0,distance.y/3)
 
-            else:
-
-                p1=p0+Point(0,distance.y/3)
-
-                p2=p1+Point(distance.x,distance.y/3)
-
-                p3=p2+Point(0,distance.y/3)
-
-                list_points=np.array([p0(),p1(),p2(),p3()])
+            list_points=np.array([p0(),p1(),p2(),p3()])
 
             path=pp.smooth(points=list_points)
 
@@ -548,7 +541,7 @@ class Routing(LayoutPart):
             ll,lr,ul,ur=get_corners(bbox)
 
             if source.x>ll.x and source.x<lr.x: #source tucked inside clearance
-                # print('tucked')
+
                 if self.side=='auto':
 
                     source=self._add_taper(cell,source)
@@ -593,6 +586,7 @@ class Routing(LayoutPart):
 
                 path_rx=pp.smooth(points=list_points_rx)
 
+                print(self.side)
                 if self.side=='auto':
 
                     if path_lx.length()<path_rx.length():
@@ -611,11 +605,17 @@ class Routing(LayoutPart):
 
                     path=path_rx
 
+                else:
+
+                    raise Exception("Invalid option for side :{}".format(self.side))
+
             else:
 
-                # print('untucked')
+                # source is not tucked under the clearance
+
                 source=self._add_taper(cell,source)
                 destination=self._add_taper(cell,destination)
+
                 source.name='source'
                 destination.name='destination'
 
@@ -647,6 +647,9 @@ class Routing(LayoutPart):
         path_cell=x.extrude(path,simplify=5)
 
         cell.absorb(cell<<path_cell)
+
+        cell=join(cell)
+
         del path_cell
 
         del bbox
@@ -659,7 +662,7 @@ class Routing(LayoutPart):
 
         if not(port.width==self.trace_width):
 
-            taper=pg.taper(length=port.width,\
+            taper=pg.taper(length=port.width/4,\
             width1=port.width,width2=self.trace_width,\
             layer=self.layer)
 
@@ -685,7 +688,7 @@ class Routing(LayoutPart):
 
         if not(port.width==self.trace_width):
 
-            taper=pg.ramp(length=port.width,\
+            taper=pg.ramp(length=port.width/4,\
             width1=port.width,width2=self.trace_width,\
             layer=self.layer)
 
@@ -712,7 +715,7 @@ class Routing(LayoutPart):
 
             if not(port.width==self.trace_width):
 
-                taper=pg.ramp(length=port.width,\
+                taper=pg.ramp(length=port.width/4,\
                 width1=port.width,width2=self.trace_width,\
                 layer=self.layer)
 
@@ -922,7 +925,11 @@ class GSGProbe_LargePad(GSGProbe):
 
         cell.absorb(groundpad_lx)
         cell.absorb(groundpad_rx)
-        join(cell)
+
+        cell=join(cell)
+        cell.add_port(port=port_c)
+        cell.add_port(port=port_lx)
+        cell.add_port(port=port_rx)
 
         self.cell=cell
 
@@ -931,7 +938,7 @@ class GSGProbe_LargePad(GSGProbe):
     def get_data_table(self):
 
         t=GSGProbe.get_data_table(self)
-        
+
         t["GroundPadSize"]=self.groundsize
 
         return t

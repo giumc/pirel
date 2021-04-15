@@ -12,7 +12,7 @@ import matplotlib.pyplot as plt
 
 # pit=sketch.EtchPit("pitt").test()
 
-# anchor=sketch.Anchor("an").test()
+anchor=sketch.Anchor("an").test()
 
 # res=sketch.LFERes('ress')
 # res.test()
@@ -41,10 +41,13 @@ import matplotlib.pyplot as plt
 # sketch.check_cell(routing)
 
 # sketch.GSGProbe_LargePad().test()
-d=sketch.DUT("hi")
-d.dut.idt.n=8
-d.dut.anchor.etch_choice=False
-d.routing_width=120
-d.test()
 
-print(d.get_data_table().to_string())
+# d=sketch.DUT("hi")
+# d.dut.idt.n=8
+# # d.dut.anchor.etch_choice=False
+# d.routing_width=200
+# d.probe.size=sketch.Point(50,50)
+# d.probe.groundsize=300
+# d.test()
+
+# print(d.get_data_table().to_string())

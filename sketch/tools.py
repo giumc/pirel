@@ -204,7 +204,7 @@ def print_ports(device):
 
 def join(device):
 
-    return pg.union(device,by_layer=True, precision=0.1)
+    return pg.union(device,by_layer=True, precision=0.1,join_first=False)
 
 def get_corners(device):
 

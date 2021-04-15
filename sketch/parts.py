@@ -122,7 +122,7 @@ class LFERes(LayoutPart):
 
         del idt_cell,bus_cell,etch_cell,anchor_cell
 
-        self.cell=cell
+        self.cell=cell_out
 
         return cell_out
 
@@ -297,13 +297,14 @@ class DUT(LayoutPart):
 
         cell=Device(name=self.name)
 
+        probe_dut_distance=Point(0,50)
         cell<<device_cell
         probe_ref=cell<<probe_cell
 
         ports=cell.get_ports()
 
         probe_ref.connect(ports[2],\
-        destination=ports[1],overlap=-self.routing_width*3)
+        destination=ports[1],overlap=-probe_dut_distance.y)
 
         ports=cell.get_ports()
 
@@ -319,17 +320,25 @@ class DUT(LayoutPart):
             probe_port_rx=ports[4]
 
             routing_lx=self._route(bbox,probe_port_lx,dut_port_top,side='left')
-            routing_c=self._route(bbox,probe_port_center,dut_port_bottom)
+
+            routing_c=pg.taper(length=probe_dut_distance.y,\
+            width1=probe_port_center.width,\
+            width2=dut_port_bottom.width,layer=self.probe.layer)
+
             routing_rx=self._route(bbox,probe_port_rx,dut_port_top,side='right')
             routing_tot=pg.boolean(routing_lx,routing_rx,'or',layer=probe.layer)
 
             cell<<routing_tot
-            cell<<routing_c
+            center_routing=cell<<routing_c
+
+            center_routing.connect(center_routing.ports[2],destination=dut_port_bottom)
 
         del probe_cell,device_cell,routing_lx,routing_rx,routing_c,routing_tot
 
         cell.flatten()
-        join(cell)
+
+        cell=join(cell)
+
         self.cell=cell
 
         return cell
