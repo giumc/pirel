@@ -128,8 +128,11 @@ class LFERes(LayoutPart):
 
     def get_data_table(self):
 
-        t_res=self.idt.get_data_table().drop(columns='Type')
+        t_res=self.idt.get_data_table().drop(columns=['Type'])
+
         t_res=t_res.rename(columns=lambda x: "IDT"+x)
+
+        t_res['Type']='LFERes'
 
         t_bus=self.bus.get_data_table().drop(columns=['Type','Distance'])
         t_bus=t_bus.rename(columns=lambda x: "Bus"+x)
@@ -147,6 +150,8 @@ class LFERes(LayoutPart):
         t=self._add_columns(t,t_anchor)
 
         t.index=[self.name]
+
+        t=t.reindex(columns=['Type']+[col for col in t.columns if not col=='Type'])
 
         return t
 
@@ -181,13 +186,19 @@ class FBERes(LFERes):
 
         return cell
 
+    def get_data_table(self):
+
+        t=LFERes.get_data_table()
+        t['Type']='FBERes'
+
+        return # TEMP:
+
 class TFERes(LFERes):
 
     def __init__(self,*args,**kwargs):
 
         super().__init__(*args,**kwargs)
 
-        # self.idt_bottom=copy(self.idt)
         self.bottomlayer=ld.TFEResbottomlayer
 
     def draw(self):
@@ -258,6 +269,14 @@ class TFERes(LFERes):
 
         return cell
 
+    def get_data_table(self):
+
+        t=LFERes.get_data_table(self)
+
+        t["Type"]="TFERes"
+
+        return t
+
 class DUT(LayoutPart):
 
     def __init__(self,*args,**kwargs):
@@ -265,7 +284,7 @@ class DUT(LayoutPart):
         super().__init__(*args,**kwargs)
 
         self.dut=LFERes(name=self.name+'_DUT')
-        self.probe=GSGProbe(name=self.name+'_Probe')
+        self.probe=GSGProbe_LargePad(name=self.name+'_Probe')
         self.routing_width=ld.DUTrouting_width
 
     def draw(self):
@@ -326,3 +345,23 @@ class DUT(LayoutPart):
         del routing
         return cell
         # return routing.draw_frame()
+
+    def get_data_table(self):
+
+        t_dut=self.dut.get_data_table()
+
+        t_dut=t_dut.rename(columns={"Type":"DUT_Type"})
+
+        # print(t_dut.to_string())
+
+        t_probe=self.probe.get_data_table()
+        t_probe=t_probe.rename(columns=lambda x : "Probe"+x )
+
+        t=self._add_columns(t_dut,t_probe)
+        t["Type"]="DUT"
+
+        t.index=[self.name]
+
+        t=t.reindex(columns=["Type"]+[cols for cols in t.columns if not cols=="Type"])
+
+        return t

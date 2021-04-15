@@ -26,8 +26,8 @@ import matplotlib.pyplot as plt
 
 # gs=sketch.GSProbe("probs").test()
 
-tfe=sketch.TFERes("")
-print(tfe.get_data_table().to_string())
+# tfe=sketch.TFERes("")
+# print(tfe.get_data_table().to_string())
 # tfe.draw()
 # tfe.add_text(location='bottom')
 # tfe.add_text(location='top')
@@ -41,8 +41,10 @@ print(tfe.get_data_table().to_string())
 # sketch.check_cell(routing)
 
 # sketch.GSGProbe_LargePad().test()
-# d=sketch.DUT("hi")
-# d.dut.idt.n=8
-# d.dut.anchor.etch_choice=False
-# d.routing_width=120
-# d.test()
+d=sketch.DUT("hi")
+d.dut.idt.n=8
+d.dut.anchor.etch_choice=False
+d.routing_width=120
+d.test()
+
+print(d.get_data_table().to_string())

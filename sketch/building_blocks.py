@@ -84,6 +84,7 @@ class LayoutPart(ABC) :
 
         self.cell=cell
 
+    @abstractmethod
     def get_data_table(self):
 
         return DataFrame({
@@ -475,7 +476,7 @@ class Routing(LayoutPart):
         self.trace_width=ld.Routingtrace_width
         self.clearance=ld.Routingclearance
         self.ports=ld.Routingports
-        self.side='auto'
+        self.side=side
 
     def draw_frame(self):
 
@@ -929,10 +930,8 @@ class GSGProbe_LargePad(GSGProbe):
 
     def get_data_table(self):
 
-        t=LayoutPart.get_data_table(self)
-        t["Size"]=self.size
-        t["Type"]="GSProbe"
-        t["Pitch"]=self.pitch
+        t=GSGProbe.get_data_table(self)
+        
         t["GroundPadSize"]=self.groundsize
 
         return t
