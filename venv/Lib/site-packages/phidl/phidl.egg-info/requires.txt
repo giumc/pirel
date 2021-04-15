@@ -1,0 +1,4 @@
+six
+gdspy>=1.5
+numpy
+matplotlib
