@@ -1,7 +1,11 @@
-from phidl.device_layout import Device, Port, DeviceReference
+from phidl.device_layout import Device, Port, DeviceReference, Group
+
 import phidl.geometry as pg
+
 from phidl import set_quickplot_options
+
 from phidl import quickplot as qp
+
 from phidl import Path,CrossSection
 
 import os
@@ -11,13 +15,18 @@ import phidl.path as pp
 import gdspy
 
 import numpy as np
+
 from abc import ABC, abstractmethod
-from tools import *
+
 from copy import copy,deepcopy
+
 import matplotlib.pyplot as plt
+
 import warnings
 
 from pandas import DataFrame
+
+from tools import *
 
 ld=LayoutDefault()
 
@@ -34,12 +43,12 @@ class LayoutPart(ABC) :
         self.cell=Device()
 
     @abstractmethod
-    def draw(self):
+    def draw(self,*args,**kwargs):
         pass
 
-    def test(self):
+    def test(self,*args,**kwargs):
         set_quickplot_options(blocking=True)
-        qp(self.draw())
+        qp(self.draw(*args,**kwargs))
         return
 
     def test_gds(self):
@@ -48,7 +57,7 @@ class LayoutPart(ABC) :
         gdspy.LayoutViewer(lib)
 
     def add_text(self,location='top',size=25,\
-        text='default',font='BebasNeue-Regular.otf',*args,**kwargs):
+        text='default',font='BebasNeue-Regular.otf',layer=ld.layerTop):
 
         package_directory = os.path.dirname(os.path.abspath(__file__))
 
@@ -59,7 +68,7 @@ class LayoutPart(ABC) :
 
         ll,lr,ul,ur=get_corners(cell)
 
-        text_cell=pg.text(size=size,text=text,font=font,*args,**kwargs)
+        text_cell=pg.text(size=size,text=text,font=font,layer=layer)
 
         text_y=text_cell.ysize
 
@@ -85,7 +94,7 @@ class LayoutPart(ABC) :
         self.cell=cell
 
     @abstractmethod
-    def get_data_table(self):
+    def export_params(self):
 
         return DataFrame({
         'Type':"LayoutPart"},index=[self.name])
@@ -98,6 +107,22 @@ class LayoutPart(ABC) :
             d1[cols]=d2[cols].iat[0]
 
         return d1
+
+    @abstractmethod
+    def import_params(self,df):
+
+        if len(df.index)>1:
+
+            raise Exception("Single Row DataFrame is used to load parameters")
+
+        self.name=df.index.values[0]
+
+    def print_params_name(self):
+
+        df=self.export_params()
+
+        print("List of parameters for instance of {}\n".format(self.__class__.__name__))
+        print(*df.columns.values,sep='\n')
 
 class IDT(LayoutPart) :
 
@@ -173,9 +198,9 @@ class IDT(LayoutPart) :
 
         return Point(dx,dy)
 
-    def get_data_table(self):
+    def export_params(self):
 
-        t=LayoutPart.get_data_table(self)
+        t=LayoutPart.export_params(self)
         t["Type"]="IDT",
         t["Length"]=self.y,
         t["Pitch"]=self.pitch,
@@ -184,6 +209,36 @@ class IDT(LayoutPart) :
         t["N_fingers"]=self.n
 
         return t
+
+    def import_params(self,df):
+
+        LayoutPart.import_params(self,df)
+
+        for cols in df.columns:
+
+            if cols=='Y':
+
+                self.y=df[cols].iat[0]
+
+            elif cols=='Pitch':
+
+                self.pitch=df[cols].iat[0]
+
+            elif cols in {'Offset','offset','y_offset','Y_Offset','Y_offset'}:
+
+                self.y_offset=df[cols].iat[0]
+
+            elif cols=='Coverage':
+
+                self.coverage=df[cols].iat[0]
+
+            elif cols in {'n','N','N_fingers','n_fingers'}:
+
+                self.n=df[cols].iat[0]
+
+            elif cols=='Layer':
+
+                self.n=df[cols].iat[0]
 
 class Bus(LayoutPart) :
 
@@ -226,13 +281,31 @@ class Bus(LayoutPart) :
 
         return cell
 
-    def get_data_table(self):
+    def export_params(self):
 
-        t=LayoutPart.get_data_table(self)
+        t=LayoutPart.export_params(self)
         t["Type"]="Bus"
         t["Size"]=self.size
         t["Distance"]=self.distance
         return t
+
+    def import_params(self,df):
+
+        LayoutPart.import_params(self,df)
+
+        for cols in df.columns:
+
+            if cols=='Size':
+
+                self.size=df[cols].iat[0]
+
+            elif cols=='Distance':
+
+                self.distance=df[cols].iat[0]
+
+            elif cols=='Layer':
+
+                self.layer=df[cols].iat[0]
 
 class EtchPit(LayoutPart) :
 
@@ -287,14 +360,32 @@ class EtchPit(LayoutPart) :
 
         return etch
 
-    def get_data_table(self):
+    def export_params(self):
 
-        t=LayoutPart.get_data_table(self)
+        t=LayoutPart.export_params(self)
         t["Type"]="EtchPit"
         t["ActiveArea"]=self.active_area
         t["Width"]=self.x
 
         return t
+
+    def import_params(self,df):
+
+        LayoutPart.import_params(self,df)
+
+        for cols in df.columns:
+
+            if cols in {'active_area', 'activearea','ActiveArea','Active_Area'}:
+
+                self.active_area=df[cols].iat[0]
+
+            elif cols in {'width','EtchWidth','X','x','Etch_Width','etch_width'}:
+
+                self.x=df[cols].iat[0]
+
+            elif cols=='Layer':
+
+                self.layer=df[cols].iat[0]
 
 class Anchor(LayoutPart):
 
@@ -369,9 +460,9 @@ class Anchor(LayoutPart):
 
         return cell
 
-    def get_data_table(self):
+    def export_params(self):
 
-        t=LayoutPart.get_data_table(self)
+        t=LayoutPart.export_params(self)
         t["Size"]=self.size
         t["Type"]="Anchor"
         t["EtchMargin"]=self.etch_margin
@@ -380,6 +471,32 @@ class Anchor(LayoutPart):
         t["Offset"]=self.x_offset
 
         return t
+
+    def import_params(self,df):
+
+        LayoutPart.import_params(self,df)
+
+        for cols in df.columns:
+
+            if cols=='Size':
+
+                self.size=df[cols].iat[0]
+
+            elif cols in {'etch_margin','EtchMargin','Etch_Margin','etchmargin'}:
+
+                self.etch_margin=df[cols].iat[0]
+
+            elif cols in {'EtchChoice','etch_choice','Etch_Choice','etch_choice'}:
+
+                self.etch_choice=df[cols].iat[0]
+
+            elif cols in {'Offset','offset','x_offset','X_Offset'}:
+
+                self.x_offset=df[cols].iat[0]
+
+            elif cols =='Layer':
+
+                self.layer=df[cols].iat[0]
 
 class Via(LayoutPart):
 
@@ -458,14 +575,32 @@ class Via(LayoutPart):
 
         return cell
 
-    def get_data_table(self):
+    def export_params(self):
 
-        t=LayoutPart.get_data_table(self)
+        t=LayoutPart.export_params(self)
         t["Type"]="Via"
         t["Shape"]=self.type
         t["Size"]=self.size
 
         return t
+
+    def import_params(self,df):
+
+        LayoutPart.import_params(self,df)
+
+        for cols in df.columns:
+
+            if cols=='Size':
+
+                self.size=df[cols].iat[0]
+
+            if cols=='Shape':
+
+                self.shape=df[cols].iat[0]
+
+            elif cols =='Layer':
+
+                self.layer=df[cols].iat[0]
 
 class Routing(LayoutPart):
 
@@ -511,8 +646,8 @@ class Routing(LayoutPart):
 
                     raise Exception("Routing error: non-hindered routing needs +90 -> -90 oriented ports")
 
-            source=self._add_taper(cell,source)
-            destination=self._add_taper(cell,destination)
+            source=self._add_taper(cell,source,len=taper_len)
+            destination=self._add_taper(cell,destination,len=taper_len)
 
             source.name='source'
             destination.name='destination'
@@ -534,28 +669,32 @@ class Routing(LayoutPart):
 
         elif destination.y>=ur.y : #destination is above clearance
 
+            y_overtravel=ll.y-source.midpoint.y-self.trace_width
+
+            taper_len=min([ll.y-y_overtravel-source.midpoint.y,self.trace_width/4])
+
             if not(destination.orientation==source.orientation):
 
                 raise Exception("Routing error: non-hindered routing needs +90 -> -90 oriented ports")
 
             ll,lr,ul,ur=get_corners(bbox)
 
-            if source.x>ll.x and source.x<lr.x: #source tucked inside clearance
+            if source.x+source.width/2>ll.x and source.x-source.width/2<lr.x: #source tucked inside clearance
 
                 if self.side=='auto':
 
-                    source=self._add_taper(cell,source)
-                    destination=self._add_taper(cell,destination)
+                    source=self._add_taper(cell,source,len=taper_len)
+                    destination=self._add_taper(cell,destination,len=taper_len)
 
                 elif self.side=='left':
 
-                    source=self._add_ramp_lx(cell,source)
-                    destination=self._add_ramp_lx(cell,destination)
+                    source=self._add_ramp_lx(cell,source,len=taper_len)
+                    destination=self._add_ramp_lx(cell,destination,len=taper_len)
 
                 elif self.side=='right':
 
-                    source=self._add_ramp_rx(cell,source)
-                    destination=self._add_ramp_rx(cell,destination)
+                    source=self._add_ramp_rx(cell,source,len=taper_len)
+                    destination=self._add_ramp_rx(cell,destination,len=taper_len)
 
                 source.name='source'
                 destination.name='destination'
@@ -564,7 +703,6 @@ class Routing(LayoutPart):
 
                 center_box=Point().from_iter(bbox.center)
 
-                y_overtravel=ll.y-p0.y-self.trace_width
                 #left path
                 p1=p0+Point(0,y_overtravel)
                 p2=ll-Point(self.trace_width,self.trace_width)
@@ -586,7 +724,6 @@ class Routing(LayoutPart):
 
                 path_rx=pp.smooth(points=list_points_rx)
 
-                print(self.side)
                 if self.side=='auto':
 
                     if path_lx.length()<path_rx.length():
@@ -613,8 +750,8 @@ class Routing(LayoutPart):
 
                 # source is not tucked under the clearance
 
-                source=self._add_taper(cell,source)
-                destination=self._add_taper(cell,destination)
+                source=self._add_taper(cell,source,len=self.trace_width/4)
+                destination=self._add_taper(cell,destination,len=self.trace_width/4)
 
                 source.name='source'
                 destination.name='destination'
@@ -634,7 +771,7 @@ class Routing(LayoutPart):
 
                 list_points=[p0(),p1(),p2(),p3()]
 
-                path=pp.smooth(points=list_points)
+                path=pp.smooth(points=list_points)#source tucked inside clearance
 
         else:
 
@@ -658,11 +795,11 @@ class Routing(LayoutPart):
 
         return cell
 
-    def _add_taper(self,cell,port):
+    def _add_taper(self,cell,port,len=10):
 
         if not(port.width==self.trace_width):
 
-            taper=pg.taper(length=port.width/4,\
+            taper=pg.taper(length=len,\
             width1=port.width,width2=self.trace_width,\
             layer=self.layer)
 
@@ -684,11 +821,11 @@ class Routing(LayoutPart):
 
         return port
 
-    def _add_ramp_lx(self,cell,port):
+    def _add_ramp_lx(self,cell,port,len=10):
 
         if not(port.width==self.trace_width):
 
-            taper=pg.ramp(length=port.width/4,\
+            taper=pg.ramp(length=len,\
             width1=port.width,width2=self.trace_width,\
             layer=self.layer)
 
@@ -711,11 +848,11 @@ class Routing(LayoutPart):
 
         return port
 
-    def _add_ramp_rx(self,cell,port):
+    def _add_ramp_rx(self,cell,port,len=10):
 
             if not(port.width==self.trace_width):
 
-                taper=pg.ramp(length=port.width/4,\
+                taper=pg.ramp(length=len,\
                 width1=port.width,width2=self.trace_width,\
                 layer=self.layer)
 
@@ -746,17 +883,42 @@ class Routing(LayoutPart):
 
         return cell_frame
 
-    def get_data_table(self):
+    def export_params(self):
 
-        t=LayoutPart.get_data_table(self)
+        t=LayoutPart.export_params(self)
         t["TraceWidth"]=self.trace_width
         t["Type"]="Routing"
         t["Clearance"]=self.clearance
-        t["Etch_Choice"]=self.etch_choice
-        t["Etch_Width"]=self.etch_x
-        t["Offset"]=self.x_offset
+        t["Ports"]=self.ports
+        t["Side"]=self.side
 
         return t
+
+    def import_params(self,df):
+
+        LayoutPart.import_params(self,df)
+
+        for cols in df.columns:
+
+            if cols=='TraceWidth':
+
+                self.trace_width=df[cols].iat[0]
+
+            elif cols=='Clearance':
+
+                self.clearance=df[cols].iat[0]
+
+            elif cols=='Ports':
+
+                self.ports=df[cols].iat[0]
+
+            elif cols=='Side':
+
+                self.side=df[cols].iat[0]
+
+            elif cols =='Layer':
+
+                self.layer=df[cols].iat[0]
 
 class GSProbe(LayoutPart):
 
@@ -810,22 +972,38 @@ class GSProbe(LayoutPart):
 
         return cell
 
-    def get_data_table(self):
+    def export_params(self):
 
-        t=LayoutPart.get_data_table(self)
+        t=LayoutPart.export_params(self)
         t["Size"]=self.size
         t["Type"]="GSProbe"
         t["Pitch"]=self.pitch
 
         return t
 
+    def import_params(self,df):
+
+        LayoutPart.import_params(self,df)
+
+        for cols in df.columns:
+
+            if cols=='Size':
+
+                self.size=df[cols].iat[0]
+
+            elif cols =='Pitch':
+
+                self.pitch=df[cols].iat[0]
+
+            elif cols =='Layer':
+
+                self.layer=df[cols].iat[0]
+
 class GSGProbe(LayoutPart):
 
     def __init__(self,*args,**kwargs):
 
         super().__init__(*args,**kwargs)
-
-
 
         self.layer=ld.GSGProbelayer
         self.pitch=ld.GSGProbepitch
@@ -882,14 +1060,32 @@ class GSGProbe(LayoutPart):
 
         return cell
 
-    def get_data_table(self):
+    def export_params(self):
 
-        t=LayoutPart.get_data_table(self)
+        t=LayoutPart.export_params(self)
         t["Size"]=self.size
         t["Type"]="GSGProbe"
         t["Pitch"]=self.pitch
 
         return t
+
+    def import_params(self,df):
+
+        LayoutPart.import_params(self,df)
+
+        for cols in df.columns:
+
+            if cols=='Size':
+
+                self.size=df[cols].iat[0]
+
+            elif cols =='Pitch':
+
+                self.pitch=df[cols].iat[0]
+
+            elif cols =='Layer':
+
+                self.layer=df[cols].iat[0]
 
 class GSGProbe_LargePad(GSGProbe):
 
@@ -935,10 +1131,20 @@ class GSGProbe_LargePad(GSGProbe):
 
         return cell
 
-    def get_data_table(self):
+    def export_params(self):
 
-        t=GSGProbe.get_data_table(self)
+        t=GSGProbe.export_params(self)
 
         t["GroundPadSize"]=self.groundsize
 
         return t
+
+    def import_params(self,df):
+
+        GSGProbe.import_params(self,df)
+
+        for cols in df.columns:
+
+            if cols=={'GroundPadSize','ground_pad_size','ground_size'}:
+
+                self.groundsize=df[cols].iat[0]

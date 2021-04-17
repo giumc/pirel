@@ -96,6 +96,14 @@ class LayoutDefault:
         #GSGProbe_LargePad
         self.GSGProbe_LargePadground_size=200
 
+        #DUTArray
+
+        self.Arrayspacing=50
+        self.Arrayparam_name="Pitch"
+        self.Arrayparam_value=range(1,4)
+        self.Arraylabels_top=["Pitch"+str(x) for x in self.Arrayparam_value]
+        self.Arraylabels_bottom=[str(x) for x in self.Arrayparam_value]
+
 class Point:
 
     def __init__(self,x=0,y=0):
@@ -220,3 +228,15 @@ def check_cell(device):
 
     set_quickplot_options(blocking=True)
     qp(device)
+
+def if_match_import(obj,col,tag,df):
+
+    from re import search
+
+    match=search(tag,col)
+
+    if match and match.start()==0:
+
+        varname=col.replace(tag,"")
+        # print(varname)
+        obj.import_params(df.rename(columns={col:varname}))

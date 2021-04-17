@@ -16,7 +16,7 @@ import matplotlib.pyplot as plt
 
 # res=sketch.LFERes('ress')
 # res.test()
-# print(res.get_data_table().to_string())
+# print(res.export_params().to_string())
 
 # res=sketch.FBERes('ress').test()
 
@@ -26,8 +26,20 @@ import matplotlib.pyplot as plt
 
 # gs=sketch.GSProbe("probs").test()
 
-# tfe=sketch.TFERes("")
-# print(tfe.get_data_table().to_string())
+# tfe=sketch.LFERes("bu")
+# tfe.test()
+
+# print(tfe.export_params().to_string())
+
+# df=tfe.export_params()
+# print(df)
+# df["IDTPitch"]=50
+
+# print(*df.columns.values,sep='\n')
+
+# tfe.import_params(df)
+
+# tfe.test()
 # tfe.draw()
 # tfe.add_text(location='bottom')
 # tfe.add_text(location='top')
@@ -44,10 +56,26 @@ import matplotlib.pyplot as plt
 
 d=sketch.DUT("hi")
 d.dut.idt.n=8
-# d.dut.anchor.etch_choice=False
-d.routing_width=200
-d.probe.size=sketch.Point(50,50)
-d.probe.groundsize=300
+# # d.dut.anchor.etch_choice=False
+# d.routing_width=200
+# d.probe.size=sketch.Point(50,50)
+# d.probe.groundsize=300
+df=d.export_params()
 d.test()
-
-# print(d.get_data_table().to_string())
+df["IDTN_fingers"]=3
+# df["BusSize"]=sketch.Point(50,200)
+df["AnchorSize"]=sketch.Point(300,50)
+df["AnchorEtchMargin"]=sketch.Point(5,10)
+d.import_params(df)
+d.test()
+#
+# dut=d.dut
+#
+# dut.test()
+#
+# df=dut.export_params()
+# df["BusSize"]=sketch.Point(100,400)
+# df=dut.import_params(df)
+# anchor=dut.test()
+# print(*df.columns.values,sep='\n')
+# print(d.export_params().to_string())

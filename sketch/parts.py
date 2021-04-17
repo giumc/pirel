@@ -1,4 +1,3 @@
-
 from building_blocks import *
 
 from tools import *
@@ -6,6 +5,8 @@ from tools import *
 ld=LayoutDefault()
 
 import pandas as pd
+
+import warnings
 
 class LFERes(LayoutPart):
 
@@ -74,9 +75,16 @@ class LFERes(LayoutPart):
 
         cell.absorb(bus_ref)
 
+        # return cell
+
         self.anchor.etch_x=self.etchpit.x*2+self.etchpit.active_area.x
 
         self.anchor.layer=self.layer
+
+        if self.anchor.size.x>self.bus.size.x:
+
+            self.anchor.size=Point(self.bus.size.x,self.anchor.size.y)
+            warnings.warn("Anchor is too wide, reduced to Bus width size")
 
         anchor_cell=self.anchor.draw()
 
@@ -126,25 +134,25 @@ class LFERes(LayoutPart):
 
         return cell_out
 
-    def get_data_table(self):
+    def export_params(self):
 
-        t_res=self.idt.get_data_table().drop(columns=['Type'])
+        t_res=self.idt.export_params().drop(columns=['Type'])
 
         t_res=t_res.rename(columns=lambda x: "IDT"+x)
 
         t_res['Type']='LFERes'
 
-        t_bus=self.bus.get_data_table().drop(columns=['Type','Distance'])
+        t_bus=self.bus.export_params().drop(columns=['Type','Distance'])
         t_bus=t_bus.rename(columns=lambda x: "Bus"+x)
 
         t=self._add_columns(t_res,t_bus)
 
-        t_etch=self.etchpit.get_data_table().drop(columns=['Type','ActiveArea'])
+        t_etch=self.etchpit.export_params().drop(columns=['Type','ActiveArea'])
         t_etch=t_etch.rename(columns=lambda x: "Etch"+x)
 
         t=self._add_columns(t,t_etch)
 
-        t_anchor=self.anchor.get_data_table().drop(columns=['Type','EtchWidth','Offset','EtchChoice'])
+        t_anchor=self.anchor.export_params().drop(columns=['Type','EtchWidth','Offset','EtchChoice'])
         t_anchor=t_anchor.rename(columns=lambda x: "Anchor"+x)
 
         t=self._add_columns(t,t_anchor)
@@ -154,6 +162,19 @@ class LFERes(LayoutPart):
         t=t.reindex(columns=['Type']+[col for col in t.columns if not col=='Type'])
 
         return t
+
+    def import_params(self,df):
+
+        from re import search
+
+        LayoutPart.import_params(self,df)
+
+        for col in df.columns:
+
+            if_match_import(self.idt,col,"IDT",df)
+            if_match_import(self.bus,col,"Bus",df)
+            if_match_import(self.etchpit,col,"Etch",df)
+            if_match_import(self.anchor,col,"Anchor",df)
 
 class FBERes(LFERes):
 
@@ -186,12 +207,16 @@ class FBERes(LFERes):
 
         return cell
 
-    def get_data_table(self):
+    def export_params(self):
 
-        t=LFERes.get_data_table()
+        t=LFERes.export_params()
         t['Type']='FBERes'
 
-        return # TEMP:
+        return t
+
+    def import_params(self,df):
+
+        LFERes.import_params(self,df)
 
 class TFERes(LFERes):
 
@@ -269,13 +294,17 @@ class TFERes(LFERes):
 
         return cell
 
-    def get_data_table(self):
+    def export_params(self):
 
-        t=LFERes.get_data_table(self)
+        t=LFERes.export_params(self)
 
         t["Type"]="TFERes"
 
         return t
+
+    def import_params(self,df):
+
+        LFERes.import_params(self,df)
 
 class DUT(LayoutPart):
 
@@ -297,7 +326,7 @@ class DUT(LayoutPart):
 
         cell=Device(name=self.name)
 
-        probe_dut_distance=Point(0,50)
+        probe_dut_distance=Point(0,25)
         cell<<device_cell
         probe_ref=cell<<probe_cell
 
@@ -355,22 +384,35 @@ class DUT(LayoutPart):
         return cell
         # return routing.draw_frame()
 
-    def get_data_table(self):
+    def export_params(self):
 
-        t_dut=self.dut.get_data_table()
+        t_dut=self.dut.export_params()
 
         t_dut=t_dut.rename(columns={"Type":"DUT_Type"})
 
-        # print(t_dut.to_string())
-
-        t_probe=self.probe.get_data_table()
+        t_probe=self.probe.export_params()
         t_probe=t_probe.rename(columns=lambda x : "Probe"+x )
 
         t=self._add_columns(t_dut,t_probe)
         t["Type"]="DUT"
+        t["RoutingWidth"]=self.routing_width
 
         t.index=[self.name]
 
         t=t.reindex(columns=["Type"]+[cols for cols in t.columns if not cols=="Type"])
 
         return t
+
+    def import_params(self,df):
+
+        LayoutPart.import_params(self,df)
+
+        self.dut.import_params(df)
+
+        for col in df.columns:
+
+            if_match_import(self.probe,col,"Probe",df)
+
+            if col in {"routing_width","RoutingWidth","Routing_Width"}:
+
+                self.routing_width=df[col].iat[0]
