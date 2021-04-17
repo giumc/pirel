@@ -54,20 +54,20 @@ import matplotlib.pyplot as plt
 
 # sketch.GSGProbe_LargePad().test()
 
-d=sketch.DUT("hi")
-d.dut.idt.n=8
-# # d.dut.anchor.etch_choice=False
-# d.routing_width=200
-# d.probe.size=sketch.Point(50,50)
-# d.probe.groundsize=300
-df=d.export_params()
-d.test()
-df["IDTN_fingers"]=3
-# df["BusSize"]=sketch.Point(50,200)
-df["AnchorSize"]=sketch.Point(300,50)
-df["AnchorEtchMargin"]=sketch.Point(5,10)
-d.import_params(df)
-d.test()
+# d=sketch.DUT("hi")
+# d.dut.idt.n=8
+# # # d.dut.anchor.etch_choice=False
+# # d.routing_width=200
+# # d.probe.size=sketch.Point(50,50)
+# # d.probe.groundsize=300
+# df=d.export_params()
+# d.test()
+# df["IDTN_fingers"]=3
+# # df["BusSize"]=sketch.Point(50,200)
+# df["AnchorSize"]=sketch.Point(300,50)
+# df["AnchorEtchMargin"]=sketch.Point(5,10)
+# d.import_params(df)
+# d.test()
 #
 # dut=d.dut
 #

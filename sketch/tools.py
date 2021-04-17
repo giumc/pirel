@@ -99,10 +99,9 @@ class LayoutDefault:
         #DUTArray
 
         self.Arrayspacing=50
-        self.Arrayparam_name="Pitch"
-        self.Arrayparam_value=range(1,4)
-        self.Arraylabels_top=["Pitch"+str(x) for x in self.Arrayparam_value]
-        self.Arraylabels_bottom=[str(x) for x in self.Arrayparam_value]
+        self.Arrayparam={"IDTPitch":[_ for _ in range(1,4)]}
+        self.Arraylabels_top=["Pitch"+str(x) for x in self.Arrayparam.values()]
+        self.Arraylabels_bottom=[str(x) for x in self.Arrayparam.values()]
 
 class Point:
 

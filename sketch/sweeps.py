@@ -1,14 +1,76 @@
 from building_blocks import *
 
+class LayoutParam():
+
+    def __init__(self,pars):
+
+        self.default_value=pars
+
+    def __set_name__(self,obj,name):
+
+        self.private_name="_"+name
+
+    def __get__(self,obj,objtype=None):
+
+        if not hasattr(obj,self.private_name):
+
+            return self.default_value
+
+        else:
+
+            return getattr(obj,self.private_name)
+
+    def __set__(self,obj,value):
+
+        if not isinstance(obj, LayoutPart):
+
+            raise ValueError("{} needs to derive from LayoutPart".format(obj))
+
+        else:
+
+            self._set_valid_names(obj.get_param_names())
+
+            if not isinstance(value,dict):
+
+                raise ValueError("{} needs to be a dict".format(value))
+
+            else:
+
+                if not all([names in self._valid_names for names in value.keys()]):
+
+                    raise ValueError("Lists length doesn't match")
+
+                else:
+
+                    it = iter(value.values)
+
+                    the_len = len(next(it))
+
+                    if not all(len(x)==the_len for x in it):
+
+                        raise ValueError("All params need to have same length")
+
+                    else:
+
+                        setattr(obj,self.private_name,value)
+
+    def _set_valid_names(self,opts):
+
+        if isinstance(opts, str):
+
+            opts=list(opts)
+
+        self._valid_names=opts
+
 class ParametricArray(LayoutPart):
+
+    param=LayoutParam(ld.Arrayparam)
 
     def __init__(self,*args,**kwargs):
 
         super().__init__(*args,**kwargs)
         self.device=IDT(self.name)
         self.spacing=ld.Arrayspacing
-        self.param_name=ld.Arrayparam_name
-        self.param_value=ld.Arrayparam_value
         self.labels_top=ld.Arraylabels_top
         self.labels_bottom=ld.Arraylabels_bottom
 
@@ -29,50 +91,50 @@ class ParametricArray(LayoutPart):
         else:
 
             self._device=value
-            
+
             self._device.name=self.name
 
-    @property
-    def param_name(self):
-
-        if not all( [names in self.get_available_params() for names in self._param_name]):
-            # import pdb; pdb.set_trace()
-            raise Exception("Cannot continue as param_name is invalid")
-
-        else:
-
-            return self._param_name
-
-    @param_name.setter
-    def param_name(self,name):
-
-        if isinstance(name,str):
-
-            name=[name]
-
-        if not all([names in self.get_available_params() for names in name]) :
-            print(*self.get_available_params())
-            raise Exception("{}\n".format("Bad entries for param_name property"))
-
-        else:
-
-            self._param_name= name
-
-    @property
-    def param_value(self):
-
-            return self._param_value
-
-    @param_value.setter
-    def param_value(self,value):
-
-        import numpy as np
-
-        if not isinstance(value,np.ndarray):
-
-            value=np.array(value)
-
-        self._param_value=value
+    # @property
+    # def param_name(self):
+    #
+    #     if not all( [names in self.get_available_params() for names in self._param_name]):
+    #         # import pdb; pdb.set_trace()
+    #         raise Exception("Cannot continue as param_name is invalid")
+    #
+    #     else:
+    #
+    #         return self._param_name
+    #
+    # @param_name.setter
+    # def param_name(self,name):
+    #
+    #     if isinstance(name,str):
+    #
+    #         name=[name]
+    #
+    #     if not all([names in self.get_available_params() for names in name]) :
+    #         print(*self.get_available_params())
+    #         raise Exception("{}\n".format("Bad entries for param_name property"))
+    #
+    #     else:
+    #
+    #         self._param_name= name
+    #
+    # @property
+    # def param_value(self):
+    #
+    #         return self._param_value
+    #
+    # @param_value.setter
+    # def param_value(self,value):
+    #
+    #     import numpy as np
+    #
+    #     if not isinstance(value,np.ndarray):
+    #
+    #         value=np.array(value)
+    #
+    #     self._param_value=value
 
     def get_available_params(self):
 
@@ -81,13 +143,13 @@ class ParametricArray(LayoutPart):
     def export_params(self):
 
         df=self.device.export_params()
-        warnings.warn("ParamArray.export_params() returned from device")
+        # warnings.warn("ParamArray.export_params() returned from device")
         return df
 
     def import_params(self,df):
 
         self.device.import_params(df)
-        warnings.warn("ParamArray.import_params() passed to device")
+        # warnings.warn("ParamArray.import_params() passed to device")
 
     def draw(self,text_size=25,text_font="BebasNeue-Regular.otf",text_layer=None):
 
@@ -95,84 +157,89 @@ class ParametricArray(LayoutPart):
 
         df=device.export_params()
 
-        param_name=self.param_name
 
-        param_value=self.param_value
 
-        if param_value.ndim>1:
+        # param_name=[self.param.keys()]
+        #
+        # param_value=np.array(self.param.values())
+        #
+        # if param_value.ndim>1:
+        #
+        #     n_cells = param_value.shape[1]
+        #
+        # else:
+        #
+        #     n_cells = len(param_value)
+        #
+        # master_cell=Device(name=self.name)
+        #
+        # cells=list()
+        #
+        # for i_val in range(n_cells):
+        #
+        #     # import pdb ; pdb.set_trace()
+        #
+        #     if param_value.ndim>1:
+        #
+        #         for i_name,name in enumerate(param_name):
+        #
+        #             df[name]=param_value[i_name,i_val]
+        #
+        #     else:
+        #
+        #         df[param_name]=param_value[i_val]
+        #
 
-            n_cells = param_value.shape[1]
+        param=self.param
 
-        else:
+        for index in range(len(param[list(param.keys())[0]])):
 
-            n_cells = len(param_value)
+            # import pdb; pdb.set_trace()
 
-        master_cell=Device(name=self.name)
+            for name,value in param.items():
 
-        cells=list()
+                print('{} ->{}'.format(name,value[index]))
 
-        for i_val in range(n_cells):
+            # device.import_params(df)
+            #
+            # new_cell=device.draw()
+            #
+            # if self.labels_top is not None or self.labels_bottom is not None:
+            #
+            #     if text_layer is None:
+            #
+            #         if hasattr(device,'probe'):
+            #
+            #             text_layer=device.probe.layer
+            #
+            #         elif hasattr(device,'layer'):
+            #
+            #             text_layer=device.layer
+            #
+            #         else:
+            #
+            #                 raise Exception ("Specify Text Layer")
+            #
+            #     if self.labels_top is not None:
+            #
+            #         device.add_text(text=self.labels_top[i_val],location='top',\
+            #             size=text_size,font=text_font,\
+            #             layer=text_layer)
+            #
+            #     if self.labels_bottom is not None:
+            #
+            #         device.add_text(text=self.labels_bottom[i_val],location='bottom',\
+            #             size=text_size,font=text_font,\
+            #             layer=text_layer)
+            #
+            # master_cell<<new_cell
+            #
+            # cells.append(new_cell)
 
-            # import pdb ; pdb.set_trace()
+        # g=Group(cells)
+        #
+        # g.distribute(spacing=self.spacing)
+        #
+        # del device, cells ,g
 
-            if param_value.ndim>1:
-
-                for i_name,name in enumerate(param_name):
-
-                    df[name]=param_value[i_name,i_val]
-
-            else:
-
-                df[param_name]=param_value[i_val]
-
-            device.import_params(df)
-
-            new_cell=device.draw()
-
-            if self.labels_top is not None or self.labels_bottom is not None:
-
-                if text_layer is None:
-
-                    if hasattr(device,'probe'):
-
-                        text_layer=device.probe.layer
-
-                    elif hasattr(device,'layer'):
-
-                        text_layer=device.layer
-
-                    else:
-
-                            raise Exception ("Specify Text Layer")
-
-                if self.labels_top is not None:
-
-                    device.add_text(text=self.labels_top[i_val],location='top',\
-                        size=text_size,font=text_font,\
-                        layer=text_layer)
-
-                if self.labels_bottom is not None:
-
-                    device.add_text(text=self.labels_bottom[i_val],location='bottom',\
-                        size=text_size,font=text_font,\
-                        layer=text_layer)
-
-            master_cell<<new_cell
-
-            cells.append(new_cell)
-
-        g=Group(cells)
-
-        g.distribute(spacing=self.spacing)
-
-        del device, cells ,g
-
-        return master_cell
-
-class ParametricMatrix(LayoutPart):
-
-    def __init__(self,*args,**kwargs):
-
-        super().__init__(*args,**kwargs)
-
-        self.device=DUT()
+        # return master_cell
