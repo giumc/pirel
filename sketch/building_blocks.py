@@ -124,6 +124,18 @@ class LayoutPart(ABC) :
         print("List of parameters for instance of {}\n".format(self.__class__.__name__))
         print(*df.columns.values,sep='\n')
 
+    def __repr__(self):
+
+        df=self.export_params()
+
+        df["Name"]=df.index.values[0]
+
+        df=df.rename(index={df.index.values[0]:'Values'})
+
+        df=df.rename_axis("Parameters",axis=1)
+
+        return df.transpose().to_string()
+
 class IDT(LayoutPart) :
 
     def __init__(self,*args,**kwargs):
@@ -224,7 +236,7 @@ class IDT(LayoutPart) :
 
                 self.pitch=df[cols].iat[0]
 
-            elif cols in {'Offset','offset','y_offset','Y_Offset','Y_offset'}:
+            elif cols=='Offset':
 
                 self.y_offset=df[cols].iat[0]
 
@@ -232,13 +244,13 @@ class IDT(LayoutPart) :
 
                 self.coverage=df[cols].iat[0]
 
-            elif cols in {'n','N','N_fingers','n_fingers'}:
+            elif cols=='N_fingers':
 
                 self.n=df[cols].iat[0]
 
             elif cols=='Layer':
 
-                self.n=df[cols].iat[0]
+                self.layer=df[cols].iat[0]
 
 class Bus(LayoutPart) :
 
@@ -375,11 +387,14 @@ class EtchPit(LayoutPart) :
 
         for cols in df.columns:
 
-            if cols in {'active_area', 'activearea','ActiveArea','Active_Area'}:
+            if cols =='ActiveArea':
 
                 self.active_area=df[cols].iat[0]
 
-            elif cols in {'width','EtchWidth','X','x','Etch_Width','etch_width'}:
+
+
+
+            elif cols =='Width':
 
                 self.x=df[cols].iat[0]
 
@@ -482,15 +497,15 @@ class Anchor(LayoutPart):
 
                 self.size=df[cols].iat[0]
 
-            elif cols in {'etch_margin','EtchMargin','Etch_Margin','etchmargin'}:
+            elif cols=="EtchMargin":
 
                 self.etch_margin=df[cols].iat[0]
 
-            elif cols in {'EtchChoice','etch_choice','Etch_Choice','etch_choice'}:
+            elif cols == "EtchChoice":
 
                 self.etch_choice=df[cols].iat[0]
 
-            elif cols in {'Offset','offset','x_offset','X_Offset'}:
+            elif cols == "Offset":
 
                 self.x_offset=df[cols].iat[0]
 
@@ -667,11 +682,12 @@ class Routing(LayoutPart):
 
             path=pp.smooth(points=list_points)
 
+
         elif destination.y>=ur.y : #destination is above clearance
 
-            y_overtravel=ll.y-source.midpoint.y-self.trace_width
+            y_overtravel=ll.y-source.midpoint[1]-self.trace_width
 
-            taper_len=min([ll.y-y_overtravel-source.midpoint.y,self.trace_width/4])
+            taper_len=min([y_overtravel,self.trace_width/4])
 
             if not(destination.orientation==source.orientation):
 

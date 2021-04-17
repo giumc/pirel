@@ -155,7 +155,7 @@ class Point:
 
     def __repr__(self):
 
-        return f"P: x={self.x} y ={self.y}"
+        return f"x={self.x} y ={self.y}"
         # return f"{self.x}"
 
     def __call__(self):
@@ -189,6 +189,7 @@ class Point:
             raise Exception("Division Point/x0 is not possible here")
 
     __rmul__=__mul__
+
 
 def add_compass(device):
 

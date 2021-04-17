@@ -5,7 +5,7 @@ class ParametricArray(LayoutPart):
     def __init__(self,*args,**kwargs):
 
         super().__init__(*args,**kwargs)
-        self.device=IDT()
+        self.device=IDT(self.name)
         self.spacing=ld.Arrayspacing
         self.param_name=ld.Arrayparam_name
         self.param_value=ld.Arrayparam_value
@@ -29,6 +29,8 @@ class ParametricArray(LayoutPart):
         else:
 
             self._device=value
+            
+            self._device.name=self.name
 
     @property
     def param_name(self):
@@ -111,11 +113,13 @@ class ParametricArray(LayoutPart):
 
         for i_val in range(n_cells):
 
+            # import pdb ; pdb.set_trace()
+
             if param_value.ndim>1:
 
                 for i_name,name in enumerate(param_name):
 
-                    df[name]=param_value[i_val,i_name]
+                    df[name]=param_value[i_name,i_val]
 
             else:
 
@@ -164,3 +168,11 @@ class ParametricArray(LayoutPart):
         del device, cells ,g
 
         return master_cell
+
+class ParametricMatrix(LayoutPart):
+
+    def __init__(self,*args,**kwargs):
+
+        super().__init__(*args,**kwargs)
+
+        self.device=DUT()
