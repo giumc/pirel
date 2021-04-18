@@ -57,11 +57,12 @@ class LayoutPart(ABC) :
         gdspy.LayoutViewer(lib)
 
     def add_text(self,location='top',size=25,\
-        text='default',font='BebasNeue-Regular.otf',layer=ld.layerTop):
+        text='default',font='BebasNeue-Regular.otf',layer=ld.layerTop,spacing=100):
 
         package_directory = os.path.dirname(os.path.abspath(__file__))
 
         font=os.path.join(package_directory,font)
+
         cell=self.cell
 
         o=Point(0,0)
@@ -72,7 +73,7 @@ class LayoutPart(ABC) :
 
         text_y=text_cell.ysize
 
-        space=Point(0,20)
+        space=Point(0,spacing)
 
         if location=='top':
 
@@ -124,6 +125,11 @@ class LayoutPart(ABC) :
         print("List of parameters for instance of {}\n".format(self.__class__.__name__))
         print(*df.columns.values,sep='\n')
 
+    def get_params_name(self):
+
+        df=self.export_params()
+
+        return [str(_) for _ in df.columns ]
     def __repr__(self):
 
         df=self.export_params()
@@ -1033,11 +1039,11 @@ class GSGProbe(LayoutPart):
 
         pad_x=self.size.x
 
-        if pad_x>self.pitch*2/3:
+        if pad_x>self.pitch*9/10:
 
-            pad_x=self.pitch*2/3
+            pad_x=self.pitch*9/10
 
-            warnings.warn("Pad size too large, capped to pitch*2/3")
+            warnings.warn("Pad size too large, capped to pitch*9/10")
 
         pad_cell=pg.rectangle(size=(pad_x,self.size.y),\
         layer=self.layer)
