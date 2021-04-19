@@ -1,10 +1,77 @@
 from building_blocks import *
 
-class _LayoutParam():
+class LayoutParam():
+
+    def __init__(self,params):
+
+        if isinstance(params,dict):
+
+            self._dict=params
+
+        else:
+            # import pdb; pdb.set_trace()
+            raise ValueError("LayoutParam is init by dict of names:values")
+
+    def __call__(self):
+
+        return self._dict
+
+    def __len__(self):
+        return len(self._dict[list(self._dict.keys())[0]])
+
+    def __repr__(self):
+
+        return str(self._dict)
+
+    @property
+    def names(self):
+
+        return [x for x in self._dict.keys()]
+
+    @property
+    def values(self):
+
+        return [_ for _ in self._dict.values()]
+
+    def combine(self,sweep2):
+
+        sweep1=self
+
+        if not isinstance(sweep2,LayoutParam):
+
+            raise ValueError("the parameter needs to be a LayoutParam")
+
+        # import pdb; pdb.set_trace()
+
+        init_names=sweep1.names
+
+        new_names=sweep2.names
+
+        init_values=sweep1.values
+
+        new_values=sweep2.values
+
+        if any([name in new_names for name in init_names]):
+
+            raise ValueError("Unexpected behaviour:at least one sweep parameter is repeated")
+
+        dict_new={x : [] for x in init_names+new_names}
+
+        tot_values=init_values+new_values
+
+        meshed_values=np.meshgrid(*tot_values)
+
+        for iter,name in enumerate(dict_new.keys()):
+
+            dict_new[name]=meshed_values[iter].flatten()
+
+        return LayoutParam(dict_new)
+
+class _LayoutParamValidator():
 
     def __init__(self,pars):
 
-        self.default_value=pars
+        self.default_value=LayoutParam(pars)
 
     def __set_name__(self,obj,name):
 
@@ -20,7 +87,7 @@ class _LayoutParam():
 
             return getattr(obj,self.private_name)
 
-    def __set__(self,obj,value):
+    def __set__(self,obj,layout_param):
 
         if not isinstance(obj, LayoutPart):
 
@@ -30,29 +97,25 @@ class _LayoutParam():
 
             self._set_valid_names(obj.get_params_name())
 
-            if not isinstance(value,dict):
+            layout_param=LayoutParam(layout_param)
 
-                raise ValueError("{} needs to be a dict".format(value))
+            if not all([names in self._valid_names for names in layout_param.names]):
+
+                raise ValueError("At least one param key is invalid")
 
             else:
 
-                if not all([names in self._valid_names for names in value.keys()]):
+                it = iter(layout_param.values)
 
-                    raise ValueError("At least one param key is invalid")
+                the_len = len(next(it))
+
+                if not all(len(x)==the_len for x in it):
+
+                    raise ValueError("All params need to have same length")
 
                 else:
 
-                    it = iter(value.values())
-
-                    the_len = len(next(it))
-
-                    if not all(len(x)==the_len for x in it):
-
-                        raise ValueError("All params need to have same length")
-
-                    else:
-
-                        setattr(obj,self.private_name,value)
+                    setattr(obj,self.private_name,layout_param)
 
     def _set_valid_names(self,opts):
 
@@ -64,7 +127,7 @@ class _LayoutParam():
 
 class ParametricArray(LayoutPart):
 
-    x_param=_LayoutParam(ld.Arrayx_param)
+    x_param=_LayoutParamValidator(ld.Arrayx_param)
 
     def __init__(self,*args,**kwargs):
 
@@ -117,17 +180,15 @@ class ParametricArray(LayoutPart):
 
         param=self.x_param
 
-        for index in range(self.x_size):
+        for index in range(len(param)):
 
-            # import pdb; pdb.set_trace()
-
-            for name,value in param.items():
+            for name,value in zip(param.names,param.values):
 
                 df[name]=value[index]
 
             device.import_params(df)
 
-            print("drawing device {} of {}".format(index+1,self.x_size))
+            print("drawing device {} of {}".format(index+1,len(param)))
 
             new_cell=device.draw()
 
@@ -171,25 +232,21 @@ class ParametricArray(LayoutPart):
 
         return master_cell
 
-    @property
-    def x_size(self):
-
-        return len(self.x_param[list(self.x_param.keys())[0]])
-
     def auto_labels(self,top=True,bottom=True,top_label=None,bottom_label=None,\
         col_index=0,row_index=0):
 
-        l=self.x_size
+        param=self.x_param
+
+        l=len(param)
 
         sweep_label=[]
 
-        for name in self.x_param.keys():
+        for name in param.names:
 
-            sweep_label.append(''.join([c for c in name if c.isupper() and not c in {'I','D','T'}]))
+            sweep_label.append(''.join([c for c in name if c.isupper()]))
 
         top_label_sweep=[]
 
-        # pdb
         for i in range(l):
 
             for lab in sweep_label:
@@ -234,7 +291,7 @@ class ParametricArray(LayoutPart):
 
 class ParametricMatrix(ParametricArray):
 
-    y_param=_LayoutParam(ld.Matrixy_param)
+    y_param=_LayoutParamValidator(ld.Matrixy_param)
 
     def __init__(self,*args,**kwargs):
 
@@ -243,12 +300,6 @@ class ParametricMatrix(ParametricArray):
         self.y_spacing=ld.Matrixy_spacing
         self.labels_top=ld.Matrixlabels_top
         self.labels_bottom=ld.Matrixlabels_bottom
-
-    @property
-
-    def y_size(self):
-
-        return len(self.y_param[list(self.y_param.keys())[0]])
 
     def draw(self,layer=None,*args,**kwargs):
 
@@ -266,21 +317,23 @@ class ParametricMatrix(ParametricArray):
 
         bottom_label_matrix=self.labels_bottom
 
-        for index in range(self.y_size):
+        y_param=self.y_param
 
-            for name,value in self.y_param.items():
+        for index in range(len(y_param)):
+
+            for name,value in zip(y_param.names,y_param.values):
 
                 df[name]=value[index]
 
             device.import_params(df)
 
-            print("drawing array {} of {}".format(index+1,self.y_size))
+            print("drawing array {} of {}".format(index+1,len(y_param)))
 
             if top_label_matrix is not None:
 
                 if isinstance(top_label_matrix[index],list):
 
-                    if len(top_label_matrix[index])==self.x_size:
+                    if len(top_label_matrix[index])==len(self.x_param):
 
                         self.labels_top=top_label_matrix[index]
 
@@ -296,7 +349,7 @@ class ParametricMatrix(ParametricArray):
 
                 if isinstance(bottom_label_matrix[index],list):
 
-                    if len(bottom_label_matrix[index])==self.x_size:
+                    if len(bottom_label_matrix[index])==len(self.x_param):
 
                         self.labels_bottom=bottom_label_matrix[index]
 
@@ -333,7 +386,7 @@ class ParametricMatrix(ParametricArray):
     def auto_labels(self,top=True,bottom=True,top_label=None,bottom_label=None,\
         col_index=0,row_index=0):
 
-        l=self.y_size
+        l=len(self.y_param)
 
         top_label_matrix=[]
 
@@ -341,9 +394,9 @@ class ParametricMatrix(ParametricArray):
 
         row_label_sweep=[]
 
-        for name in self.y_param.keys():
+        for name in self.y_param.names:
 
-            row_label_sweep.append(''.join([c for c in name if c.isupper() and not c in {'I','D','T'}]))
+            row_label_sweep.append(''.join([c for c in name if c.isupper() ]))
 
         for i in range(l):
 

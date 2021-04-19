@@ -1,4 +1,3 @@
-import sketch
 
 # import phidl.geometry as pg
 
@@ -8,7 +7,9 @@ from phidl import quickplot as qp
 
 import matplotlib.pyplot as plt
 
-# idt=sketch.IDT("hey").test()
+# idt=sketch.IDT("hey")
+#
+# idt.test()
 
 # pit=sketch.EtchPit("pitt").test()
 
@@ -55,14 +56,16 @@ import matplotlib.pyplot as plt
 # sketch.GSGProbe_LargePad().test()
 
 # d=sketch.DUT("hi")
+# d.dut.anchor.etch_choice=False
 # d.dut.idt.n=8
-# # # d.dut.anchor.etch_choice=False
-# # d.routing_width=200
-# # d.probe.size=sketch.Point(50,50)
-# # d.probe.groundsize=300
+# d.routing_width=200
+# d.probe.size=sketch.Point(50,50)
+# d.probe.groundsize=300
+# # import pdb; pdb.set_trace()
 # df=d.export_params()
+# print(df)
 # d.test()
-# df["IDTN_fingers"]=3
+# /df["IDTN_fingers"]=3
 # # df["BusSize"]=sketch.Point(50,200)
 # df["AnchorSize"]=sketch.Point(300,50)
 # df["AnchorEtchMargin"]=sketch.Point(5,10)

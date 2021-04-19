@@ -100,7 +100,7 @@ class LayoutDefault:
 
         self.Arrayx_spacing=50
         self.Arrayx_param={"IDTPitch":[_ for _ in range(1,4)]}
-        self.Arraylabels_top=["P"+str(x) for x in self.Arrayx_param.values()]
+        self.Arraylabels_top=["IDTP"+str(x) for x in self.Arrayx_param.values()]
         self.Arraylabels_bottom=[str(x) for x in self.Arrayx_param.values()]
 
         #ParametricMatrix
