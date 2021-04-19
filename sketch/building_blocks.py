@@ -234,7 +234,7 @@ class IDT(LayoutPart) :
 
         for cols in df.columns:
 
-            if cols=='Y':
+            if cols=='Length':
 
                 self.y=df[cols].iat[0]
 
@@ -1167,6 +1167,6 @@ class GSGProbe_LargePad(GSGProbe):
 
         for cols in df.columns:
 
-            if cols=={'GroundPadSize','ground_pad_size','ground_size'}:
+            if cols=='GroundPadSize':
 
                 self.groundsize=df[cols].iat[0]

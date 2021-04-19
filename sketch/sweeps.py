@@ -1,4 +1,3 @@
-
 from building_blocks import *
 
 class _LayoutParam():
@@ -65,13 +64,13 @@ class _LayoutParam():
 
 class ParametricArray(LayoutPart):
 
-    param=_LayoutParam(ld.Arrayparam)
+    x_param=_LayoutParam(ld.Arrayx_param)
 
     def __init__(self,*args,**kwargs):
 
         super().__init__(*args,**kwargs)
         self.device=IDT(self.name)
-        self.spacing=ld.Arrayspacing
+        self.x_spacing=ld.Arrayx_spacing
         self.labels_top=ld.Arraylabels_top
         self.labels_bottom=ld.Arraylabels_bottom
 
@@ -116,9 +115,9 @@ class ParametricArray(LayoutPart):
 
         cells=list()
 
-        param=self.param
+        param=self.x_param
 
-        for index in range(len(self)):
+        for index in range(self.x_size):
 
             # import pdb; pdb.set_trace()
 
@@ -127,6 +126,8 @@ class ParametricArray(LayoutPart):
                 df[name]=value[index]
 
             device.import_params(df)
+
+            print("drawing device {} of {}".format(index+1,self.x_size))
 
             new_cell=device.draw()
 
@@ -162,48 +163,58 @@ class ParametricArray(LayoutPart):
 
         g=Group(cells)
 
-        g.distribute(spacing=self.spacing)
+        g.distribute(spacing=self.x_spacing)
+
+        g.align(alignment='ymin')
 
         del device, cells ,g
 
         return master_cell
 
-    def __len__(self):
+    @property
+    def x_size(self):
 
-        return len(self.param[list(self.param.keys())[0]])
+        return len(self.x_param[list(self.x_param.keys())[0]])
 
-    def gen_labels(self,top=True,bottom=True,top_label=None,bottom_label=None,\
+    def auto_labels(self,top=True,bottom=True,top_label=None,bottom_label=None,\
         col_index=0,row_index=0):
 
-        l=len(self)
+        l=self.x_size
+
+        sweep_label=[]
+
+        for name in self.x_param.keys():
+
+            sweep_label.append(''.join([c for c in name if c.isupper() and not c in {'I','D','T'}]))
+
+        top_label_sweep=[]
+
+        # pdb
+        for i in range(l):
+
+            for lab in sweep_label:
+
+                tmp_lab=' '.join([x+str(i) for x in sweep_label])
+
+            top_label_sweep.append(tmp_lab)
 
         if top_label is None:
 
-            top_label=[]
-
-            sweep_label=[]
-
-            for name in self.param.keys():
-
-                sweep_label.append(''.join([c for c in name if c.isupper() and not c in {'I','D','T'}]))
-
-            for i in range(1,l+1):
-
-                for lab in sweep_label:
-
-                    tmp_lab=' '.join([x+str(i) for x in sweep_label])
-
-                top_label.append(tmp_lab)
+            top_label=top_label_sweep
 
         else:
 
-            top_label=[top_label+x for x in range(1,l+1)]
+            top_label=[ top_label+" "+ x for x in top_label_sweep]
 
         if bottom_label is None:
 
             bottom_label=""
 
-        bottom_label=[bottom_label+"{:03d} x {:03}".format(col_index,y) for y in range(row_index,row_index+l+1)]
+        else:
+
+            bottom_label=bottom_label+" "
+
+        bottom_label=[bottom_label+"{:03d} x {:03}".format(col_index,y) for y in range(row_index,row_index+l)]
 
         if top==True:
 
@@ -216,6 +227,146 @@ class ParametricArray(LayoutPart):
         if bottom==True:
 
             self.labels_bottom=bottom_label
+
+        else:
+
+            self.labels_bottom=None
+
+class ParametricMatrix(ParametricArray):
+
+    y_param=_LayoutParam(ld.Matrixy_param)
+
+    def __init__(self,*args,**kwargs):
+
+        super().__init__(*args,**kwargs)
+
+        self.y_spacing=ld.Matrixy_spacing
+        self.labels_top=ld.Matrixlabels_top
+        self.labels_bottom=ld.Matrixlabels_bottom
+
+    @property
+
+    def y_size(self):
+
+        return len(self.y_param[list(self.y_param.keys())[0]])
+
+    def draw(self,layer=None,*args,**kwargs):
+
+        original_device=deepcopy(self.device)
+
+        device=self.device
+
+        df=device.export_params()
+
+        master_cell=Device(name=self.name)
+
+        cells=list()
+
+        top_label_matrix=self.labels_top
+
+        bottom_label_matrix=self.labels_bottom
+
+        for index in range(self.y_size):
+
+            for name,value in self.y_param.items():
+
+                df[name]=value[index]
+
+            device.import_params(df)
+
+            print("drawing array {} of {}".format(index+1,self.y_size))
+
+            if top_label_matrix is not None:
+
+                if isinstance(top_label_matrix[index],list):
+
+                    if len(top_label_matrix[index])==self.x_size:
+
+                        self.labels_top=top_label_matrix[index]
+
+                    else:
+
+                        self.labels_top=None
+
+                else:
+
+                    self.labels_top=None
+
+            if bottom_label_matrix is not None:
+
+                if isinstance(bottom_label_matrix[index],list):
+
+                    if len(bottom_label_matrix[index])==self.x_size:
+
+                        self.labels_bottom=bottom_label_matrix[index]
+
+                    else:
+
+                        self.labels_bottom=None
+
+                else:
+
+                    self.labels_bottom=None
+
+            new_cell=ParametricArray.draw(self,layer,*args,**kwargs)
+
+            new_cell.name=self.name+str(index)
+
+            master_cell<<new_cell
+
+            cells.append(new_cell)
+
+        g=Group(cells)
+
+        g.distribute(direction='y',spacing=self.y_spacing)
+
+        g.align(alignment='xmin')
+
+        del device, cells ,g
+
+        self.device=original_device
+
+        self.cell=master_cell
+
+        return master_cell
+
+    def auto_labels(self,top=True,bottom=True,top_label=None,bottom_label=None,\
+        col_index=0,row_index=0):
+
+        l=self.y_size
+
+        top_label_matrix=[]
+
+        bottom_label_matrix=[]
+
+        row_label_sweep=[]
+
+        for name in self.y_param.keys():
+
+            row_label_sweep.append(''.join([c for c in name if c.isupper() and not c in {'I','D','T'}]))
+
+        for i in range(l):
+
+            row_lab=' '.join([x+str(i) for x in row_label_sweep])
+
+            ParametricArray.auto_labels(self,top_label=row_lab,bottom_label=bottom_label,\
+                col_index=i+col_index,row_index=row_index)
+
+            top_label_matrix.append(self.labels_top)
+
+            bottom_label_matrix.append(self.labels_bottom)
+
+        if top==True:
+
+            self.labels_top=top_label_matrix
+
+        else:
+
+            self.labels_top=None
+
+        if bottom==True:
+
+            self.labels_bottom=bottom_label_matrix
 
         else:
 

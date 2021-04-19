@@ -96,12 +96,20 @@ class LayoutDefault:
         #GSGProbe_LargePad
         self.GSGProbe_LargePadground_size=200
 
-        #DUTArray
+        #ParametricArray
 
-        self.Arrayspacing=50
-        self.Arrayparam={"IDTPitch":[_ for _ in range(1,4)]}
-        self.Arraylabels_top=["Pitch"+str(x) for x in self.Arrayparam.values()]
-        self.Arraylabels_bottom=[str(x) for x in self.Arrayparam.values()]
+        self.Arrayx_spacing=50
+        self.Arrayx_param={"IDTPitch":[_ for _ in range(1,4)]}
+        self.Arraylabels_top=["P"+str(x) for x in self.Arrayx_param.values()]
+        self.Arraylabels_bottom=[str(x) for x in self.Arrayx_param.values()]
+
+        #ParametricMatrix
+        self.Matrixy_param={"IDTLength":[_ for _ in range(100,400,100)]}
+        self.Matrixy_spacing=self.Arrayx_spacing
+        self.Matrixlabels_top=[ [x+y for x in self.Arrayx_param]\
+            for y in ["L"+str(z) for z in self.Matrixy_param.values()]]
+        self.Matrixlabels_bottom=[ [str(x)+str(y) for x in self.Arrayx_param.values()] \
+            for y in self.Matrixy_param.values()]
 
 class Point:
 
@@ -188,7 +196,6 @@ class Point:
             raise Exception("Division Point/x0 is not possible here")
 
     __rmul__=__mul__
-
 
 def add_compass(device):
 
