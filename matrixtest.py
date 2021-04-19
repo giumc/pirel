@@ -23,7 +23,7 @@ array.device=device
 array.x_spacing=200
 
 param1=sketch.LayoutParam({"IDTCoverage":[0.3,0.5,0.7]})
-param2=sketch.LayoutParam({"BusSize":[sketch.Point(x,100) for x in [50,100,150]]})
+param2=sketch.LayoutParam({"BusSize":[sketch.Point(100,x) for x in [50,100,150]]})
 
 array.x_param=(param1.combine(param2))()
 
