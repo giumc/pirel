@@ -1,6 +1,6 @@
 from building_blocks import *
 
-class LayoutParam():
+class SweepParam():
 
     def __init__(self,params):
 
@@ -10,7 +10,7 @@ class LayoutParam():
 
         else:
             # import pdb; pdb.set_trace()
-            raise ValueError("LayoutParam is init by dict of names:values")
+            raise ValueError("SweepParam is init by dict of names:values")
 
     def __call__(self):
 
@@ -37,9 +37,9 @@ class LayoutParam():
 
         sweep1=self
 
-        if not isinstance(sweep2,LayoutParam):
+        if not isinstance(sweep2,SweepParam):
 
-            raise ValueError("the parameter needs to be a LayoutParam")
+            raise ValueError("the parameter needs to be a SweepParam")
 
         # import pdb; pdb.set_trace()
 
@@ -65,13 +65,13 @@ class LayoutParam():
 
             dict_new[name]=meshed_values[iter].flatten()
 
-        return LayoutParam(dict_new)
+        return SweepParam(dict_new)
 
-class _LayoutParamValidator():
+class _SweepParamValidator():
 
-    def __init__(self,pars):
+    def __init__(self,def_param=ld.Arrayx_param):
 
-        self.default_value=LayoutParam(pars)
+        self.default_value=SweepParam(def_param)
 
     def __set_name__(self,obj,name):
 
@@ -95,10 +95,13 @@ class _LayoutParamValidator():
 
         else:
 
+            if not isinstance(layout_param,SweepParam):
+
+                raise ValueError("param needs to be a SweepParam")
+
             self._set_valid_names(obj.get_params_name())
 
-            layout_param=LayoutParam(layout_param)
-
+            import pdb; pdb.set_trace()
             if not all([names in self._valid_names for names in layout_param.names]):
 
                 raise ValueError("At least one param key is invalid")
@@ -127,7 +130,7 @@ class _LayoutParamValidator():
 
 class ParametricArray(LayoutPart):
 
-    x_param=_LayoutParamValidator(ld.Arrayx_param)
+    x_param=_SweepParamValidator(ld.Arrayx_param)
 
     def __init__(self,*args,**kwargs):
 
@@ -291,7 +294,7 @@ class ParametricArray(LayoutPart):
 
 class ParametricMatrix(ParametricArray):
 
-    y_param=_LayoutParamValidator(ld.Matrixy_param)
+    y_param=_SweepParamValidator(ld.Matrixy_param)
 
     def __init__(self,*args,**kwargs):
 
