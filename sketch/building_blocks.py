@@ -303,8 +303,10 @@ class Bus(LayoutPart) :
 
         t=LayoutPart.export_params(self)
         t["Type"]="Bus"
-        t["Size"]=self.size
-        t["Distance"]=self.distance
+        t["Width"]=self.size.x
+        t["Length"]=self.size.y
+        t["DistanceX"]=self.distance.x
+        t["DistanceY"]=self.distance.y
         return t
 
     def import_params(self,df):
@@ -313,13 +315,21 @@ class Bus(LayoutPart) :
 
         for cols in df.columns:
 
-            if cols=='Size':
+            if cols=='Width':
 
-                self.size=df[cols].iat[0]
+                self.size.x=df[cols].iat[0]
 
-            elif cols=='Distance':
+            if cols=='Length':
 
-                self.distance=df[cols].iat[0]
+                self.size.y=df[cols].iat[0]
+
+            elif cols=='DistanceX':
+
+                self.distance.x=df[cols].iat[0]
+
+            elif cols=='DistanceY':
+
+                self.distance.y=df[cols].iat[0]
 
             elif cols=='Layer':
 
@@ -396,9 +406,6 @@ class EtchPit(LayoutPart) :
             if cols =='ActiveArea':
 
                 self.active_area=df[cols].iat[0]
-
-
-
 
             elif cols =='Width':
 
@@ -484,9 +491,11 @@ class Anchor(LayoutPart):
     def export_params(self):
 
         t=LayoutPart.export_params(self)
-        t["Size"]=self.size
+        t["Width"]=self.size.x
+        t["Length"]=self.size.y
         t["Type"]="Anchor"
-        t["EtchMargin"]=self.etch_margin
+        t["EtchMarginX"]=self.etch_margin.x
+        t["EtchMarginY"]=self.etch_margin.y
         t["EtchChoice"]=self.etch_choice
         t["EtchWidth"]=self.etch_x
         t["Offset"]=self.x_offset
@@ -499,13 +508,21 @@ class Anchor(LayoutPart):
 
         for cols in df.columns:
 
-            if cols=='Size':
+            if cols=='Width':
 
-                self.size=df[cols].iat[0]
+                self.size.x=df[cols].iat[0]
 
-            elif cols=="EtchMargin":
+            if cols=='Length':
 
-                self.etch_margin=df[cols].iat[0]
+                self.size.y=df[cols].iat[0]
+
+            elif cols=="EtchMarginX":
+
+                self.etch_margin.x=df[cols].iat[0]
+
+            elif cols=="EtchMarginY":
+
+                self.etch_margin.y=df[cols].iat[0]
 
             elif cols == "EtchChoice":
 
@@ -660,6 +677,10 @@ class Routing(LayoutPart):
             source=self.ports[1]
             destination=self.ports[0]
 
+        y_overtravel=ll.y-source.midpoint[1]-self.trace_width
+
+        taper_len=min([y_overtravel,self.trace_width/4])
+
         if destination.y<=ll.y : # destination is below clearance
 
             if not(destination.orientation==source.orientation+180 or \
@@ -668,7 +689,7 @@ class Routing(LayoutPart):
                     raise Exception("Routing error: non-hindered routing needs +90 -> -90 oriented ports")
 
             source=self._add_taper(cell,source,len=taper_len)
-            destination=self._add_taper(cell,destination,len=taper_len)
+            destination=self._add_taper(cell,destination,len=self.trace_width/4)
 
             source.name='source'
             destination.name='destination'
@@ -691,10 +712,6 @@ class Routing(LayoutPart):
 
         elif destination.y>=ur.y : #destination is above clearance
 
-            y_overtravel=ll.y-source.midpoint[1]-self.trace_width
-
-            taper_len=min([y_overtravel,self.trace_width/4])
-
             if not(destination.orientation==source.orientation):
 
                 raise Exception("Routing error: non-hindered routing needs +90 -> -90 oriented ports")
@@ -706,17 +723,17 @@ class Routing(LayoutPart):
                 if self.side=='auto':
 
                     source=self._add_taper(cell,source,len=taper_len)
-                    destination=self._add_taper(cell,destination,len=taper_len)
+                    destination=self._add_taper(cell,destination,len=self.trace_width/4)
 
                 elif self.side=='left':
 
                     source=self._add_ramp_lx(cell,source,len=taper_len)
-                    destination=self._add_ramp_lx(cell,destination,len=taper_len)
+                    destination=self._add_ramp_lx(cell,destination,len=self.trace_width/4)
 
                 elif self.side=='right':
 
                     source=self._add_ramp_rx(cell,source,len=taper_len)
-                    destination=self._add_ramp_rx(cell,destination,len=taper_len)
+                    destination=self._add_ramp_rx(cell,destination,len=self.trace_width/4)
 
                 source.name='source'
                 destination.name='destination'
@@ -997,7 +1014,8 @@ class GSProbe(LayoutPart):
     def export_params(self):
 
         t=LayoutPart.export_params(self)
-        t["Size"]=self.size
+        t["Width"]=self.size.x
+        t["Length"]=self.size.y
         t["Type"]="GSProbe"
         t["Pitch"]=self.pitch
 
@@ -1009,9 +1027,13 @@ class GSProbe(LayoutPart):
 
         for cols in df.columns:
 
-            if cols=='Size':
+            if cols=='Width':
 
-                self.size=df[cols].iat[0]
+                self.size.x=df[cols].iat[0]
+
+            elif cols=='Length':
+
+                self.size.y=df[cols].iat[0]
 
             elif cols =='Pitch':
 
@@ -1086,7 +1108,8 @@ class GSGProbe(LayoutPart):
 
         t=LayoutPart.export_params(self)
         t["Size"]=self.size
-        t["Type"]="GSGProbe"
+        t["Width"]=self.size.x
+        t["Length"]=self.size.y
         t["Pitch"]=self.pitch
 
         return t
@@ -1097,9 +1120,13 @@ class GSGProbe(LayoutPart):
 
         for cols in df.columns:
 
-            if cols=='Size':
+            if cols=='Width':
 
-                self.size=df[cols].iat[0]
+                self.size.x=df[cols].iat[0]
+
+            elif cols=='Length':
+
+                self.size.y=df[cols].iat[0]
 
             elif cols =='Pitch':
 

@@ -142,7 +142,7 @@ class LFERes(LayoutPart):
 
         t_res['Type']='LFERes'
 
-        t_bus=self.bus.export_params().drop(columns=['Type','Distance'])
+        t_bus=self.bus.export_params().drop(columns=['Type','DistanceX','DistanceY','Width'])
         t_bus=t_bus.rename(columns=lambda x: "Bus"+x)
 
         t=self._add_columns(t_res,t_bus)
@@ -164,8 +164,6 @@ class LFERes(LayoutPart):
         return t
 
     def import_params(self,df):
-
-        from re import search
 
         LayoutPart.import_params(self,df)
 
@@ -321,6 +319,9 @@ class DUT(LayoutPart):
         dut=self.dut
         probe=self.probe
 
+        dut.name=self.name+"_DUT"
+        probe.name=self.name+"_PROBE"
+
         device_cell=dut.draw()
         probe_cell=probe.draw()
 
@@ -413,6 +414,6 @@ class DUT(LayoutPart):
 
             if_match_import(self.probe,col,"Probe",df)
 
-            if col in {"routing_width","RoutingWidth","Routing_Width"}:
+            if col == "RoutingWidth" :
 
                 self.routing_width=df[col].iat[0]
