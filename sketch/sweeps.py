@@ -41,29 +41,83 @@ class SweepParam():
 
             raise ValueError("the parameter needs to be a SweepParam")
 
-        # import pdb; pdb.set_trace()
-
         init_names=sweep1.names
 
         new_names=sweep2.names
 
-        init_values=sweep1.values
+        init_values=[]
 
-        new_values=sweep2.values
+        for x in sweep1.values:
+
+            if isinstance(x,np.ndarray):
+
+                init_values.append(x.tolist())
+
+            else:
+
+                init_values.append(x)
+
+        new_values=[]
+
+        for x in sweep2.values:
+
+            if isinstance(x,np.ndarray):
+
+                new_values.append(x.tolist())
+
+            else:
+
+                new_values.append(x)
 
         if any([name in new_names for name in init_names]):
 
             raise ValueError("Unexpected behaviour:at least one sweep parameter is repeated")
 
+
+        if len(init_values)>1:
+
+            init_values=[_ for _ in zip(*init_values)]
+
+        else:
+
+            init_values=init_values[0]
+
+        if len(new_values)>1:
+
+            new_values=[_ for _ in zip(*new_values)]
+
+        else:
+
+            new_values=new_values[0]
+
+        import itertools
+
+        tot_values=[_ for _ in itertools.product(init_values,new_values)]
+
+        new_length=len(tot_values)
+
+        def flatten(L):
+            for item in L:
+                try:
+                    yield from flatten(item)
+                except TypeError:
+                    yield item
+
+        tot_values=[_ for _ in flatten(tot_values)]
+
+        # import pdb; pdb.set_trace()
+
         dict_new={x : [] for x in init_names+new_names}
 
-        tot_values=init_values+new_values
+        import pdb; pdb.set_trace()
 
-        meshed_values=np.meshgrid(*tot_values)
+        for index in range(new_length):
 
-        for iter,name in enumerate(dict_new.keys()):
+            for name in dict_new.keys():
 
-            dict_new[name]=meshed_values[iter].flatten()
+                dict_new[name].append(tot_values.pop(0))
+
+            print(dict_new)
 
         return SweepParam(dict_new)
 
@@ -101,7 +155,6 @@ class _SweepParamValidator():
 
             self._set_valid_names(obj.get_params_name())
 
-            import pdb; pdb.set_trace()
             if not all([names in self._valid_names for names in layout_param.names]):
 
                 raise ValueError("At least one param key is invalid")
