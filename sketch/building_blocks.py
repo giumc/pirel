@@ -51,9 +51,9 @@ class LayoutPart(ABC) :
         qp(self.draw(*args,**kwargs))
         return
 
-    def test_gds(self):
+    def test_gds(self,*args,**kwargs):
         lib=gdspy.GdsLibrary('test')
-        lib.add(self.draw())
+        lib.add(self.draw(*args,**kwargs))
         gdspy.LayoutViewer(lib)
 
     def add_text(self,location='top',size=25,\
@@ -98,7 +98,7 @@ class LayoutPart(ABC) :
     def export_params(self):
 
         return DataFrame({
-        'Type':"LayoutPart"},index=[self.name])
+        'Type':self.__class__.__name__},index=[self.name])
 
     @staticmethod
     def _add_columns(d1,d2):
@@ -217,14 +217,18 @@ class IDT(LayoutPart) :
 
         return Point(dx,dy)
 
+    @property
+    def active_area(self):
+
+        return Point(self.pitch*self.n*2,self.y+self.y_offset)
+
     def export_params(self):
 
         t=LayoutPart.export_params(self)
-        t["Type"]="IDT",
-        t["Length"]=self.y,
-        t["Pitch"]=self.pitch,
-        t["Offset"]=self.y_offset,
-        t["Coverage"]=self.coverage,
+        t["Length"]=self.y
+        t["Pitch"]=self.pitch
+        t["Offset"]=self.y_offset
+        t["Coverage"]=self.coverage
         t["N_fingers"]=self.n
 
         return t
@@ -303,7 +307,6 @@ class Bus(LayoutPart) :
     def export_params(self):
 
         t=LayoutPart.export_params(self)
-        t["Type"]="Bus"
         t["Width"]=self.size.x
         t["Length"]=self.size.y
         t["DistanceX"]=self.distance.x
@@ -392,7 +395,6 @@ class EtchPit(LayoutPart) :
     def export_params(self):
 
         t=LayoutPart.export_params(self)
-        t["Type"]="EtchPit"
         t["ActiveArea"]=self.active_area
         t["Width"]=self.x
 
@@ -494,7 +496,6 @@ class Anchor(LayoutPart):
         t=LayoutPart.export_params(self)
         t["Width"]=self.size.x
         t["Length"]=self.size.y
-        t["Type"]="Anchor"
         t["EtchMarginX"]=self.etch_margin.x
         t["EtchMarginY"]=self.etch_margin.y
         t["EtchChoice"]=self.etch_choice
@@ -617,7 +618,6 @@ class Via(LayoutPart):
     def export_params(self):
 
         t=LayoutPart.export_params(self)
-        t["Type"]="Via"
         t["Shape"]=self.type
         t["Size"]=self.size
 
@@ -927,7 +927,6 @@ class Routing(LayoutPart):
 
         t=LayoutPart.export_params(self)
         t["TraceWidth"]=self.trace_width
-        t["Type"]="Routing"
         t["Clearance"]=self.clearance
         t["Ports"]=self.ports
         t["Side"]=self.side
@@ -1017,7 +1016,6 @@ class GSProbe(LayoutPart):
         t=LayoutPart.export_params(self)
         t["Width"]=self.size.x
         t["Length"]=self.size.y
-        t["Type"]="GSProbe"
         t["Pitch"]=self.pitch
 
         return t

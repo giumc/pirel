@@ -136,16 +136,18 @@ class LFERes(LayoutPart):
 
     def export_params(self):
 
+        t=super().export_params()
+
         t_res=self.idt.export_params().drop(columns=['Type'])
 
         t_res=t_res.rename(columns=lambda x: "IDT"+x)
 
-        t_res['Type']='LFERes'
+        t=self._add_columns(t,t_res)
 
         t_bus=self.bus.export_params().drop(columns=['Type','DistanceX','DistanceY','Width'])
         t_bus=t_bus.rename(columns=lambda x: "Bus"+x)
 
-        t=self._add_columns(t_res,t_bus)
+        t=self._add_columns(t,t_bus)
 
         t_etch=self.etchpit.export_params().drop(columns=['Type','ActiveArea'])
         t_etch=t_etch.rename(columns=lambda x: "Etch"+x)
@@ -182,25 +184,41 @@ class LFERes_Scaled(LFERes):
 
     def draw(self,*args,**kwargs):
 
-        p=self.idt.pitch
+        selfcopy=deepcopy(self)
 
-        self.idt.y_offset=self.idt.y_offset*p
+        p=selfcopy.idt.pitch
 
-        self.idt.y=self.idt.y*p
+        selfcopy.idt.y_offset=self.idt.y_offset*p
 
-        self.bus.size.y=self.bus.size.y*p
+        selfcopy.idt.y=self.idt.y*p
 
-        self.etchpit.x=self.etchpit.x*p
+        selfcopy.bus.size.y=self.bus.size.y*p
 
-        self.anchor.size.x=self.anchor.size.x*p
+        selfcopy.etchpit.x=self.etchpit.x*selfcopy.idt.active_area.x
 
-        self.anchor.size.y=self.anchor.size.y*p
+        selfcopy.anchor.size.x=self.anchor.size.x*selfcopy.idt.active_area.x
 
-        self.anchor.etch_margin.x=self.anchor.etch_margin.x*p
+        selfcopy.anchor.size.y=self.anchor.size.y*p
 
-        self.anchor.etch_margin.y=self.anchor.etch_margin.y*p
+        selfcopy.anchor.etch_margin.x=self.anchor.etch_margin.x*p
 
-        return LFERes.draw(self,*args,**kwargs)
+        selfcopy.anchor.etch_margin.y=self.anchor.etch_margin.y*p
+
+        cell=LFERes.draw(selfcopy,*args,**kwargs)
+
+        del selfcopy
+
+        self.cell=cell
+
+        return cell
+
+    # def export_params(self):
+    #
+    #     df=LFERes.export_params(self)
+    #
+    #     df["Type"]=self.__class__.__name__
+    #
+    #     return df
 
 class FBERes(LFERes):
 
@@ -233,16 +251,42 @@ class FBERes(LFERes):
 
         return cell
 
-    def export_params(self):
 
-        t=LFERes.export_params()
-        t['Type']='FBERes'
+class FBERes_Scaled(FBERes):
 
-        return t
+    def __init__(self,*args,**kwargs):
 
-    def import_params(self,df):
+        super().__init__(*args,**kwargs)
 
-        LFERes.import_params(self,df)
+    def draw(self,*args,**kwargs):
+
+        selfcopy=deepcopy(self)
+
+        p=selfcopy.idt.pitch
+
+        selfcopy.idt.y_offset=self.idt.y_offset*p
+
+        selfcopy.idt.y=self.idt.y*p
+
+        selfcopy.bus.size.y=self.bus.size.y*p
+
+        selfcopy.etchpit.x=self.etchpit.x*selfcopy.idt.active_area.x
+
+        selfcopy.anchor.size.x=self.anchor.size.x*selfcopy.idt.active_area.x
+
+        selfcopy.anchor.size.y=self.anchor.size.y*p
+
+        selfcopy.anchor.etch_margin.x=self.anchor.etch_margin.x*p
+
+        selfcopy.anchor.etch_margin.y=self.anchor.etch_margin.y*p
+
+        cell=FBERes.draw(selfcopy,*args,**kwargs)
+
+        del selfcopy
+
+        self.cell=cell
+
+        return cell
 
 class TFERes(LFERes):
 
@@ -320,18 +364,6 @@ class TFERes(LFERes):
 
         return cell
 
-    def export_params(self):
-
-        t=LFERes.export_params(self)
-
-        t["Type"]="TFERes"
-
-        return t
-
-    def import_params(self,df):
-
-        LFERes.import_params(self,df)
-
 class DUT(LayoutPart):
 
     def __init__(self,*args,**kwargs):
@@ -341,6 +373,7 @@ class DUT(LayoutPart):
         self.dut=LFERes(name=self.name+'_DUT')
         self.probe=GSGProbe_LargePad(name=self.name+'_Probe')
         self.routing_width=ld.DUTrouting_width
+        self.probe_dut_distance=ld.DUTprobe_dut_distance
 
     def draw(self):
 
@@ -355,7 +388,7 @@ class DUT(LayoutPart):
 
         cell=Device(name=self.name)
 
-        probe_dut_distance=Point(0,25)
+        probe_dut_distance=Point(0,self.probe_dut_distance)
         cell<<device_cell
         probe_ref=cell<<probe_cell
 
@@ -415,15 +448,19 @@ class DUT(LayoutPart):
 
     def export_params(self):
 
+        t=super().export_params()
+
         t_dut=self.dut.export_params()
 
         t_dut=t_dut.rename(columns={"Type":"DUT_Type"})
 
+        t=self._add_columns(t, t_dut)
+
         t_probe=self.probe.export_params()
         t_probe=t_probe.rename(columns=lambda x : "Probe"+x )
 
-        t=self._add_columns(t_dut,t_probe)
-        t["Type"]="DUT"
+        t=self._add_columns(t,t_probe)
+
         t["RoutingWidth"]=self.routing_width
 
         t.index=[self.name]
@@ -433,8 +470,6 @@ class DUT(LayoutPart):
         return t
 
     def import_params(self,df):
-
-        LayoutPart.import_params(self,df)
 
         self.dut.import_params(df)
 

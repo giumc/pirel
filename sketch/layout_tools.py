@@ -92,6 +92,7 @@ class LayoutDefault:
 
         #DUT
         self.DUTrouting_width=self.Routingtrace_width
+        self.DUTprobe_dut_distance=50
 
         #GSGProbe_LargePad
         self.GSGProbe_LargePadground_size=200

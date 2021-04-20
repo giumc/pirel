@@ -24,6 +24,43 @@ class SweepParam():
         return str(self._dict)
 
     @property
+    def labels(self):
+
+        param=self
+
+        l=len(param)
+
+        sweep_label=[]
+
+        for name in param.names:
+
+            sweep_label.append(''.join([c for c in name if c.isupper()]))
+
+        stringout=[]
+
+        # import pdb; pdb.set_trace()
+
+        unique={name:list(dict.fromkeys(values)) for name,values in zip(param.names,param.values)}
+
+        for i in range(l):
+
+            # print(i)
+
+            tmp_lab=''
+
+            for lab,name in zip(sweep_label,param.names):
+
+                # import pdb; pdb.set_trace()
+
+                tmp_lab=tmp_lab+" " +lab+str(unique[name].index(param()[name][i]))
+
+                # print(tmp_lab)
+
+            stringout.append(tmp_lab)
+
+        return stringout
+
+    @property
     def names(self):
 
         return [x for x in self._dict.keys()]
@@ -157,7 +194,9 @@ class _SweepParamValidator():
 
             if not all([names in self._valid_names for names in layout_param.names]):
 
-                raise ValueError("At least one param key is invalid")
+                import pdb; pdb.set_trace()
+
+                raise ValueError("At least one param key in {} is invalid".format(*layout_param.names))
 
             else:
 
@@ -215,9 +254,36 @@ class ParametricArray(LayoutPart):
 
     def export_params(self):
 
-        df=self.device.export_params()
-        # warnings.warn("ParamArray.export_params() returned from device")
-        return df
+        return self.device.export_params()
+
+    @property
+    def table(self):
+
+        param=self.x_param
+
+        device=deepcopy(self.device)
+
+        data_tot=DataFrame()
+
+        for i in range(len(param)):
+
+            for name in param.names:
+
+                device.import_params(DataFrame({name:param()[name][i]},index=[0]))
+
+            df=device.export_params()
+
+            if self.labels_bottom is not None:
+
+                df.index=[self.labels_bottom[i]]
+
+            else:
+
+                df.index=[i]
+
+            data_tot=data_tot.append(df)
+
+        return data_tot
 
     def import_params(self,df):
 
@@ -286,48 +352,20 @@ class ParametricArray(LayoutPart):
 
         del device, cells ,g
 
+        # master_cell.flatten()
+
+        master_cell=join(master_cell)
+
         return master_cell
 
-    def auto_labels(self,top=True,bottom=True,top_label=None,bottom_label=None,\
+    def auto_labels(self,top=True,bottom=True,top_label='',bottom_label='',\
         col_index=0,row_index=0):
 
         param=self.x_param
 
-        l=len(param)
+        top_label=[top_label+" "+ x for x in param.labels]
 
-        sweep_label=[]
-
-        for name in param.names:
-
-            sweep_label.append(''.join([c for c in name if c.isupper()]))
-
-        top_label_sweep=[]
-
-        for i in range(l):
-
-            for lab in sweep_label:
-
-                tmp_lab=' '.join([x+str(i) for x in sweep_label])
-
-            top_label_sweep.append(tmp_lab)
-
-        if top_label is None:
-
-            top_label=top_label_sweep
-
-        else:
-
-            top_label=[ top_label+" "+ x for x in top_label_sweep]
-
-        if bottom_label is None:
-
-            bottom_label=""
-
-        else:
-
-            bottom_label=bottom_label+" "
-
-        bottom_label=[bottom_label+"{:03d} x {:03}".format(col_index,y) for y in range(row_index,row_index+l)]
+        bottom_label=[bottom_label+"{:03d} x {:03d}".format(col_index,y) for y in range(row_index,row_index+len(param))]
 
         if top==True:
 
@@ -435,39 +473,34 @@ class ParametricMatrix(ParametricArray):
 
         self.device=original_device
 
+        master_cell.flatten()
+
+        master_cell=join(master_cell)
+
         self.cell=master_cell
 
         return master_cell
 
-    def auto_labels(self,top=True,bottom=True,top_label=None,bottom_label=None,\
+    def auto_labels(self,top=True,bottom=True,top_label='',bottom_label='',\
         col_index=0,row_index=0):
-
-        l=len(self.y_param)
 
         top_label_matrix=[]
 
         bottom_label_matrix=[]
 
-        row_label_sweep=[]
+        y_label=[top_label+x for x  in self.y_param.labels]
 
-        for name in self.y_param.names:
+        x_label=[top_label+x for x in self.x_param.labels]
 
-            row_label_sweep.append(''.join([c for c in name if c.isupper() ]))
+        import itertools
 
-        for i in range(l):
+        # import pdb; pdb.set_trace()
 
-            row_lab=' '.join([x+str(i) for x in row_label_sweep])
-
-            ParametricArray.auto_labels(self,top_label=row_lab,bottom_label=bottom_label,\
-                col_index=i+col_index,row_index=row_index)
-
-            top_label_matrix.append(self.labels_top)
-
-            bottom_label_matrix.append(self.labels_bottom)
+        top_label=[[top_label+x+y for x in x_label] for y in y_label]
 
         if top==True:
 
-            self.labels_top=top_label_matrix
+            self.labels_top=top_label
 
         else:
 
@@ -475,7 +508,9 @@ class ParametricMatrix(ParametricArray):
 
         if bottom==True:
 
-            self.labels_bottom=bottom_label_matrix
+            self.labels_bottom=[[bottom_label+"{:03d} x {:03d}".format(x,y) \
+            for x in range(col_index,col_index+len(self.x_param))] \
+            for y in range(row_index,row_index+len(self.y_param))]
 
         else:
 
