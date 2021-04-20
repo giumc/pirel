@@ -109,7 +109,7 @@ class SweepParam():
 
         dict_new={x : [] for x in init_names+new_names}
 
-        import pdb; pdb.set_trace()
+        # import pdb; pdb.set_trace()
 
         for index in range(new_length):
 
@@ -117,7 +117,7 @@ class SweepParam():
 
                 dict_new[name].append(tot_values.pop(0))
 
-            print(dict_new)
+            # print(dict_new)
 
         return SweepParam(dict_new)
 

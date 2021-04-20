@@ -130,6 +130,7 @@ class LayoutPart(ABC) :
         df=self.export_params()
 
         return [str(_) for _ in df.columns ]
+
     def __repr__(self):
 
         df=self.export_params()
@@ -1107,7 +1108,6 @@ class GSGProbe(LayoutPart):
     def export_params(self):
 
         t=LayoutPart.export_params(self)
-        t["Size"]=self.size
         t["Width"]=self.size.x
         t["Length"]=self.size.y
         t["Pitch"]=self.pitch

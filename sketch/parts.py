@@ -174,6 +174,34 @@ class LFERes(LayoutPart):
             if_match_import(self.etchpit,col,"Etch",df)
             if_match_import(self.anchor,col,"Anchor",df)
 
+class LFERes_Scaled(LFERes):
+
+    def __init__(self,*args,**kwargs):
+
+        super().__init__(*args,**kwargs)
+
+    def draw(self,*args,**kwargs):
+
+        p=self.idt.pitch
+
+        self.idt.y_offset=self.idt.y_offset*p
+
+        self.idt.y=self.idt.y*p
+
+        self.bus.size.y=self.bus.size.y*p
+
+        self.etchpit.x=self.etchpit.x*p
+
+        self.anchor.size.x=self.anchor.size.x*p
+
+        self.anchor.size.y=self.anchor.size.y*p
+
+        self.anchor.etch_margin.x=self.anchor.etch_margin.x*p
+
+        self.anchor.etch_margin.y=self.anchor.etch_margin.y*p
+
+        return LFERes.draw(self,*args,**kwargs)
+
 class FBERes(LFERes):
 
     def __init__(self,*args,**kwargs):
