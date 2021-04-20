@@ -12,9 +12,15 @@ class SweepParam():
             # import pdb; pdb.set_trace()
             raise ValueError("SweepParam is init by dict of names:values")
 
-    def __call__(self):
+    def __call__(self,*args):
 
-        return self._dict
+        if not args:
+
+            return self._dict
+
+        elif isinstance(args[0],int):
+
+            return {x:y[args[0]] for x,y in zip(self.names,self.values)}
 
     def __len__(self):
         return len(self._dict[list(self._dict.keys())[0]])
@@ -515,3 +521,40 @@ class ParametricMatrix(ParametricArray):
         else:
 
             self.labels_bottom=None
+
+    @property
+    def table(self):
+
+        x_param=self.x_param
+
+        y_param=self.y_param
+
+        device=deepcopy(self.device)
+
+        data_tot=DataFrame()
+
+        for j in range(len(y_param)):
+
+            for name in y_param.names:
+
+                device.import_params(DataFrame({name:y_param()[name][j]},index=[0]))
+
+            for i in range(len(x_param)):
+
+                for name in x_param.names:
+
+                    device.import_params(DataFrame({name:x_param()[name][i]},index=[0]))
+
+                df=device.export_params()
+
+                if self.labels_bottom is not None:
+
+                    df.index=[self.labels_bottom[j][i]]
+
+                else:
+
+                    df.index=[i,j]
+
+                data_tot=data_tot.append(df)
+
+        return data_tot
