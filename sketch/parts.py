@@ -251,7 +251,6 @@ class FBERes(LFERes):
 
         return cell
 
-
 class FBERes_Scaled(FBERes):
 
     def __init__(self,*args,**kwargs):
@@ -480,3 +479,91 @@ class DUT(LayoutPart):
             if col == "RoutingWidth" :
 
                 self.routing_width=df[col].iat[0]
+
+class _addVia(LayoutPart):
+
+    def __init__(self,*args,**kwargs):
+
+        super().__init__(*args,**kwargs)
+        self.via=Via(name=self.name+'Via')
+        self.overvia=2
+        self.layer=ld.layerTop
+
+    def draw(self,*args,**kwargs):
+
+        viacell=self.via.draw()
+
+        if self.via.type=='rectangle':
+
+            size=self.via.size*self.overvia
+
+        elif self.via.type=='circle':
+
+            size=self.via.size*3.14/2*self.overvia
+
+        port=viacell.get_ports()[0]
+
+        trace=pg.rectangle(size=(size,size),layer=self.layer)
+
+        cell=Device(name=self.name)
+
+        cell.absorb((cell<<trace).move(origin=trace.center,\
+            destination=viacell.center))
+
+        cell.absorb(cell<<viacell)
+
+        port.midpoint=(port.midpoint[0],cell.ymax)
+        port.width=size
+
+        cell.add_port(port)
+
+        return cell
+
+    def export_params(self):
+
+        t_via=self.via.export_params().drop(columns=['Type'])
+        t['Overvia']=self.overvia
+        t_via=t_via.rename(columns=lambda x: "Via"+x)
+
+    def import_params(self, df):
+
+        for col in df.columns:
+
+            if_match_import(self.via,col,"Via",df)
+
+            if col=='Overvia':
+
+                self.overvia=df[col]
+
+class LFERes_wVia(LFERes,_addVia):
+
+    def __init__(self,*args,**kwargs):
+
+        LFERes.__init__(self,*args,**kwargs)
+        _addVia.__init__(self,*args,**kwargs)
+
+    def draw(self,*args,**kwargs):
+
+        rescell=LFERes.draw(self,*args,**kwargs)
+
+        viacell=_addVia.draw(self,*args,**kwargs)
+
+        cell=Device(name=self.name)
+
+        cell<<rescell
+
+        cell<<viacell
+
+        self.cell=cell
+
+        return cell
+
+    def export_params(self):
+
+        return LFERes.export_params(self)._add_columns(_addVia.export_params())
+
+    def import_params(self, df):
+
+        LFERes.import_params(self, df)
+
+        _addVia.import_params(self, df)

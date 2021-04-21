@@ -32,7 +32,10 @@ array.x_param=param1.combine(param2)
 
 array.auto_labels()
 
-# array.test(size=200,spacing=200)
+array.test(size=200,spacing=200)
+
+print(array.device)
+input()
 #
 # mat=sketch.ParametricMatrix("Hi")
 # mat.x_spacing=200

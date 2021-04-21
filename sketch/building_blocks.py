@@ -719,7 +719,7 @@ class Routing(LayoutPart):
 
             ll,lr,ul,ur=get_corners(bbox)
 
-            if source.x+source.width/2>ll.x and source.x-source.width/2<lr.x: #source tucked inside clearance
+            if source.x+self.trace_width/2>ll.x and source.x-self.trace_width/2<lr.x: #source tucked inside clearance
 
                 if self.side=='auto':
 

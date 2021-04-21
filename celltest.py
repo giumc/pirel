@@ -28,8 +28,10 @@ import matplotlib.pyplot as plt
 
 # gs=sketch.GSProbe("probs").test()
 
-# tfe=sketch.LFERes("bu")
-# tfe.test()
+tfe=sketch.LFERes_wVia("bu")
+tfe.overvia=2
+tfe.via.size=50
+tfe.test()
 
 # print(tfe.export_params().to_string())
 
@@ -55,22 +57,22 @@ import matplotlib.pyplot as plt
 # sketch.check_cell(routing)
 
 # sketch.GSGProbe_LargePad().test()
-
-d=sketch.DUT("hi")
-# d.dut.anchor.etch_choice=False
-d.dut.idt.n=20
-d.routing_width=100
-d.probe.size=sketch.Point(50,50)
-d.probe.groundsize=300
-# # import pdb; pdb.set_trace()
-df=d.export_params()
-d.test()
-df["IDTN_fingers"]=3
-# # df["BusSize"]=sketch.Point(50,200)
-# df["AnchorSize"]=sketch.Point(300,50)
-# df["AnchorEtchMargin"]=sketch.Point(5,10)
-d.import_params(df)
-d.test()
+#
+# d=sketch.DUT("hi")
+# # d.dut.anchor.etch_choice=False
+# d.dut.idt.n=20
+# d.routing_width=100
+# d.probe.size=sketch.Point(50,50)
+# d.probe.groundsize=300
+# # # import pdb; pdb.set_trace()
+# df=d.export_params()
+# d.test()
+# df["IDTN_fingers"]=3
+# # # df["BusSize"]=sketch.Point(50,200)
+# # df["AnchorSize"]=sketch.Point(300,50)
+# # df["AnchorEtchMargin"]=sketch.Point(5,10)
+# d.import_params(df)
+# d.test()
 #
 # dut=d.dut
 #

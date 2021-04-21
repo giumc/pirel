@@ -275,7 +275,7 @@ class ParametricArray(LayoutPart):
 
             for name in param.names:
 
-                device.import_params(DataFrame({name:param()[name][i]},index=[0]))
+                device.import_params(DataFrame(param(i),index=[0]))
 
             df=device.export_params()
 
@@ -298,7 +298,7 @@ class ParametricArray(LayoutPart):
 
     def draw(self,layer=None,*args,**kwargs):
 
-        device=copy(self.device)
+        device=deepcopy(self.device)
 
         df=device.export_params()
 
@@ -361,6 +361,8 @@ class ParametricArray(LayoutPart):
         # master_cell.flatten()
 
         master_cell=join(master_cell)
+
+        self.cell=master_cell
 
         return master_cell
 
@@ -483,24 +485,26 @@ class ParametricMatrix(ParametricArray):
 
         master_cell=join(master_cell)
 
+        self.device=original_device
+
         self.cell=master_cell
+
+        self.labels_top=top_label_matrix
+
+        self.labels_bottom=bottom_label_matrix
 
         return master_cell
 
     def auto_labels(self,top=True,bottom=True,top_label='',bottom_label='',\
         col_index=0,row_index=0):
 
-        top_label_matrix=[]
-
-        bottom_label_matrix=[]
+        # import pdb; pdb.set_trace()
 
         y_label=[top_label+x for x  in self.y_param.labels]
 
         x_label=[top_label+x for x in self.x_param.labels]
 
         import itertools
-
-        # import pdb; pdb.set_trace()
 
         top_label=[[top_label+x+y for x in x_label] for y in y_label]
 
@@ -533,17 +537,15 @@ class ParametricMatrix(ParametricArray):
 
         data_tot=DataFrame()
 
+        # import pdb; pdb.set_trace()
+
         for j in range(len(y_param)):
 
-            for name in y_param.names:
-
-                device.import_params(DataFrame({name:y_param()[name][j]},index=[0]))
+            device.import_params(DataFrame(y_param(j),index=[0]))
 
             for i in range(len(x_param)):
 
-                for name in x_param.names:
-
-                    device.import_params(DataFrame({name:x_param()[name][i]},index=[0]))
+                device.import_params(DataFrame(x_param(i),index=[0]))
 
                 df=device.export_params()
 
