@@ -88,7 +88,7 @@ class LayoutPart(ABC) :
 
             o=ll-text_distance
 
-            text_cell.rotate(angle=-90)
+            text_cell.rotate(angle=90)
 
         text_ref=cell<<text_cell
 
@@ -634,15 +634,16 @@ class Via(LayoutPart):
 
                 cell=pg.rectangle(size=self.size(),\
                     layer=self.layer)
-
-            elif isinstance(self.size,int) or isinstance(self.size,float):
-
-                cell=pg.rectangle(size=(self.size,self.size),\
-                    layer=self.layer)
-
             else:
 
-                raise Exception("Via.size has to be Point or int/float")
+                try:
+
+                    cell=pg.rectangle(size=(self.size,self.size),\
+                        layer=self.layer)
+
+                except Exception:
+
+                    raise Exception("Via.size has to be Point or int/float")
 
         elif self.type=='circle':
 
@@ -651,14 +652,16 @@ class Via(LayoutPart):
                 cell=pg.circle(radius=self.size.x/2,\
                 layer=self.layer)
 
-            elif isinstance(self.size,int) or isinstance(self.size,float):
-
-                cell=pg.circle(radius=self.size/2,\
-                layer=self.layer)
-
             else:
 
-                raise Exception("Via.size has to be Point or int/float")
+                try:
+
+                    cell=pg.circle(radius=self.size/2,\
+                    layer=self.layer)
+
+                except Exception:
+
+                    raise Exception("Via.size has to be Point or int/float")
 
         else:
 

@@ -14,11 +14,11 @@ def Scaled(res):
 
         def __init__(self,*args,**kwargs):
 
-            self._valid_classes=(LFERes,FBERes,TFERes)
-
-            if not any([res.__name__==x.__name__ for x in self._valid_classes]):
-
-                raise ValueError("Wrong init of scaled design. You can scale {}".format(",".join(self._valid_classes)))
+            # self._valid_classes=(LFERes,FBERes,TFERes)
+            #
+            # if not any([res.__name__==x.__name__ for x in self._valid_classes]):
+            #
+            #     raise ValueError("Wrong init of scaled design. You can scale {}".format(",".join(self._valid_classes)))
 
             res.__init__(self,*args,**kwargs)
 
@@ -52,7 +52,91 @@ def Scaled(res):
 
             return cell
 
+        def __name__(self):
+
+            return "Scaled"+res.__name__
+
+
     return Scaled
+
+def addVia(res):
+
+    class addVia(res,_addVia):
+
+        def __init__(self,*args,**kwargs):
+
+            res.__init__(self,*args,**kwargs)
+            _addVia.__init__(self,*args,**kwargs)
+
+        def draw(self,*args,**kwargs):
+
+            rescell=res.draw(self)
+
+            bottom_port=rescell.get_ports()[1]
+
+            active_width=rescell.xsize
+
+            import numpy as np
+
+            nvias=max(1,int(np.floor(active_width/2/self.via.size/self.overvia)))
+
+            viacell=LayoutPart.draw_array(_addVia.draw(self),nvias,3,*args,**kwargs)
+
+            cell=Device(name=self.name)
+
+            cell<<rescell
+
+            viaref=cell<<viacell
+
+            viaref.connect(viacell.get_ports()[0],\
+            destination=rescell.get_ports()[0])
+
+            top_port=rescell.get_ports()[0]
+
+            top_port=Port(name=top_port.name,\
+                midpoint=(top_port.midpoint[0],top_port.midpoint[1]),\
+                width=viacell.xsize,\
+                orientation=90)
+
+            cell=join(cell)
+            cell.add_port(top_port)
+            cell.add_port(bottom_port)
+
+            cell.remove_layers(layers=[self.padlayers[1]])
+
+            self.cell=cell
+
+            return cell
+
+        def __name__(self):
+
+            return "addVia"+res.__name__
+
+        def export_params(self):
+
+            t=res.export_params(self)
+            t=LayoutPart._add_columns(t,_addVia.export_params(self))
+            t=LayoutPart._add_columns(t,LayoutPart.export_params(self))
+            return t
+
+        def import_params(self, df):
+
+            res.import_params(self, df)
+
+            _addVia.import_params(self, df)
+
+        def bbox_mod(self,bbox):
+
+            LayoutPart.bbox_mod(self,bbox)
+
+            ll=Point().from_iter(bbox[0])
+            ur=Point().from_iter(bbox[1])
+
+            ur=ur-Point(0,float(self.via.size*self.overvia*3))
+
+            return (ll(),ur())
+
+    return addVia
 
 class LFERes(LayoutPart):
 
@@ -468,17 +552,18 @@ class _addVia(LayoutPart):
         self.padlayers=[ld.layerTop,ld.layerBottom]
         self.overvia=2
 
-    def draw(self,*args,**kwargs):
+    def draw(self,*argss,**kwargs):
 
         viacell=self.via.draw()
 
-        size=self.via.size*self.overvia
+        size=float(self.via.size*self.overvia)
 
         port=viacell.get_ports()[0]
 
         trace=pg.rectangle(size=(size,size),layer=self.padlayers[0])
-        trace.move(origin=trace.center,\
-            destination=viacell.center)
+
+        trace.move(origin=trace.center.tolist(),\
+            destination=viacell.center.tolist())
 
         trace2=pg.copy_layer(trace,layer=self.padlayers[0],new_layer=self.padlayers[1])
 
@@ -503,8 +588,10 @@ class _addVia(LayoutPart):
     def export_params(self):
 
         t_via=self.via.export_params().drop(columns=['Type'])
-        t_via['Overvia']=self.overvia
+
         t_via=t_via.rename(columns=lambda x: "Via"+x)
+
+        t_via['Overvia']=self.overvia
 
         return t_via
 
@@ -517,100 +604,3 @@ class _addVia(LayoutPart):
             if col=='Overvia':
 
                 self.overvia=df[col]
-
-class LFERes_wVia(LFERes,_addVia):
-
-    def __init__(self,*args,**kwargs):
-
-        LFERes.__init__(self,*args,**kwargs)
-        _addVia.__init__(self,*args,**kwargs)
-
-    def draw(self,*args,**kwargs):
-
-        rescell=LFERes.draw(self)
-
-        bottom_port=rescell.get_ports()[1]
-
-        # import pdb; pdb.set_trace()
-
-        self.via.size=self.anchor.size.x/self.overvia
-
-        # self.via.layer=self.idt.layer
-
-        active_width=rescell.xsize
-
-        import numpy as np
-
-        nvias=max(1,int(np.floor(active_width/2/self.via.size/self.overvia)))
-
-        viacell=LayoutPart.draw_array(_addVia.draw(self),nvias,3,*args,**kwargs)
-
-        cell=Device(name=self.name)
-
-        cell<<rescell
-
-        viaref=cell<<viacell
-
-        viaref.connect(viacell.get_ports()[0],\
-        destination=rescell.get_ports()[0])
-
-        top_port=rescell.get_ports()[0]
-
-        top_port=Port(name=top_port.name,\
-            midpoint=(top_port.midpoint[0],top_port.midpoint[1]),\
-            width=viacell.xsize,\
-            orientation=90)
-
-        # top_port.rotate(angle=180,center=top_port.midpoint)
-
-        # vialx=cell<<viacell
-        #
-        # vialx.move(origin=(0,0),\
-        #     destination=(viaref.center[0]-self.anchor.size.x,viaref.center[1]))
-        #
-        # viarx=cell<<viacell
-        #
-        # viarx.move(origin=(0,0),\
-        #     destination=(viaref.center[0]+self.anchor.size.x,viaref.center[1]))
-
-        cell=join(cell)
-        cell.add_port(top_port)
-        cell.add_port(bottom_port)
-
-        cell.remove_layers(layers=[self.padlayers[1]])
-
-        self.cell=cell
-
-        return cell
-
-    def export_params(self):
-
-        t=LFERes.export_params(self)
-        t=LayoutPart._add_columns(t,_addVia.export_params(self))
-        t=LayoutPart._add_columns(t,LayoutPart.export_params(self))
-        return t
-
-    def import_params(self, df):
-
-        LFERes.import_params(self, df)
-
-        _addVia.import_params(self, df)
-
-    def bbox_mod(self,bbox):
-
-        LayoutPart.bbox_mod(self,bbox)
-
-        ll=Point().from_iter(bbox[0])
-        ur=Point().from_iter(bbox[1])
-
-        ur=ur-Point(0,self.via.size*self.overvia*3)
-
-        return (ll(),ur())
-
-# # class LFERes_Scaled_wVia(LFERes_wVia):
-#
-#     def __init__(self,*args,**kwargs):
-#
-#         super().__init__(*args,**kwargs)
-#
-#     def draw():

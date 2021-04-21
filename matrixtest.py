@@ -35,7 +35,6 @@ array.auto_labels()
 array.view(text_size=200,text_distance=sketch.Point(0,200))
 
 print(array.device)
-input()
 #
 # mat=sketch.ParametricMatrix("Hi")
 # mat.x_spacing=200

@@ -17,7 +17,7 @@ import matplotlib.pyplot as plt
 #
 lfe=sketch.LFERes('ress')
 
-lfe.view()
+# lfe.view()
 # sketch.FBERes('ress').view()
 #
 # sketch.TFERes("bu").view()
@@ -33,8 +33,10 @@ lfe.view()
 
 d=sketch.DUT("hi")
 
-d.dut=sketch.Scaled(sketch.LFERes)()
+d.dut=sketch.Scaled(sketch.addVia(sketch.LFERes))()
 
+# d.dut.print_params_name()
+# print(d.dut.__class__.__name__)
 base_params=d.dut.export_params()
 
 base_params["ProbeWidth"]=100
@@ -53,6 +55,8 @@ base_params["AnchorWidth"]=0.5
 base_params["AnchorEtchMarginX"]=0.5
 base_params["AnchorEtchMarginY"]=0.5
 base_params["ProbeGroundPadSize"]=200
+base_params["ViaSize"]=30
+base_params["Overvia"]=3
 
 d.dut.import_params(base_params)
 
