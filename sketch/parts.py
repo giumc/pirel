@@ -8,6 +8,52 @@ import pandas as pd
 
 import warnings
 
+def Scaled(res):
+
+    class Scaled(res):
+
+        def __init__(self,*args,**kwargs):
+
+            self._valid_classes=(LFERes,FBERes,TFERes)
+
+            if not any([res.__name__==x.__name__ for x in self._valid_classes]):
+
+                raise ValueError("Wrong init of scaled design. You can scale {}".format(",".join(self._valid_classes)))
+
+            res.__init__(self,*args,**kwargs)
+
+        def draw(self,*args,**kwargs):
+
+            selfcopy=deepcopy(self)
+
+            p=selfcopy.idt.pitch
+
+            selfcopy.idt.y_offset=self.idt.y_offset*p
+
+            selfcopy.idt.y=self.idt.y*p
+
+            selfcopy.bus.size.y=self.bus.size.y*p
+
+            selfcopy.etchpit.x=self.etchpit.x*selfcopy.idt.active_area.x
+
+            selfcopy.anchor.size.x=self.anchor.size.x*selfcopy.idt.active_area.x
+
+            selfcopy.anchor.size.y=self.anchor.size.y*p
+
+            selfcopy.anchor.etch_margin.x=self.anchor.etch_margin.x*p
+
+            selfcopy.anchor.etch_margin.y=self.anchor.etch_margin.y*p
+
+            cell=res.draw(selfcopy,*args,**kwargs)
+
+            del selfcopy
+
+            self.cell=cell
+
+            return cell
+
+    return Scaled
+
 class LFERes(LayoutPart):
 
     def __init__(self,*args,**kwargs):
@@ -176,50 +222,6 @@ class LFERes(LayoutPart):
             if_match_import(self.etchpit,col,"Etch",df)
             if_match_import(self.anchor,col,"Anchor",df)
 
-class LFERes_Scaled(LFERes):
-
-    def __init__(self,*args,**kwargs):
-
-        super().__init__(*args,**kwargs)
-
-    def draw(self,*args,**kwargs):
-
-        selfcopy=deepcopy(self)
-
-        p=selfcopy.idt.pitch
-
-        selfcopy.idt.y_offset=self.idt.y_offset*p
-
-        selfcopy.idt.y=self.idt.y*p
-
-        selfcopy.bus.size.y=self.bus.size.y*p
-
-        selfcopy.etchpit.x=self.etchpit.x*selfcopy.idt.active_area.x
-
-        selfcopy.anchor.size.x=self.anchor.size.x*selfcopy.idt.active_area.x
-
-        selfcopy.anchor.size.y=self.anchor.size.y*p
-
-        selfcopy.anchor.etch_margin.x=self.anchor.etch_margin.x*p
-
-        selfcopy.anchor.etch_margin.y=self.anchor.etch_margin.y*p
-
-        cell=LFERes.draw(selfcopy,*args,**kwargs)
-
-        del selfcopy
-
-        self.cell=cell
-
-        return cell
-
-    # def export_params(self):
-    #
-    #     df=LFERes.export_params(self)
-    #
-    #     df["Type"]=self.__class__.__name__
-    #
-    #     return df
-
 class FBERes(LFERes):
 
     def __init__(self,*args,**kwargs):
@@ -246,42 +248,6 @@ class FBERes(LFERes):
         cell.absorb(plate_ref)
 
         del plate
-
-        self.cell=cell
-
-        return cell
-
-class FBERes_Scaled(FBERes):
-
-    def __init__(self,*args,**kwargs):
-
-        super().__init__(*args,**kwargs)
-
-    def draw(self,*args,**kwargs):
-
-        selfcopy=deepcopy(self)
-
-        p=selfcopy.idt.pitch
-
-        selfcopy.idt.y_offset=self.idt.y_offset*p
-
-        selfcopy.idt.y=self.idt.y*p
-
-        selfcopy.bus.size.y=self.bus.size.y*p
-
-        selfcopy.etchpit.x=self.etchpit.x*selfcopy.idt.active_area.x
-
-        selfcopy.anchor.size.x=self.anchor.size.x*selfcopy.idt.active_area.x
-
-        selfcopy.anchor.size.y=self.anchor.size.y*p
-
-        selfcopy.anchor.etch_margin.x=self.anchor.etch_margin.x*p
-
-        selfcopy.anchor.etch_margin.y=self.anchor.etch_margin.y*p
-
-        cell=FBERes.draw(selfcopy,*args,**kwargs)
-
-        del selfcopy
 
         self.cell=cell
 
@@ -367,13 +333,14 @@ class DUT(LayoutPart):
 
     def __init__(self,*args,**kwargs):
 
+        # import pdb; pdb.set_trace()
+
         super().__init__(*args,**kwargs)
 
         self.dut=LFERes(name=self.name+'_DUT')
         self.probe=GSGProbe_LargePad(name=self.name+'_Probe')
         self.routing_width=ld.DUTrouting_width
         self.probe_dut_distance=ld.DUTprobe_dut_distance
-        self.bbox_mod=lambda x:x
 
     def draw(self):
 
@@ -639,3 +606,11 @@ class LFERes_wVia(LFERes,_addVia):
         ur=ur-Point(0,self.via.size*self.overvia*3)
 
         return (ll(),ur())
+
+# # class LFERes_Scaled_wVia(LFERes_wVia):
+#
+#     def __init__(self,*args,**kwargs):
+#
+#         super().__init__(*args,**kwargs)
+#
+#     def draw():

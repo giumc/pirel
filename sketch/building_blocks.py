@@ -58,7 +58,7 @@ class LayoutPart(ABC) :
 
         package_directory = os.path.dirname(os.path.abspath(__file__))
 
-        font=os.path.join(package_directory,font)
+        font=os.path.join(package_directory,text_font)
 
         cell=self.cell
 
@@ -66,27 +66,27 @@ class LayoutPart(ABC) :
 
         ll,lr,ul,ur=get_corners(cell)
 
-        text_cell=pg.text(size=text_size,text=text_label,font=text_font,layer=text_layer)
+        text_cell=pg.text(size=text_size,text=text_label,font=font,layer=text_layer)
 
         text_size=Point().from_iter(text_cell.size)
 
         if text_location=='top':
 
-            o=ul+distance
+            o=ul+text_distance
 
         elif text_location=='bottom':
 
-            o=ll-Point(0,text_size.y)-distance
+            o=ll-Point(0,text_size.y)-text_distance
 
         elif text_location=='right':
 
-            o=ur+distance
+            o=ur+text_distance
 
             text_cell.rotate(angle=-90)
 
         elif text_location=='left':
 
-            o=ll-distance
+            o=ll-text_distance
 
             text_cell.rotate(angle=-90)
 

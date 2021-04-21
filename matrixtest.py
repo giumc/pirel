@@ -7,9 +7,9 @@ sys.path.append(str(p.parent.absolute()))
 import sketch
 import numpy as np
 
-device=sketch.DUT()
+device=sketch.Scaled(sketch.LFERes)
 
-device_params=device.export_params()
+device_params=device().export_params()
 
 device_params["ProbeSize"]=sketch.Point(100,100)
 device_params["ProbePitch"]=200
@@ -17,13 +17,13 @@ device_params["ProbeGroundPadSize"]=500
 
 device.import_params(device_params)
 
-array=sketch.ParametricArray()
+array=sketch.ParametricArray("Hi")
 
-array.device=device
+array.device=sketch.Scaled(device)
 array.x_spacing=200
 
 param1=sketch.SweepParam({"IDTCoverage":[0.3,0.5,0.7]})
-param2=sketch.SweepParam({"BusLength":[50,100,150]})
+param2=sketch.SweepParam({"BusLength":[5,10,15]})
 
 array.x_param=param1.combine(param2)
 
@@ -32,7 +32,7 @@ array.x_param=param1.combine(param2)
 
 array.auto_labels()
 
-array.test(size=200,spacing=200)
+array.view(text_size=200,text_distance=sketch.Point(0,200))
 
 print(array.device)
 input()
