@@ -42,22 +42,19 @@ class LayoutPart(ABC) :
 
         self.cell=Device()
 
-    @abstractmethod
-    def draw(self,*args,**kwargs):
-        pass
-
-    def test(self,*args,**kwargs):
+    def view(self,*args,**kwargs):
         set_quickplot_options(blocking=True)
         qp(self.draw(*args,**kwargs))
         return
 
-    def test_gds(self,*args,**kwargs):
+    def view_gds(self,*args,**kwargs):
         lib=gdspy.GdsLibrary('test')
         lib.add(self.draw(*args,**kwargs))
         gdspy.LayoutViewer(lib)
 
-    def add_text(self,location='top',size=25,\
-        text='default',font='BebasNeue-Regular.otf',layer=ld.layerTop,spacing=100):
+    def add_text(self,text_location='top',text_size=25,\
+        text_label='default',text_font='BebasNeue-Regular.otf',\
+        text_layer=ld.layerTop,text_distance=Point(0,100)):
 
         package_directory = os.path.dirname(os.path.abspath(__file__))
 
@@ -69,19 +66,29 @@ class LayoutPart(ABC) :
 
         ll,lr,ul,ur=get_corners(cell)
 
-        text_cell=pg.text(size=size,text=text,font=font,layer=layer)
+        text_cell=pg.text(size=text_size,text=text_label,font=text_font,layer=text_layer)
 
-        text_y=text_cell.ysize
+        text_size=Point().from_iter(text_cell.size)
 
-        space=Point(0,spacing)
+        if text_location=='top':
 
-        if location=='top':
+            o=ul+distance
 
-            o=ul+space
+        elif text_location=='bottom':
 
-        elif location=='bottom':
+            o=ll-Point(0,text_size.y)-distance
 
-            o=ll-Point(0,text_y)-space
+        elif text_location=='right':
+
+            o=ur+distance
+
+            text_cell.rotate(angle=-90)
+
+        elif text_location=='left':
+
+            o=ll-distance
+
+            text_cell.rotate(angle=-90)
 
         text_ref=cell<<text_cell
 
@@ -94,20 +101,66 @@ class LayoutPart(ABC) :
 
         self.cell=cell
 
+    def print_params_name(self):
+
+        df=self.export_params()
+
+        print("List of parameters for instance of {}\n".format(self.__class__.__name__))
+
+        print(*df.columns.values,sep='\n')
+
+    def get_params_name(self):
+
+        df=self.export_params()
+
+        return [str(_) for _ in df.columns ]
+
+    @property
+    def clearance(self):
+
+        if not hasattr(self,'_clearance'):
+
+            cell=self.draw()
+
+            ll,_,_,ur=get_corners(cell)
+
+            self._clearance=(ll,ur)
+
+        return self._clearance
+
+    @clearance.setter
+
+    def clearance(self,new_points):
+
+        msgerr="clearance is set by two points"
+
+        try :
+
+            iter(new_points)
+
+        except Exception :
+
+            raise ValueError(msgerr)
+
+        if not  len(new_points)==2:
+
+            raise ValueError(msgerr)
+
+        if not all([isinstance(_, Point) for _ in new_points]):
+
+            raise ValueError(msgerr)
+
+        self._clearance=new_points
+
+    @abstractmethod
+    def draw(self,*args,**kwargs):
+        pass
+
     @abstractmethod
     def export_params(self):
 
         return DataFrame({
         'Type':self.__class__.__name__},index=[self.name])
-
-    @staticmethod
-    def _add_columns(d1,d2):
-
-        for cols in d2.columns:
-
-            d1[cols]=d2[cols].iat[0]
-
-        return d1
 
     @abstractmethod
     def import_params(self,df):
@@ -118,18 +171,14 @@ class LayoutPart(ABC) :
 
         self.name=df.index.values[0]
 
-    def print_params_name(self):
+    @staticmethod
+    def _add_columns(d1,d2):
 
-        df=self.export_params()
+        for cols in d2.columns:
 
-        print("List of parameters for instance of {}\n".format(self.__class__.__name__))
-        print(*df.columns.values,sep='\n')
+            d1[cols]=d2[cols].iat[0]
 
-    def get_params_name(self):
-
-        df=self.export_params()
-
-        return [str(_) for _ in df.columns ]
+        return d1
 
     def __repr__(self):
 
@@ -142,6 +191,30 @@ class LayoutPart(ABC) :
         df=df.rename_axis("Parameters",axis=1)
 
         return df.transpose().to_string()
+
+    @staticmethod
+    def draw_array(cell,x,y,row_spacing=0,column_spacing=0,*args,**kwargs):
+
+        new_cell=Device(name=cell.name+"array")
+
+        cell_size=Point().from_iter(cell.size)
+        new_cell.add_array(cell,rows=y,columns=x,\
+            spacing=(row_spacing+cell_size.x,column_spacing+cell_size.y))
+
+        _,_,ul,ur=get_corners(new_cell)
+
+        midpoint=ul/2+ur/2
+
+        p=Port(name=new_cell.name,\
+            orientation=90,\
+            midpoint=midpoint(),\
+            width=(ur.x-ul.x))
+
+        new_cell=join(new_cell)
+
+        new_cell.add_port(p)
+
+        return new_cell
 
 class IDT(LayoutPart) :
 
@@ -710,8 +783,7 @@ class Routing(LayoutPart):
 
             path=pp.smooth(points=list_points)
 
-
-        elif destination.y>=ur.y : #destination is above clearance
+        else: #destination is above clearance
 
             if not(destination.orientation==source.orientation):
 
@@ -729,12 +801,12 @@ class Routing(LayoutPart):
                 elif self.side=='left':
 
                     source=self._add_ramp_lx(cell,source,len=taper_len)
-                    destination=self._add_ramp_lx(cell,destination,len=self.trace_width/4)
+                    destination=self._add_taper(cell,destination,len=self.trace_width/4)
 
                 elif self.side=='right':
 
                     source=self._add_ramp_rx(cell,source,len=taper_len)
-                    destination=self._add_ramp_rx(cell,destination,len=self.trace_width/4)
+                    destination=self._add_taper(cell,destination,len=self.trace_width/4)
 
                 source.name='source'
                 destination.name='destination'
@@ -812,10 +884,6 @@ class Routing(LayoutPart):
                 list_points=[p0(),p1(),p2(),p3()]
 
                 path=pp.smooth(points=list_points)#source tucked inside clearance
-
-        else:
-
-            raise Exception("Destination port needs to be above or below the hindrance ")
 
         x=CrossSection()
 

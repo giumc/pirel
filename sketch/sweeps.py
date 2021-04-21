@@ -338,13 +338,13 @@ class ParametricArray(LayoutPart):
 
                 if self.labels_top is not None:
 
-                    device.add_text(layer=layer,location='top',\
-                    text=self.labels_top[index],*args,**kwargs)
+                    device.add_text(text_layer=layer,text_location='top',\
+                    text_label=self.labels_top[index],*args,**kwargs)
 
                 if self.labels_bottom is not None:
 
-                    device.add_text(layer=layer,location='bottom',\
-                    text=self.labels_bottom[index],*args,**kwargs)
+                    device.add_text(text_layer=layer,text_location='bottom',\
+                    text_label=self.labels_bottom[index],*args,**kwargs)
 
             master_cell<<new_cell
 

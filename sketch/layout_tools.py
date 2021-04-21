@@ -146,7 +146,7 @@ class Point:
 
         return Point(x1,y1)
 
-    def __floordiv__(self,x0):
+    def __truediv__(self,x0):
 
         if isinstance(x0,int) or isinstance(x0,float):
 
@@ -155,9 +155,8 @@ class Point:
             y1=p.y/x0
 
             return Point(x1,y1)
+
         else:
-
-
 
             raise Exception("Division Point/x0 is not possible here")
 
@@ -171,6 +170,10 @@ class Point:
         return (self.x,self.y)
 
     __radd__ = __add__
+
+    # __div__ = __floordiv__
+
+    # __truediv = __floordiv__
 
     def from_iter(self,l):
 

@@ -486,8 +486,8 @@ class _addVia(LayoutPart):
 
         super().__init__(*args,**kwargs)
         self.via=Via(name=self.name+'Via')
+        self.padlayers=[ld.layerTop,ld.layerBottom]
         self.overvia=2
-        self.layer=ld.layerTop
 
     def draw(self,*args,**kwargs):
 
@@ -497,17 +497,25 @@ class _addVia(LayoutPart):
 
         port=viacell.get_ports()[0]
 
-        trace=pg.rectangle(size=(size,size),layer=self.layer)
+        trace=pg.rectangle(size=(size,size),layer=self.padlayers[0])
+        trace.move(origin=trace.center,\
+            destination=viacell.center)
+
+        trace2=pg.copy_layer(trace,layer=self.padlayers[0],new_layer=self.padlayers[1])
 
         cell=Device(name=self.name)
 
-        cell.absorb((cell<<trace).move(origin=trace.center,\
-            destination=viacell.center))
+        cell.absorb((cell<<trace))
+
+        cell.absorb((cell<<trace2))
 
         cell.absorb(cell<<viacell)
 
         port.midpoint=(port.midpoint[0],cell.ymax)
+
         port.width=size
+
+        cell=join(cell)
 
         cell.add_port(port)
 
@@ -516,8 +524,10 @@ class _addVia(LayoutPart):
     def export_params(self):
 
         t_via=self.via.export_params().drop(columns=['Type'])
-        t['Overvia']=self.overvia
+        t_via['Overvia']=self.overvia
         t_via=t_via.rename(columns=lambda x: "Via"+x)
+
+        return t_via
 
     def import_params(self, df):
 
@@ -538,13 +548,23 @@ class LFERes_wVia(LFERes,_addVia):
 
     def draw(self,*args,**kwargs):
 
-        rescell=LFERes.draw(self,*args,**kwargs)
+        rescell=LFERes.draw(self)
 
         bottom_port=rescell.get_ports()[1]
 
+        # import pdb; pdb.set_trace()
+
         self.via.size=self.anchor.size.x/self.overvia
 
-        viacell=_addVia.draw(self,*args,**kwargs)
+        # self.via.layer=self.idt.layer
+
+        active_width=rescell.xsize
+
+        import numpy as np
+
+        nvias=max(1,int(np.floor(active_width/2/self.via.size/self.overvia)))
+
+        viacell=LayoutPart.draw_array(_addVia.draw(self),nvias,3,*args,**kwargs)
 
         cell=Device(name=self.name)
 
@@ -552,13 +572,14 @@ class LFERes_wVia(LFERes,_addVia):
 
         viaref=cell<<viacell
 
-        viaref.connect(viacell.get_ports()[0],
-            destination=cell.get_ports()[0])
+        viaref.connect(viacell.get_ports()[0],\
+        destination=rescell.get_ports()[0])
 
         top_port=rescell.get_ports()[0]
+
         top_port=Port(name=top_port.name,\
-            midpoint=(top_port.midpoint[0],top_port.midpoint[1]+self.anchor.size.x),\
-            width=self.anchor.size.x,\
+            midpoint=(top_port.midpoint[0],top_port.midpoint[1]),\
+            width=viacell.xsize,\
             orientation=90)
 
         # top_port.rotate(angle=180,center=top_port.midpoint)
@@ -577,13 +598,18 @@ class LFERes_wVia(LFERes,_addVia):
         cell.add_port(top_port)
         cell.add_port(bottom_port)
 
+        cell.remove_layers(layers=[self.padlayers[1]])
+
         self.cell=cell
 
         return cell
 
     def export_params(self):
 
-        return LFERes.export_params(self)._add_columns(_addVia.export_params())
+        t=LFERes.export_params(self)
+        t=LayoutPart._add_columns(t,_addVia.export_params(self))
+        t=LayoutPart._add_columns(t,LayoutPart.export_params(self))
+        return t
 
     def import_params(self, df):
 
