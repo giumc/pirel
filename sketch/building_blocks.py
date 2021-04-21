@@ -115,43 +115,6 @@ class LayoutPart(ABC) :
 
         return [str(_) for _ in df.columns ]
 
-    @property
-    def clearance(self):
-
-        if not hasattr(self,'_clearance'):
-
-            cell=self.draw()
-
-            ll,_,_,ur=get_corners(cell)
-
-            self._clearance=(ll,ur)
-
-        return self._clearance
-
-    @clearance.setter
-
-    def clearance(self,new_points):
-
-        msgerr="clearance is set by two points"
-
-        try :
-
-            iter(new_points)
-
-        except Exception :
-
-            raise ValueError(msgerr)
-
-        if not  len(new_points)==2:
-
-            raise ValueError(msgerr)
-
-        if not all([isinstance(_, Point) for _ in new_points]):
-
-            raise ValueError(msgerr)
-
-        self._clearance=new_points
-
     @abstractmethod
     def draw(self,*args,**kwargs):
         pass

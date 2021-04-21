@@ -423,6 +423,10 @@ class DUT(LayoutPart):
 
             center_routing.connect(center_routing.ports[2],destination=dut_port_bottom)
 
+        elif isinstance(self.probe,GSProbe):
+
+            raise ValueError("DUT with GSprobe to be implemented ")
+
         del probe_cell,device_cell,routing_lx,routing_rx,routing_c,routing_tot
 
         cell.flatten()
