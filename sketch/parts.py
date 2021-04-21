@@ -373,6 +373,7 @@ class DUT(LayoutPart):
         self.probe=GSGProbe_LargePad(name=self.name+'_Probe')
         self.routing_width=ld.DUTrouting_width
         self.probe_dut_distance=ld.DUTprobe_dut_distance
+        self.bbox_mod=lambda x:x
 
     def draw(self):
 
@@ -388,7 +389,10 @@ class DUT(LayoutPart):
         cell=Device(name=self.name)
 
         probe_dut_distance=Point(0,self.probe_dut_distance)
+
         cell<<device_cell
+
+        bbox=cell.bbox
         probe_ref=cell<<probe_cell
 
         ports=cell.get_ports()
@@ -401,7 +405,7 @@ class DUT(LayoutPart):
         dut_port_bottom=ports[1]
         dut_port_top=ports[0]
 
-        bbox=device_cell.bbox
+        bbox=self.dut.bbox_mod(bbox)
 
         if isinstance(self.probe,GSGProbe):
 
@@ -426,6 +430,10 @@ class DUT(LayoutPart):
         elif isinstance(self.probe,GSProbe):
 
             raise ValueError("DUT with GSprobe to be implemented ")
+
+        else:
+
+            raise ValueError("DUT without GSG/GSprobe to be implemented ")
 
         del probe_cell,device_cell,routing_lx,routing_rx,routing_c,routing_tot
 
@@ -620,3 +628,14 @@ class LFERes_wVia(LFERes,_addVia):
         LFERes.import_params(self, df)
 
         _addVia.import_params(self, df)
+
+    def bbox_mod(self,bbox):
+
+        LayoutPart.bbox_mod(self,bbox)
+
+        ll=Point().from_iter(bbox[0])
+        ur=Point().from_iter(bbox[1])
+
+        ur=ur-Point(0,self.via.size*self.overvia*3)
+
+        return (ll(),ur())

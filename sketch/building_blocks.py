@@ -115,6 +115,33 @@ class LayoutPart(ABC) :
 
         return [str(_) for _ in df.columns ]
 
+    def bbox_mod(self,bbox):
+
+        msgerr="pass 2 (x,y) coordinates as a bbox"
+
+        try :
+
+            iter(bbox)
+
+            for x in bbox:
+
+                iter(x)
+
+        except Exception:
+
+            raise ValueError(msgerr)
+
+        if not len(bbox)==2:
+
+            raise ValueError(msgerr)
+
+
+        if not all([len(x)==2 for x in bbox]):
+
+            raise ValueError(msgerr)
+
+        return bbox
+
     @abstractmethod
     def draw(self,*args,**kwargs):
         pass
@@ -143,18 +170,6 @@ class LayoutPart(ABC) :
 
         return d1
 
-    def __repr__(self):
-
-        df=self.export_params()
-
-        df["Name"]=df.index.values[0]
-
-        df=df.rename(index={df.index.values[0]:'Values'})
-
-        df=df.rename_axis("Parameters",axis=1)
-
-        return df.transpose().to_string()
-
     @staticmethod
     def draw_array(cell,x,y,row_spacing=0,column_spacing=0,*args,**kwargs):
 
@@ -178,6 +193,18 @@ class LayoutPart(ABC) :
         new_cell.add_port(p)
 
         return new_cell
+
+    def __repr__(self):
+
+        df=self.export_params()
+
+        df["Name"]=df.index.values[0]
+
+        df=df.rename(index={df.index.values[0]:'Values'})
+
+        df=df.rename_axis("Parameters",axis=1)
+
+        return df.transpose().to_string()
 
 class IDT(LayoutPart) :
 
