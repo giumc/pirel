@@ -585,12 +585,12 @@ class Via(LayoutPart):
 
             if isinstance(self.size,Point):
 
-                cell=pg.circle(radius=self.size.x,\
+                cell=pg.circle(radius=self.size.x/2,\
                 layer=self.layer)
 
             elif isinstance(self.size,int) or isinstance(self.size,float):
 
-                cell=pg.circle(radius=self.size,\
+                cell=pg.circle(radius=self.size/2,\
                 layer=self.layer)
 
             else:

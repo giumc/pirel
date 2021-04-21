@@ -493,13 +493,7 @@ class _addVia(LayoutPart):
 
         viacell=self.via.draw()
 
-        if self.via.type=='rectangle':
-
-            size=self.via.size*self.overvia
-
-        elif self.via.type=='circle':
-
-            size=self.via.size*3.14/2*self.overvia
+        size=self.via.size*self.overvia
 
         port=viacell.get_ports()[0]
 
@@ -546,13 +540,42 @@ class LFERes_wVia(LFERes,_addVia):
 
         rescell=LFERes.draw(self,*args,**kwargs)
 
+        bottom_port=rescell.get_ports()[1]
+
+        self.via.size=self.anchor.size.x/self.overvia
+
         viacell=_addVia.draw(self,*args,**kwargs)
 
         cell=Device(name=self.name)
 
         cell<<rescell
 
-        cell<<viacell
+        viaref=cell<<viacell
+
+        viaref.connect(viacell.get_ports()[0],
+            destination=cell.get_ports()[0])
+
+        top_port=rescell.get_ports()[0]
+        top_port=Port(name=top_port.name,\
+            midpoint=(top_port.midpoint[0],top_port.midpoint[1]+self.anchor.size.x),\
+            width=self.anchor.size.x,\
+            orientation=90)
+
+        # top_port.rotate(angle=180,center=top_port.midpoint)
+
+        # vialx=cell<<viacell
+        #
+        # vialx.move(origin=(0,0),\
+        #     destination=(viaref.center[0]-self.anchor.size.x,viaref.center[1]))
+        #
+        # viarx=cell<<viacell
+        #
+        # viarx.move(origin=(0,0),\
+        #     destination=(viaref.center[0]+self.anchor.size.x,viaref.center[1]))
+
+        cell=join(cell)
+        cell.add_port(top_port)
+        cell.add_port(bottom_port)
 
         self.cell=cell
 

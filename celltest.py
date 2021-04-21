@@ -30,7 +30,7 @@ import matplotlib.pyplot as plt
 
 tfe=sketch.LFERes_wVia("bu")
 tfe.overvia=2
-tfe.via.size=50
+# tfe.via.size=50
 tfe.test()
 
 # print(tfe.export_params().to_string())
