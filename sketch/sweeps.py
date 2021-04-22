@@ -233,21 +233,9 @@ class ParametricArray(LayoutPart):
     def __init__(self,*args,**kwargs):
 
         super().__init__(*args,**kwargs)
-
-        try:
-
-            if isinstance(args[0],LayoutPart):
-
-                self.device=args[0]
-
-        except Exception:
-
-            self.device=IDT(name="Hello")
-
+        self.device=IDT(self.name)
         self.x_spacing=ld.Arrayx_spacing
-
         self.labels_top=ld.Arraylabels_top
-
         self.labels_bottom=ld.Arraylabels_bottom
 
     @property
