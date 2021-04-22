@@ -677,6 +677,7 @@ class Stack(LayoutPart):
         t["GndWidth"]=self.gnd_width
 
         return t
+
     def import_params(self,df):
 
         self.device.import_params(df)

@@ -747,7 +747,7 @@ class Routing(LayoutPart):
 
         y_overtravel=ll.y-source.midpoint[1]-self.trace_width
 
-        taper_len=min([y_overtravel,self.trace_width/4])
+        taper_len=min([max(y_overtravel,-self.trace_width/4),self.trace_width/4])
 
         if destination.y<=ll.y : # destination is below clearance
 
@@ -812,7 +812,7 @@ class Routing(LayoutPart):
                 #left path
                 p1=p0+Point(0,y_overtravel)
                 p2=ll-Point(self.trace_width,self.trace_width)
-                p3=p2+Point(0,2*self.trace_width+bbox.ysize)
+                p3=p2+Point(0,1.5*self.trace_width+bbox.ysize)
                 p4=Point(destination.x,p3.y)
                 p5=Point(destination.x,destination.y)
 
@@ -822,7 +822,7 @@ class Routing(LayoutPart):
                 #right path
                 p1=p0+Point(0,y_overtravel)
                 p2=lr+Point(self.trace_width,-self.trace_width)
-                p3=p2+Point(0,2*self.trace_width+bbox.ysize)
+                p3=p2+Point(0,1.5*self.trace_width+bbox.ysize)
                 p4=Point(destination.x,p3.y)
                 p5=Point(destination.x,destination.y)
 
