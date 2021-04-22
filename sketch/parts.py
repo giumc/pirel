@@ -52,21 +52,18 @@ def Scaled(res):
 
             return cell
 
-        def __name__(self):
-
-            return "Scaled"+res.__name__
-
-
     return Scaled
 
 def addVia(res):
 
-    class addVia(res,_addVia):
+    class addVia(res):
 
         def __init__(self,*args,**kwargs):
 
             res.__init__(self,*args,**kwargs)
-            _addVia.__init__(self,*args,**kwargs)
+            self.via=Via(name=self.name+'Via')
+            self.padlayers=[ld.layerTop,ld.layerBottom]
+            self.overvia=2
 
         def draw(self,*args,**kwargs):
 
@@ -78,9 +75,9 @@ def addVia(res):
 
             import numpy as np
 
-            nvias=max(1,int(np.floor(active_width/2/self.via.size/self.overvia)))
+            nvias=max(1,int(np.floor(active_width/3/self.via.size/self.overvia)))
 
-            viacell=LayoutPart.draw_array(_addVia.draw(self),nvias,3,*args,**kwargs)
+            viacell=LayoutPart.draw_array(self._draw_padded_via(),nvias,3,*args,**kwargs)
 
             cell=Device(name=self.name)
 
@@ -88,10 +85,20 @@ def addVia(res):
 
             viaref=cell<<viacell
 
-            viaref.connect(viacell.get_ports()[0],\
-            destination=rescell.get_ports()[0])
-
             top_port=rescell.get_ports()[0]
+
+            pad=pg.compass(size=(viacell.xsize,viacell.ysize*2),layer=self.padlayers[0])
+
+            padref=cell<<pad
+
+            padref.connect(pad.ports['S'],\
+                destination=top_port)
+
+            cell.absorb(padref)
+
+            viaref.connect(viacell.get_ports()[0],\
+            destination=rescell.get_ports()[0],\
+            overlap=-viacell.ysize/2)
 
             top_port=Port(name=top_port.name,\
                 midpoint=(top_port.midpoint[0],top_port.midpoint[1]),\
@@ -108,22 +115,31 @@ def addVia(res):
 
             return cell
 
-        def __name__(self):
-
-            return "addVia"+res.__name__
-
         def export_params(self):
 
             t=res.export_params(self)
-            t=LayoutPart._add_columns(t,_addVia.export_params(self))
-            t=LayoutPart._add_columns(t,LayoutPart.export_params(self))
+
+            t_via=self.via.export_params().drop(columns=['Type'])
+
+            t_via=t_via.rename(columns=lambda x: "Via"+x)
+
+            t_via['Overvia']=self.overvia
+
+            t=LayoutPart._add_columns(t,t_via)
+
             return t
 
         def import_params(self, df):
 
             res.import_params(self, df)
 
-            _addVia.import_params(self, df)
+            for col in df.columns:
+
+                if_match_import(self.via,col,"Via",df)
+
+                if col=='Overvia':
+
+                    self.overvia=df[col]
 
         def bbox_mod(self,bbox):
 
@@ -132,17 +148,100 @@ def addVia(res):
             ll=Point().from_iter(bbox[0])
             ur=Point().from_iter(bbox[1])
 
-            ur=ur-Point(0,float(self.via.size*self.overvia*3))
+            ur=ur-Point(0,float(self.via.size*self.overvia*3*1.5))
 
             return (ll(),ur())
 
+        def _draw_padded_via(self):
+
+            viacell=self.via.draw()
+
+            size=float(self.via.size*self.overvia)
+
+            port=viacell.get_ports()[0]
+
+            trace=pg.rectangle(size=(size,size),layer=self.padlayers[0])
+
+            trace.move(origin=trace.center.tolist(),\
+                destination=viacell.center.tolist())
+
+            trace2=pg.copy_layer(trace,layer=self.padlayers[0],new_layer=self.padlayers[1])
+
+            cell=Device(name=self.name)
+
+            cell.absorb((cell<<trace))
+
+            cell.absorb((cell<<trace2))
+
+            cell.absorb(cell<<viacell)
+
+            port.midpoint=(port.midpoint[0],cell.ymax)
+
+            port.width=size
+
+            cell=join(cell)
+
+            cell.add_port(port)
+
+            return cell
+
     return addVia
+
+def addPad(res):
+
+    class addPad(res):
+
+        def __init__(self,*args,**kwargs):
+
+            res.__init__(self,*args,**kwargs)
+            self.pad=Pad(name=self.name+'Pad')
+
+        def draw(self,*args,**kwargs):
+
+            destcell=res.draw(self,*args,**kwargs)
+
+            for port in destcell.get_ports():
+
+                self.pad.port=port
+
+                ref=destcell<<self.pad.draw(*args,**kwargs)
+
+                ref.connect(ref.ports['conn'],\
+                    destination=port)
+
+                destcell.absorb(ref)
+
+            self.cell=destcell
+
+            return destcell
+
+        def export_params(self):
+
+            t_pad=self.pad.export_params().drop(columns=['Type'])
+
+            t_pad=t_pad.rename(columns=lambda x: "Pad"+x)
+
+            t=res.export_params(self)
+
+            t=LayoutPart._add_columns(t,t_pad)
+
+            return t
+
+        def import_params(self, df):
+
+            res.import_params(self,df)
+
+            for col in df.columns:
+
+                if_match_import(self.pad,col,"Pad",df)
+
+    return addPad
 
 class LFERes(LayoutPart):
 
     def __init__(self,*args,**kwargs):
 
-        super().__init__(*args,**kwargs)
+        LayoutPart.__init__(self,*args,**kwargs)
 
         self.layer=ld.IDTlayer
 
@@ -540,67 +639,91 @@ class DUT(LayoutPart):
             if_match_import(self.probe,col,"Probe",df)
 
             if col == "RoutingWidth" :
-
+                # import pdb; pdb.set_trace()
                 self.routing_width=df[col].iat[0]
 
-class _addVia(LayoutPart):
+class Stack(LayoutPart):
 
     def __init__(self,*args,**kwargs):
 
         super().__init__(*args,**kwargs)
-        self.via=Via(name=self.name+'Via')
-        self.padlayers=[ld.layerTop,ld.layerBottom]
-        self.overvia=2
 
-    def draw(self,*argss,**kwargs):
+        self.device=LFERes(name=self.name+'Device')
 
-        viacell=self.via.draw()
+        self.n=ld.Stackn
 
-        size=float(self.via.size*self.overvia)
+        self.gnd_width=self.device.pad.size*1.5
 
-        port=viacell.get_ports()[0]
+    @property
 
-        trace=pg.rectangle(size=(size,size),layer=self.padlayers[0])
+    def device(self):
 
-        trace.move(origin=trace.center.tolist(),\
-            destination=viacell.center.tolist())
+        return self._padded_device
 
-        trace2=pg.copy_layer(trace,layer=self.padlayers[0],new_layer=self.padlayers[1])
+    @device.setter
 
-        cell=Device(name=self.name)
+    def device(self,dev):
 
-        cell.absorb((cell<<trace))
+        device_with_pads=addPad(dev.__class__)()
 
-        cell.absorb((cell<<trace2))
+        device_with_pads.import_params(dev.export_params())
 
-        cell.absorb(cell<<viacell)
-
-        port.midpoint=(port.midpoint[0],cell.ymax)
-
-        port.width=size
-
-        cell=join(cell)
-
-        cell.add_port(port)
-
-        return cell
+        self._padded_device=device_with_pads
 
     def export_params(self):
 
-        t_via=self.via.export_params().drop(columns=['Type'])
+        t=self.device.export_params()
+        t["NCopies"]=self.n
+        t["GndWidth"]=self.gnd_width
 
-        t_via=t_via.rename(columns=lambda x: "Via"+x)
+        return t
+    def import_params(self,df):
 
-        t_via['Overvia']=self.overvia
+        self.device.import_params(df)
 
-        return t_via
+        for cols in df.columns:
 
-    def import_params(self, df):
+            if cols=='NCopies':
 
-        for col in df.columns:
+                self.n=df[cols].iat[0]
 
-            if_match_import(self.via,col,"Via",df)
+            if cols=='GndWidth':
 
-            if col=='Overvia':
+                self.gnd_width=df[cols].iat[0]
 
-                self.overvia=df[col]
+    def draw(self,*args,**kwargs):
+
+        device=self.device
+
+        cell=LayoutPart.draw_array(device.draw(*args,**kwargs),\
+            self.n,1)
+
+        port=cell.get_ports()[0]
+
+        cell=join(cell)
+
+        out_port=Port(name='bottom',\
+        midpoint=(port.midpoint[0],port.midpoint[1]-cell.ysize+device.pad.size),\
+        width=cell.xsize,\
+        orientation=-90)
+
+        cell.add_port(out_port)
+
+        gnd_width=self.gnd_width
+
+        gndpad=pg.compass(size=(cell.xsize,gnd_width),layer=device.pad.layer)
+
+        gnd_ref=cell<<gndpad
+
+        gnd_ref.connect(gndpad.ports['N'],\
+            destination=out_port)
+
+        cell.absorb(gnd_ref)
+
+        cell=join(cell)
+
+        cell.add_port(out_port)
+
+        self.cell=cell
+
+        return cell

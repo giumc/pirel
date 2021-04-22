@@ -32,7 +32,7 @@ ld=LayoutDefault()
 
 class LayoutPart(ABC) :
 
-    def __init__(self,name='default'):
+    def __init__(self,name='default',*args,**kwargs):
 
         ld=LayoutDefault()
 
@@ -176,6 +176,7 @@ class LayoutPart(ABC) :
         new_cell=Device(name=cell.name+"array")
 
         cell_size=Point().from_iter(cell.size)
+
         new_cell.add_array(cell,rows=y,columns=x,\
             spacing=(row_spacing+cell_size.x,column_spacing+cell_size.y))
 
@@ -1256,3 +1257,62 @@ class GSGProbe_LargePad(GSGProbe):
             if cols=='GroundPadSize':
 
                 self.groundsize=df[cols].iat[0]
+
+class Pad(LayoutPart):
+
+    def __init__(self,*args,**kwargs):
+
+        super().__init__(*args,**kwargs)
+        self.size=ld.Padsize
+        self.layer=ld.Padlayer
+        self.distance=ld.Paddistance
+        self.port=ld.Padport
+
+    def draw(self,*args,**kwargs):
+
+        r1=pg.compass(size=(self.port.width,self.distance),\
+            layer=self.layer)
+
+        north_port=r1.ports['N']
+        south_port=r1.ports['S']
+
+        r2=pg.compass(size=(self.size,self.size),\
+            layer=self.layer)
+
+        sq_ref=r1<<r2
+
+        sq_ref.connect(r2.ports['S'],
+            destination=north_port)
+
+        r1.absorb(sq_ref)
+        r1=join(r1)
+        r1.add_port(port=south_port,name='conn')
+
+        del r2
+
+        self.cell=r1
+
+        return r1
+
+    def export_params(self):
+
+        t=super().export_params()
+
+        t["Size"]=self.size
+        t["Distance"]=self.distance
+
+        return t
+
+    def import_params(self,df):
+
+        super().import_params(df)
+
+        for cols in df.columns:
+
+            if cols=='Size':
+
+                self.size=df[cols].iat[0]
+
+            if cols=='Distance':
+
+                self.distance=df[cols].iat[0]

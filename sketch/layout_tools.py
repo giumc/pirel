@@ -112,6 +112,15 @@ class LayoutDefault:
         self.Matrixlabels_bottom=[ [str(x)+str(y) for x in self.Arrayx_param.values()] \
             for y in self.Matrixy_param.values()]
 
+        #Stack
+        self.Stackn=4
+        #Pad
+        self.Padsize=400
+        self.Padlayer=self.IDTlayer
+        self.Paddistance=200
+        self.Padport=Port(name='top',midpoint=(50,50),width=100,\
+            orientation=-90)
+
 class Point:
 
     def __init__(self,x=0,y=0):

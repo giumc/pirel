@@ -296,7 +296,7 @@ class ParametricArray(LayoutPart):
         self.device.import_params(df)
         # warnings.warn("ParamArray.import_params() passed to device")
 
-    def draw(self,layer=None,*args,**kwargs):
+    def draw(self,text_layer=None,*args,**kwargs):
 
         device=deepcopy(self.device)
 
@@ -322,15 +322,15 @@ class ParametricArray(LayoutPart):
 
             if self.labels_top is not None or self.labels_bottom is not None:
 
-                if layer is None:
+                if text_layer is None:
 
                     if hasattr(device,'probe'):
 
-                        layer=device.probe.layer
+                        text_layer=device.probe.layer
 
                     elif hasattr(device,'layer'):
 
-                        layer=device.layer
+                        text_layer=device.layer
 
                     else:
 
@@ -338,12 +338,12 @@ class ParametricArray(LayoutPart):
 
                 if self.labels_top is not None:
 
-                    device.add_text(text_layer=layer,text_location='top',\
+                    device.add_text(text_layer=text_layer,text_location='top',\
                     text_label=self.labels_top[index],*args,**kwargs)
 
                 if self.labels_bottom is not None:
 
-                    device.add_text(text_layer=layer,text_location='bottom',\
+                    device.add_text(text_layer=text_layer,text_location='bottom',\
                     text_label=self.labels_bottom[index],*args,**kwargs)
 
             master_cell<<new_cell
