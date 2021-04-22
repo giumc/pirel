@@ -308,7 +308,7 @@ class ParametricArray(LayoutPart):
         self.device.import_params(df)
         # warnings.warn("ParamArray.import_params() passed to device")
 
-    def draw(self,text_layer=None,with_test=False,*args,**kwargs):
+    def draw(self):
 
         device=deepcopy(self.device)
 
@@ -330,54 +330,19 @@ class ParametricArray(LayoutPart):
 
             print("drawing device {} of {}".format(index+1,len(param)))
 
-            if with_test==False:
+            new_cell=device.draw()
 
-                new_cell=device.draw()
+            if self.labels_top is not None:
 
-            else:
+                self.add_text(new_cell,\
+                text_opts=self.text_params.update({\
+                    'location':'top','label':self.labels_top[index]}))
 
-                if hasattr(device,'draw_with_test'):
+            if self.labels_bottom is not None:
 
-                    if callable(getattr(device,'draw_with_test',None)):
-
-                        new_cell=device.draw_with_test()
-
-                    else:
-
-                        new_cell=device.draw()
-                        warn.Warnings("{} doesn't have a draw_with_test(), returning to default".format(device.__class__.__name__))
-
-                else:
-
-                    new_cell=device.draw()
-                    warn.Warnings("{} doesn't have a draw_with_test(), returning to default".format(device.__class__.__name__))
-
-
-            if self.labels_top is not None or self.labels_bottom is not None:
-
-                if text_layer is None:
-
-                    if hasattr(device,'probe'):
-
-                        text_layer=device.probe.layer
-
-                    elif hasattr(device,'layer'):
-
-                        text_layer=device.layer
-
-                    else:
-
-                            raise Exception ("Specify Text Layer")
-
-                if self.labels_top is not None:
-
-                    device.add_text(text_layer=text_layer,text_location='top',\
-                    text_label=self.labels_top[index],*args,**kwargs)
-
-                if self.labels_bottom is not None:
-
-                    device.add_text(text_layer=text_layer,text_location='bottom',\
-                    text_label=self.labels_bottom[index],*args,**kwargs)
+                self.add_text(new_cell,\
+                text_opts=self.text_params.update({\
+                    'location':'bottom','label':self.labels_bottom[index]}))
 
             master_cell<<new_cell
 
@@ -436,7 +401,7 @@ class ParametricMatrix(ParametricArray):
         self.labels_top=ld.Matrixlabels_top
         self.labels_bottom=ld.Matrixlabels_bottom
 
-    def draw(self,layer=None,*args,**kwargs):
+    def draw(self):
 
         original_device=deepcopy(self.device)
 
@@ -496,7 +461,7 @@ class ParametricMatrix(ParametricArray):
 
                     self.labels_bottom=None
 
-            new_cell=ParametricArray.draw(self,layer,*args,**kwargs)
+            new_cell=ParametricArray.draw(self)
 
             new_cell.name=self.name+str(index)
 

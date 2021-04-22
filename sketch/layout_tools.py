@@ -22,6 +22,11 @@ class LayoutDefault:
         self.layerBackSide = 7
         self.layerMask = 99
 
+        #text
+
+        self.TextParams={'font':"BebasNeue-Regular.otf",'size':125,'location':'top',\
+            'distance':Point(0,100),'label':"default",'layer':self.layerTop}
+
         #IDT
 
         self.IDT_y = 200
@@ -222,52 +227,29 @@ def add_compass(device):
     device.add_port(port=ports[2],name=device.name+'E')
     device.add_port(port=ports[3],name=device.name+'W')
 
-def add_text(cell,text_location='top',text_size=25,\
-    text_label='default',text_font='BebasNeue-Regular.otf',\
-    text_layer=ld.layerTop,text_distance=Point(0,100)):
+def draw_array(cell,x,y,row_spacing=0,column_spacing=0):
 
-    package_directory = os.path.dirname(os.path.abspath(__file__))
+    new_cell=pg.Device(name=cell.name+"array")
 
-    font=os.path.join(package_directory,text_font)
+    cell_size=Point().from_iter(cell.size)
 
-    o=Point(0,0)
+    new_cell.add_array(cell,rows=y,columns=x,\
+        spacing=(row_spacing+cell_size.x,column_spacing+cell_size.y))
 
-    ll,lr,ul,ur=get_corners(cell)
+    _,_,ul,ur=get_corners(new_cell)
 
-    text_cell=pg.text(size=text_size,text=text_label,font=font,layer=text_layer)
+    midpoint=ul/2+ur/2
 
-    text_size=Point().from_iter(text_cell.size)
+    p=Port(name=new_cell.name,\
+        orientation=90,\
+        midpoint=midpoint(),\
+        width=(ur.x-ul.x))
 
-    if text_location=='top':
+    new_cell=join(new_cell)
 
-        o=ul+text_distance
+    new_cell.add_port(p)
 
-    elif text_location=='bottom':
-
-        o=ll-Point(0,text_size.y)-text_distance
-
-    elif text_location=='right':
-
-        o=ur+text_distance
-
-        text_cell.rotate(angle=-90)
-
-    elif text_location=='left':
-
-        o=ll-text_distance
-
-        text_cell.rotate(angle=90)
-
-    text_ref=cell<<text_cell
-
-    text_ref.move(origin=(0,0),\
-        destination=o())
-
-    cell.absorb(text_ref)
-
-    del text_cell
-
-    return cell
+    return new_cell
 
 def print_ports(device):
 
