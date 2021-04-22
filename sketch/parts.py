@@ -309,6 +309,137 @@ def addPad(res):
 
     return addPad
 
+def addProbe(res,probe):
+
+    class addProbe(res):
+
+        def __init__(self,*args,**kwargs):
+
+            res.__init__(self,*args,**kwargs)
+
+            self.probe=probe
+
+            elf.routing_width=ld.DUTrouting_width
+            self.probe_dut_distance=ld.DUTprobe_dut_distance
+
+        def draw(self):
+
+            device_cell=res.draw(self)
+
+            probe_cell=self.probe.draw()
+
+            cell=Device(name=self.name)
+
+            probe_dut_distance=Point(0,self.probe_dut_distance)
+
+            cell<<device_cell
+
+            bbox=cell.bbox
+
+            probe_ref=cell<<probe_cell
+
+            ports=cell.get_ports()
+
+            probe_ref.connect(ports[2],\
+            destination=ports[1],overlap=-probe_dut_distance.y)
+
+            ports=cell.get_ports()
+
+            dut_port_bottom=ports[1]
+            dut_port_top=ports[0]
+
+            bbox=self.dut.bbox_mod(bbox)
+
+            if isinstance(self.probe,GSGProbe):
+
+                probe_port_lx=ports[3]
+                probe_port_center=ports[2]
+                probe_port_rx=ports[4]
+
+                routing_lx=self._route(bbox,probe_port_lx,dut_port_top,side='left')
+
+                routing_c=pg.taper(length=probe_dut_distance.y,\
+                width1=probe_port_center.width,\
+                width2=dut_port_bottom.width,layer=self.probe.layer)
+
+                routing_rx=self._route(bbox,probe_port_rx,dut_port_top,side='right')
+                routing_tot=pg.boolean(routing_lx,routing_rx,'or',layer=probe.layer)
+
+                cell<<routing_tot
+                center_routing=cell<<routing_c
+
+                center_routing.connect(center_routing.ports[2],destination=dut_port_bottom)
+
+            elif isinstance(self.probe,GSProbe):
+
+                raise ValueError("DUT with GSprobe to be implemented ")
+
+            else:
+
+                raise ValueError("DUT without GSG/GSprobe to be implemented ")
+
+            del probe_cell,device_cell,routing_lx,routing_rx,routing_c,routing_tot
+
+            cell.flatten()
+
+            cell=join(cell)
+
+            self.cell=cell
+
+            return cell
+
+        def _route(self,bbox,p1,p2,*args,**kwargs):
+
+            routing=Routing(*args,**kwargs)
+            routing.layer=self.probe.layer
+            routing.clearance=bbox
+            routing.trace_width=self.routing_width
+            routing.ports=(p1,p2)
+            cell=routing.draw()
+            del routing
+            return cell
+            # return routing.draw_frame()
+
+        def export_params(self):
+
+            t=super().export_params()
+
+            t=t.rename(columns={"Type":"DUT_Type"})
+
+            t=self._add_columns(t, t_dut)
+
+            t_probe=self.probe.export_params()
+
+            t_probe=t_probe.rename(columns=lambda x : "Probe"+x )
+
+            t=self._add_columns(t,t_probe)
+
+            t["RoutingWidth"]=self.routing_width
+
+            t["ProbeDistance"]=self.probe_dut_distance
+
+            t.index=[self.name]
+
+            t=t.reindex(columns=["Type"]+[cols for cols in t.columns if not cols=="Type"])
+
+            return t
+
+        def import_params(self,df):
+
+        self.dut.import_params(df)
+
+        for col in df.columns:
+
+            if_match_import(self.probe,col,"Probe",df)
+
+            if col == "RoutingWidth" :
+                # import pdb; pdb.set_trace()
+                self.routing_width=df[col].iat[0]
+
+            if col == "ProbeDistance" :
+
+                self.probe_dut_distance=df[col].iat[0]
+                
 class LFERes(LayoutPart):
 
     def __init__(self,*args,**kwargs):
@@ -585,143 +716,21 @@ class TFERes(LFERes):
 
         return cell
 
-class DUT(LayoutPart):
-
-    def __init__(self,*args,**kwargs):
-
-        # import pdb; pdb.set_trace()
-
-        super().__init__(*args,**kwargs)
-
-        self.dut=LFERes(name=self.name+'_DUT')
-        self.probe=GSGProbe_LargePad(name=self.name+'_Probe')
-        self.routing_width=ld.DUTrouting_width
-        self.probe_dut_distance=ld.DUTprobe_dut_distance
-
-    def draw(self):
-
-        dut=self.dut
-        probe=self.probe
-
-        dut.name=self.name+"_DUT"
-        probe.name=self.name+"_PROBE"
-
-        device_cell=dut.draw()
-        probe_cell=probe.draw()
-
-        cell=Device(name=self.name)
-
-        probe_dut_distance=Point(0,self.probe_dut_distance)
-
-        cell<<device_cell
-
-        bbox=cell.bbox
-        probe_ref=cell<<probe_cell
-
-        ports=cell.get_ports()
-
-        probe_ref.connect(ports[2],\
-        destination=ports[1],overlap=-probe_dut_distance.y)
-
-        ports=cell.get_ports()
-
-        dut_port_bottom=ports[1]
-        dut_port_top=ports[0]
-
-        bbox=self.dut.bbox_mod(bbox)
-
-        if isinstance(self.probe,GSGProbe):
-
-            probe_port_lx=ports[3]
-            probe_port_center=ports[2]
-            probe_port_rx=ports[4]
-
-            routing_lx=self._route(bbox,probe_port_lx,dut_port_top,side='left')
-
-            routing_c=pg.taper(length=probe_dut_distance.y,\
-            width1=probe_port_center.width,\
-            width2=dut_port_bottom.width,layer=self.probe.layer)
-
-            routing_rx=self._route(bbox,probe_port_rx,dut_port_top,side='right')
-            routing_tot=pg.boolean(routing_lx,routing_rx,'or',layer=probe.layer)
-
-            cell<<routing_tot
-            center_routing=cell<<routing_c
-
-            center_routing.connect(center_routing.ports[2],destination=dut_port_bottom)
-
-        elif isinstance(self.probe,GSProbe):
-
-            raise ValueError("DUT with GSprobe to be implemented ")
-
-        else:
-
-            raise ValueError("DUT without GSG/GSprobe to be implemented ")
-
-        del probe_cell,device_cell,routing_lx,routing_rx,routing_c,routing_tot
-
-        cell.flatten()
-
-        cell=join(cell)
-
-        self.cell=cell
-
-        return cell
-
-    def _route(self,bbox,p1,p2,*args,**kwargs):
-
-        routing=Routing(*args,**kwargs)
-        routing.layer=self.probe.layer
-        routing.clearance=bbox
-        routing.trace_width=self.routing_width
-        routing.ports=(p1,p2)
-        cell=routing.draw()
-        del routing
-        return cell
-        # return routing.draw_frame()
-
-    def export_params(self):
-
-        t=super().export_params()
-
-        t_dut=self.dut.export_params()
-
-        t_dut=t_dut.rename(columns={"Type":"DUT_Type"})
-
-        t=self._add_columns(t, t_dut)
-
-        t_probe=self.probe.export_params()
-        t_probe=t_probe.rename(columns=lambda x : "Probe"+x )
-
-        t=self._add_columns(t,t_probe)
-
-        t["RoutingWidth"]=self.routing_width
-
-        t.index=[self.name]
-
-        t=t.reindex(columns=["Type"]+[cols for cols in t.columns if not cols=="Type"])
-
-        return t
-
-    def import_params(self,df):
-
-        self.dut.import_params(df)
-
-        for col in df.columns:
-
-            if_match_import(self.probe,col,"Probe",df)
-
-            if col == "RoutingWidth" :
-                # import pdb; pdb.set_trace()
-                self.routing_width=df[col].iat[0]
-
 class Stack(LayoutPart):
 
     def __init__(self,*args,**kwargs):
 
         super().__init__(*args,**kwargs)
 
-        self.device=LFERes(name=self.name+'Device')
+        try:
+
+            if isinstance(args[0],LayoutPart):
+
+                self.device=args[0]
+
+        except Exception:
+
+            self.device=LFERes(name=self.name+'Device')
 
         self.n=ld.Stackn
 
