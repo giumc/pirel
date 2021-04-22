@@ -52,55 +52,6 @@ class LayoutPart(ABC) :
         lib.add(self.draw(*args,**kwargs))
         gdspy.LayoutViewer(lib)
 
-    def add_text(self,text_location='top',text_size=25,\
-        text_label='default',text_font='BebasNeue-Regular.otf',\
-        text_layer=ld.layerTop,text_distance=Point(0,100)):
-
-        package_directory = os.path.dirname(os.path.abspath(__file__))
-
-        font=os.path.join(package_directory,text_font)
-
-        cell=self.cell
-
-        o=Point(0,0)
-
-        ll,lr,ul,ur=get_corners(cell)
-
-        text_cell=pg.text(size=text_size,text=text_label,font=font,layer=text_layer)
-
-        text_size=Point().from_iter(text_cell.size)
-
-        if text_location=='top':
-
-            o=ul+text_distance
-
-        elif text_location=='bottom':
-
-            o=ll-Point(0,text_size.y)-text_distance
-
-        elif text_location=='right':
-
-            o=ur+text_distance
-
-            text_cell.rotate(angle=-90)
-
-        elif text_location=='left':
-
-            o=ll-text_distance
-
-            text_cell.rotate(angle=90)
-
-        text_ref=cell<<text_cell
-
-        text_ref.move(origin=(0,0),\
-            destination=o())
-
-        cell.absorb(text_ref)
-
-        del text_cell
-
-        self.cell=cell
-
     def print_params_name(self):
 
         df=self.export_params()

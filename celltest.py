@@ -1,5 +1,4 @@
-
-import sketch
+from sketch import *
 
 import gdspy
 
@@ -33,7 +32,11 @@ import pandas as pd
 
 # print(tfe.export_params().to_string())
 
-# d=sketch.DUT("hi")
+import pdb; pdb.set_trace()
+
+d=addProbe(Scaled(LFERes(name="DEF")),GSGProbe(name="HELLO"))
+
+d.view()
 #
 # d.dut=sketch.Scaled(sketch.addVia(sketch.LFERes))()
 #
@@ -76,37 +79,37 @@ import pandas as pd
 
 # d.view()
 
-d=sketch.Stack("hey")
-
-d.device=sketch.addVia(sketch.Scaled(sketch.TFERes),side='Top')("hey")
-
-base_params=d.export_params()
-
-d.print_params_name()
-
-base_params["ProbeWidth"]=100
-base_params["ProbePitch"]=200
-base_params["ProbeLength"]=100
-base_params["RoutingWidth"]=250
-base_params["IDTPitch"]=7
-base_params["IDTN_fingers"]=38
-base_params["IDTOffset"]=1
-base_params["IDTLength"]=105
-base_params["IDTCoverage"]=0.5
-base_params["BusLength"]=4
-base_params["EtchWidth"]=0.4
-base_params["AnchorLength"]=4
-base_params["AnchorWidth"]=0.5
-base_params["AnchorEtchMarginX"]=0.5
-base_params["AnchorEtchMarginY"]=0.5
-base_params["ViaSize"]=30
-base_params["Overvia"]=3
-base_params["PadDistance"]=400
-
-d.import_params(base_params)
-
-# d.import_params(pd.DataFrame({"PadSize":150},index=[0]))
-sketch.check_cell(d.draw_with_test())
+# d=sketch.Stack("hey")
+#
+# d.device=sketch.addVia(sketch.Scaled(sketch.TFERes),side='Top')("hey")
+#
+# base_params=d.export_params()
+#
+# d.print_params_name()
+#
+# base_params["ProbeWidth"]=100
+# base_params["ProbePitch"]=200
+# base_params["ProbeLength"]=100
+# base_params["RoutingWidth"]=250
+# base_params["IDTPitch"]=7
+# base_params["IDTN_fingers"]=38
+# base_params["IDTOffset"]=1
+# base_params["IDTLength"]=105
+# base_params["IDTCoverage"]=0.5
+# base_params["BusLength"]=4
+# base_params["EtchWidth"]=0.4
+# base_params["AnchorLength"]=4
+# base_params["AnchorWidth"]=0.5
+# base_params["AnchorEtchMarginX"]=0.5
+# base_params["AnchorEtchMarginY"]=0.5
+# base_params["ViaSize"]=30
+# base_params["Overvia"]=3
+# base_params["PadDistance"]=400
+#
+# d.import_params(base_params)
+#
+# # d.import_params(pd.DataFrame({"PadSize":150},index=[0]))
+# sketch.check_cell(d.draw_with_test())
 
 # d=sketch.addVia(sketch.Scaled(sketch.TFERes),side=['Top','Bottom'])("hey")
 #

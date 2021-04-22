@@ -316,15 +316,16 @@ def addProbe(res,probe):
         def __init__(self,*args,**kwargs):
 
             res.__init__(self,*args,**kwargs)
-
             self.probe=probe
-
+            
             elf.routing_width=ld.DUTrouting_width
             self.probe_dut_distance=ld.DUTprobe_dut_distance
 
-        def draw(self):
+        def draw(self,*a,**k):
 
-            device_cell=res.draw(self)
+            # import pdb; pdb.set_trace()
+
+            device_cell=res.draw(self,*a,**k)
 
             probe_cell=self.probe.draw()
 
@@ -426,20 +427,22 @@ def addProbe(res,probe):
 
         def import_params(self,df):
 
-        self.dut.import_params(df)
+            self.dut.import_params(df)
 
-        for col in df.columns:
+            for col in df.columns:
 
-            if_match_import(self.probe,col,"Probe",df)
+                if_match_import(self.probe,col,"Probe",df)
 
-            if col == "RoutingWidth" :
-                # import pdb; pdb.set_trace()
-                self.routing_width=df[col].iat[0]
+                if col == "RoutingWidth" :
+                    # import pdb; pdb.set_trace()
+                    self.routing_width=df[col].iat[0]
 
-            if col == "ProbeDistance" :
+                if col == "ProbeDistance" :
 
-                self.probe_dut_distance=df[col].iat[0]
-                
+                    self.probe_dut_distance=df[col].iat[0]
+
+    return addProbe
+
 class LFERes(LayoutPart):
 
     def __init__(self,*args,**kwargs):
