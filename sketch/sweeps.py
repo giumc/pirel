@@ -308,7 +308,7 @@ class ParametricArray(LayoutPart):
         self.device.import_params(df)
         # warnings.warn("ParamArray.import_params() passed to device")
 
-    def draw(self,text_layer=None,with_test=False,*args,**kwargs):
+    def draw(self,text_layer=None,*args,**kwargs):
 
         device=deepcopy(self.device)
 
@@ -330,28 +330,7 @@ class ParametricArray(LayoutPart):
 
             print("drawing device {} of {}".format(index+1,len(param)))
 
-            if with_test==False:
-
-                new_cell=device.draw()
-
-            else:
-
-                if hasattr(device,'draw_with_test'):
-
-                    if callable(getattr(device,'draw_with_test',None)):
-
-                        new_cell=device.draw_with_test()
-
-                    else:
-
-                        new_cell=device.draw()
-                        warn.Warnings("{} doesn't have a draw_with_test(), returning to default".format(device.__class__.__name__))
-
-                else:
-
-                    new_cell=device.draw()
-                    warn.Warnings("{} doesn't have a draw_with_test(), returning to default".format(device.__class__.__name__))
-
+            new_cell=device.draw()
 
             if self.labels_top is not None or self.labels_bottom is not None:
 

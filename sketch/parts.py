@@ -54,13 +54,7 @@ def Scaled(res):
 
     return Scaled
 
-def addVia(res,side='top',bottom_conn=False):
-
-    if isinstance(side,str):
-
-        side=[side]
-
-    side=[(_).lower() for _ in side]
+def addVia(res):
 
     class addVia(res):
 
@@ -70,13 +64,12 @@ def addVia(res,side='top',bottom_conn=False):
             self.via=Via(name=self.name+'Via')
             self.padlayers=[ld.layerTop,ld.layerBottom]
             self.overvia=2
-            self.viadistance=100
 
         def draw(self,*args,**kwargs):
 
-            # import pdb; pdb.set_trace()
-
             rescell=res.draw(self)
+
+            bottom_port=rescell.get_ports()[1]
 
             active_width=rescell.xsize
 
@@ -90,63 +83,33 @@ def addVia(res,side='top',bottom_conn=False):
 
             cell<<rescell
 
-            pad=pg.compass(size=(viacell.xsize,self.viadistance),layer=self.padlayers[0])
+            viaref=cell<<viacell
 
-            try:
+            top_port=rescell.get_ports()[0]
 
-                top_port=rescell.ports['top']
+            pad=pg.compass(size=(viacell.xsize,viacell.ysize*2),layer=self.padlayers[0])
 
-            except Exception:
+            padref=cell<<pad
 
-                top_port=None
+            padref.connect(pad.ports['S'],\
+                destination=top_port)
 
-            try:
+            cell.absorb(padref)
 
-                bottom_port=rescell.ports['bottom']
+            viaref.connect(viacell.get_ports()[0],\
+            destination=rescell.get_ports()[0],\
+            overlap=-viacell.ysize/2)
 
-            except Exception:
-
-                bottom_port=None
-
-            for sides in side:
-
-                if sides=='top':
-
-                    try :
-
-                        rescell.ports['top']
-
-                    except Exception:
-
-                        raise ValueError ("Cannot add a top via in a cell with no top port")
-
-                    top_port=self._attach_instance(cell, pad, pad.ports['S'], viacell, rescell.ports['top'])
-
-                if sides=='bottom':
-
-                    try :
-
-                        rescell.ports['bottom']
-
-                    except Exception:
-
-                        raise ValueError ("Cannot add a bottom via in a cell with no bottom port")
-
-                    bottom_port=self._attach_instance(cell, pad, pad.ports['N'], viacell, rescell.ports['bottom'])
+            top_port=Port(name=top_port.name,\
+                midpoint=(top_port.midpoint[0],top_port.midpoint[1]),\
+                width=viacell.xsize,\
+                orientation=90)
 
             cell=join(cell)
+            cell.add_port(top_port)
+            cell.add_port(bottom_port)
 
-            if top_port is not None:
-
-                cell.add_port(top_port)
-
-            if bottom_port is not None:
-
-                cell.add_port(bottom_port)
-
-            if bottom_conn==False:
-
-                cell.remove_layers(layers=[self.padlayers[1]])
+            cell.remove_layers(layers=[self.padlayers[1]])
 
             self.cell=cell
 
@@ -161,7 +124,6 @@ def addVia(res,side='top',bottom_conn=False):
             t_via=t_via.rename(columns=lambda x: "Via"+x)
 
             t_via['Overvia']=self.overvia
-            t_via['ViaDistance']=self.viadistance
 
             t=LayoutPart._add_columns(t,t_via)
 
@@ -177,11 +139,7 @@ def addVia(res,side='top',bottom_conn=False):
 
                 if col=='Overvia':
 
-                    self.overvia=df[col].iat[0]
-
-                if col=='ViaDistance':
-
-                    self.viadistance=df[col].iat[0]
+                    self.overvia=df[col]
 
         def bbox_mod(self,bbox):
 
@@ -190,13 +148,7 @@ def addVia(res,side='top',bottom_conn=False):
             ll=Point().from_iter(bbox[0])
             ur=Point().from_iter(bbox[1])
 
-            if any([_=='top' for _ in side]):
-
-                ur=ur-Point(0,float(self.via.size*self.overvia*3*1.5))
-
-            if any([_=='bottom' for _ in side]):
-
-                ll=ll+Point(0,float(self.via.size*self.overvia*3*1.5))
+            ur=ur-Point(0,float(self.via.size*self.overvia*3*1.5))
 
             return (ll(),ur())
 
@@ -232,30 +184,6 @@ def addVia(res,side='top',bottom_conn=False):
             cell.add_port(port)
 
             return cell
-
-        def _attach_instance(self,cell,padcell,padport,viacell,port):
-
-            # import pdb; pdb.set_trace()
-
-            padref=cell<<padcell
-
-            padref.connect(padport,\
-                    destination=port)
-
-            cell.absorb(padref)
-
-            viaref=cell<<viacell
-
-            viaref.connect(viacell.get_ports()[0],\
-            destination=port,\
-            overlap=-self.viadistance)
-
-            port=Port(name=port.name,\
-                midpoint=(port.midpoint[0],port.midpoint[1]),\
-                width=viacell.xsize,\
-                orientation=port.orientation)
-
-            return port
 
     return addVia
 
@@ -548,14 +476,13 @@ class LFERes(LayoutPart):
         cell.absorb(anchor_bottom)
 
         cell_out=join(cell)
-
-        cell_out.add_port(Port(name="top",\
+        cell_out.add_port(Port(name=self.name+"Top",\
         midpoint=(Point().from_iter(ports[1].center)+\
         Point(0,self.anchor.size.y))(),\
         width=self.anchor.size.x,\
         orientation=90))
 
-        cell_out.add_port(Port(name="bottom",\
+        cell_out.add_port(Port(name=self.name+"Bottom",\
         midpoint=(Point().from_iter(ports[0].center)-\
         Point(0,self.anchor.size.y))(),\
         width=self.anchor.size.x,\
@@ -740,14 +667,11 @@ class Stack(LayoutPart):
 
     def device(self):
 
-        self._unpadded_device.import_params(self._padded_device.export_params())
         return self._padded_device
 
     @device.setter
 
     def device(self,dev):
-
-        self._unpadded_device=dev
 
         device_with_pads=addPad(dev.__class__)()
 
@@ -811,31 +735,5 @@ class Stack(LayoutPart):
         cell.add_port(out_port)
 
         self.cell=cell
-
-        return cell
-
-    def draw_with_test(self,*args,**kwargs):
-
-        cell=self.draw(*args,**kwargs)
-
-        dut=DUT(name=self.name+"Test")
-
-        dut.dut=self._unpadded_device
-
-        dut.probe=GSGProbe(name=dut.name+"Probe")
-
-        dut.draw(*args,**kwargs)
-
-        cell.add(dut.cell)
-
-        dut.add_text(text_size=150,text_label=dut.name,text_location='left')
-
-        g=Group([cell,dut.cell])
-
-        g.distribute(direction='x',spacing=150)
-
-        cell=join(cell)
-
-        cell.name=dut.name
 
         return cell
