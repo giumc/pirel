@@ -844,8 +844,8 @@ class Routing(LayoutPart):
 
                 #left path
                 p1=p0+Point(0,y_overtravel)
-                p2=ll-Point(self.trace_width,self.trace_width)
-                p3=p2+Point(0,2*self.trace_width+bbox.ysize)
+                p2=Point(ll.x-self.trace_width,p1.y)
+                p3=Point(p2.x,self.trace_width+destination.y)
                 p4=Point(destination.x,p3.y)
                 p5=Point(destination.x,destination.y)
 
@@ -854,8 +854,8 @@ class Routing(LayoutPart):
                 path_lx=pp.smooth(points=list_points_lx)
                 #right path
                 p1=p0+Point(0,y_overtravel)
-                p2=lr+Point(self.trace_width,-self.trace_width)
-                p3=p2+Point(0,2*self.trace_width+bbox.ysize)
+                p2=Point(lr.x+self.trace_width,p1.y)
+                p3=Point(p2.x,self.trace_width+destination.y)
                 p4=Point(destination.x,p3.y)
                 p5=Point(destination.x,destination.y)
 
@@ -904,7 +904,7 @@ class Routing(LayoutPart):
                 center_box=Point().from_iter(bbox.center)
 
                 #left path
-                p1=Point(p0.x,ul.y+self.trace_width)
+                p1=Point(p0.x,destination.y+self.trace_width)
                 p2=Point(destination.x,p1.y)
                 p3=Point(destination.x,destination.y)
 
