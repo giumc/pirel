@@ -323,6 +323,7 @@ def addPad(res):
             for port in res.draw(self).get_ports():
 
                 self.pad.port=port
+
                 r0=r0+self.pad.resistance(res_per_square)
 
             return r0
@@ -381,14 +382,14 @@ def addProbe(res,probe):
 
                 routing_lx=self._route(bbox,probe_port_lx,dut_port_top)
 
-                self._routing_lx_length=routing_lx.area/self.gnd_routing_width
+                self._routing_lx_length=routing_lx.area()/self.gnd_routing_width
 
                 routing_c=pg.compass(size=(dut_port_bottom.width,\
                     self.gnd_routing_width),layer=self.probe.layer)
 
                 routing_rx=self._route(bbox,probe_port_rx,dut_port_top)
 
-                self._routing_rx_length=routing_rx.area/self.gnd_routing_width
+                self._routing_rx_length=routing_rx.area()/self.gnd_routing_width
 
                 routing_tot=pg.boolean(routing_lx,routing_rx,'or',layer=probe.layer)
 
@@ -472,10 +473,15 @@ def addProbe(res,probe):
 
         def resistance(self,res_per_square=0.1):
 
-            rdut=res.resistance(res_per_square)
+            self.draw()
+            
+            rdut=res.resistance(self,res_per_square)
+
             rprobe_gnd=res_per_square*(self._routing_lx_length/self.routing_width+\
-                self._routing_lx_length/self.routing_width)/2
+                self._routing_rx_length/self.routing_width)/2
+
             sig_width=res.draw(self).ports['bottom'].width
+
             rprobe_sig=res_per_square*(self.probe_dut_distance/sig_width)
 
             return rprobe_sig+rdut+rprobe_gnd

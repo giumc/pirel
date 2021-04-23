@@ -345,7 +345,7 @@ class IDT(LayoutPart) :
 
     def resistance(self,res_per_square=0.1):
 
-        return res_per_square*self.l/self.pitch/self.coverage/self.n*2/3
+        return res_per_square*self.y/self.pitch/self.coverage/self.n*2/3
 
 class Bus(LayoutPart) :
 
@@ -626,7 +626,7 @@ class Anchor(LayoutPart):
 
                 self.layer=df[cols].iat[0]
 
-    def resistance(self,=):
+    def resistance(self,res_per_square=0.1):
 
         return res_per_square*self.size.y/self.size.x
 
