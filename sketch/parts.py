@@ -52,6 +52,13 @@ def Scaled(res):
 
             return cell
 
+        def resistance(self,res_per_square=0.1):
+
+            ridt=self.idt.resistance(res_per_square)*self.idt.pitch
+            rbus=self.bus.resistance(res_per_square)/self.idt.pitch
+            ranchor=self.anchor.resistance(res_per_square)*self.idt.pitch/self.idt.active_area.x
+
+            return ridt+rbus+ranchor
     return Scaled
 
 def addVia(res,side='top',bottom_conn=False):
@@ -309,6 +316,17 @@ def addPad(res):
 
                 if_match_import(self.pad,col,"Pad",df)
 
+        def resistance(self,res_per_square=0.1):
+
+            r0=super().resistance(res_per_square)
+
+            for port in res.draw(self).get_ports():
+
+                self.pad.port=port
+                r0=r0+self.pad.resistance(res_per_square)
+
+            return r0
+
     return addPad
 
 def addProbe(res,probe):
@@ -318,16 +336,18 @@ def addProbe(res,probe):
         def __init__(self,*args,**kwargs):
 
             res.__init__(self,*args,**kwargs)
+
             self.probe=probe
 
-            elf.routing_width=ld.DUTrouting_width
+            self.gnd_routing_width=ld.DUTrouting_width
+
+            # self.signal_routing_width=ld.DUTrouting_width
+
             self.probe_dut_distance=ld.DUTprobe_dut_distance
 
-        def draw(self,*a,**k):
+        def draw(self):
 
-            # import pdb; pdb.set_trace()
-
-            device_cell=res.draw(self,*a,**k)
+            device_cell=res.draw(self)
 
             probe_cell=self.probe.draw()
 
@@ -351,7 +371,7 @@ def addProbe(res,probe):
             dut_port_bottom=ports[1]
             dut_port_top=ports[0]
 
-            bbox=self.dut.bbox_mod(bbox)
+            bbox=super().bbox_mod(bbox)
 
             if isinstance(self.probe,GSGProbe):
 
@@ -359,19 +379,23 @@ def addProbe(res,probe):
                 probe_port_center=ports[2]
                 probe_port_rx=ports[4]
 
-                routing_lx=self._route(bbox,probe_port_lx,dut_port_top,side='left')
+                routing_lx=self._route(bbox,probe_port_lx,dut_port_top)
 
-                routing_c=pg.taper(length=probe_dut_distance.y,\
-                width1=probe_port_center.width,\
-                width2=dut_port_bottom.width,layer=self.probe.layer)
+                self._routing_lx_length=routing_lx.area/self.gnd_routing_width
 
-                routing_rx=self._route(bbox,probe_port_rx,dut_port_top,side='right')
+                routing_c=pg.compass(size=(dut_port_bottom.width,\
+                    self.gnd_routing_width),layer=self.probe.layer)
+
+                routing_rx=self._route(bbox,probe_port_rx,dut_port_top)
+
+                self._routing_rx_length=routing_rx.area/self.gnd_routing_width
+
                 routing_tot=pg.boolean(routing_lx,routing_rx,'or',layer=probe.layer)
 
                 cell<<routing_tot
                 center_routing=cell<<routing_c
 
-                center_routing.connect(center_routing.ports[2],destination=dut_port_bottom)
+                center_routing.connect(center_routing.ports['S'],destination=dut_port_bottom)
 
             elif isinstance(self.probe,GSProbe):
 
@@ -393,7 +417,7 @@ def addProbe(res,probe):
 
         def _route(self,bbox,p1,p2):
 
-            routing=Routing(*args,**kwargs)
+            routing=Routing()
             routing.layer=self.probe.layer
             routing.clearance=bbox
             routing.trace_width=self.routing_width
@@ -401,7 +425,6 @@ def addProbe(res,probe):
             cell=routing.draw()
             del routing
             return cell
-            # return routing.draw_frame()
 
         def export_params(self):
 
@@ -409,15 +432,15 @@ def addProbe(res,probe):
 
             t=t.rename(columns={"Type":"DUT_Type"})
 
-            t=self._add_columns(t, t_dut)
-
             t_probe=self.probe.export_params()
 
             t_probe=t_probe.rename(columns=lambda x : "Probe"+x )
 
             t=self._add_columns(t,t_probe)
 
-            t["RoutingWidth"]=self.routing_width
+            t["GNDRoutingWidth"]=self.gnd_routing_width
+
+            # t["SignalRoutingWidth"]=self.signal_routing_width
 
             t["ProbeDistance"]=self.probe_dut_distance
 
@@ -429,19 +452,33 @@ def addProbe(res,probe):
 
         def import_params(self,df):
 
-            self.dut.import_params(df)
+            super().import_params(df)
 
             for col in df.columns:
 
                 if_match_import(self.probe,col,"Probe",df)
 
-                if col == "RoutingWidth" :
+                if col == "GNDRoutingWidth" :
                     # import pdb; pdb.set_trace()
                     self.routing_width=df[col].iat[0]
 
                 if col == "ProbeDistance" :
 
                     self.probe_dut_distance=df[col].iat[0]
+
+                # if col =="SignalRoutingWidth":
+                #
+                #     self.signal_routing_width=df[col].iat[0]
+
+        def resistance(self,res_per_square=0.1):
+
+            rdut=res.resistance(res_per_square)
+            rprobe_gnd=res_per_square*(self._routing_lx_length/self.routing_width+\
+                self._routing_lx_length/self.routing_width)/2
+            sig_width=res.draw(self).ports['bottom'].width
+            rprobe_sig=res_per_square*(self.probe_dut_distance/sig_width)
+
+            return rprobe_sig+rdut+rprobe_gnd
 
     return addProbe
 
@@ -614,6 +651,14 @@ class LFERes(LayoutPart):
             if_match_import(self.etchpit,col,"Etch",df)
             if_match_import(self.anchor,col,"Anchor",df)
 
+    def resistance(self,res_per_square=0.1):
+
+        ridt=self.idt.resistance(res_per_square)
+        rbus=self.bus.resistance(res_per_square)
+        ranchor=self.anchor.resistance(res_per_square)
+
+        return ridt+rbus+ranchor
+
 class FBERes(LFERes):
 
     def __init__(self,*args,**kwargs):
@@ -721,7 +766,7 @@ class TFERes(LFERes):
 
         return cell
 
-class Stack(LayoutPart):
+class WBArray(LayoutPart):
 
     def __init__(self,*args,**kwargs):
 
@@ -827,8 +872,11 @@ class Stack(LayoutPart):
 
             cell.add(dut.cell)
 
+            import pdb; pdb.set_trace()
+
+            self.text_params.update({'location':'left'})
             self.add_text(cell,\
-            text_opts=self.text_params.update({'location':'left'}))
+            text_opts=self.text_params)
 
             g=Group([cell,dut.cell])
 

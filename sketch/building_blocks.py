@@ -42,6 +42,8 @@ class LayoutPart(ABC) :
 
         self.cell=Device()
 
+        self.text_params=ld.TextParams
+
     def view(self):
         set_quickplot_options(blocking=True)
         qp(self.draw())
@@ -122,9 +124,9 @@ class LayoutPart(ABC) :
 
                     raise ValueError("Invalid key for text_param.Valid options are :{}".format("\n".join(valid_names)))
 
-            else:
+                else:
 
-                self._text_params=df
+                    self._text_params=df
 
     @abstractmethod
     def draw(self):
@@ -155,12 +157,11 @@ class LayoutPart(ABC) :
         return d1
 
     @staticmethod
-
     def add_text(cell,text_opts=ld.TextParams):
 
         package_directory = os.path.dirname(os.path.abspath(__file__))
 
-        import pdb; pdb.set_trace()
+        # import pdb; pdb.set_trace()
         font=os.path.join(package_directory,text_opts['font'])
 
         o=Point(0,0)
@@ -208,6 +209,7 @@ class LayoutPart(ABC) :
         del text_cell
 
         return cell
+
 
     def __repr__(self):
 
@@ -341,6 +343,10 @@ class IDT(LayoutPart) :
 
                 self.layer=df[cols].iat[0]
 
+    def resistance(self,res_per_square=0.1):
+
+        return res_per_square*self.l/self.pitch/self.coverage/self.n*2/3
+
 class Bus(LayoutPart) :
 
     def __init__(self,*args,**kwargs):
@@ -416,6 +422,10 @@ class Bus(LayoutPart) :
             elif cols=='Layer':
 
                 self.layer=df[cols].iat[0]
+
+    def resistance(self,res_per_square=0.1):
+
+        return res_per_square*self.size.x/self.size.y/2
 
 class EtchPit(LayoutPart) :
 
@@ -616,6 +626,10 @@ class Anchor(LayoutPart):
 
                 self.layer=df[cols].iat[0]
 
+    def resistance(self,=):
+
+        return res_per_square*self.size.y/self.size.x
+
 class Via(LayoutPart):
 
     def __init__(self,*args,**kwargs):
@@ -799,7 +813,7 @@ class Routing(LayoutPart):
 
             ll,lr,ul,ur=get_corners(bbox)
 
-            if source.x+self.trace_width/2>ll.x and source.x-self.trace_width/2<lr.x: #source tucked inside clearance
+            if source.x+self.trace_width>ll.x and source.x-self.trace_width<lr.x: #source tucked inside clearance
 
                 if self.side=='auto':
 
@@ -1034,6 +1048,10 @@ class Routing(LayoutPart):
             elif cols =='Layer':
 
                 self.layer=df[cols].iat[0]
+
+    def resistance(self,res_per_square=0.1):
+
+        return res_per_square*self.draw().area/self.trace_width
 
 class GSProbe(LayoutPart):
 
@@ -1330,3 +1348,7 @@ class Pad(LayoutPart):
             if cols=='Distance':
 
                 self.distance=df[cols].iat[0]
+
+    def resistance(self,res_per_square=0.1):
+
+        return res_per_square*(1+self.distance/self.port.width)
