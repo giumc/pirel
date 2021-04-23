@@ -22,18 +22,22 @@ base_params["IDTLength"]=40
 base_params["ViaSize"]=50
 base_params["ViaShape"]='rectangle'
 base_params["Overvia"]=2
-base_params["ViaSize"]=50
+base_params["ViaSize"]=40
 base_params["Overvia"]=2
 base_params["IDTLength"]=20
 base_params["IDTN_fingers"]=10
 base_params["PadSize"]=50
 base_params["SignalRoutingWidth"]=10
+base_params["GndRoutingWidth"]=200
 base_params["DutProbeDistance"]=100
+base_params["ViaDistance"]=100
+base_params["ViaAreaX"]=200
+base_params["ViaAreaY"]=200
 
 d.import_params(base_params)
 
-rpq=1
+# rpq=1
 
-print(d.resistance(res_per_square=rpq))
+# print(d.resistance(res_per_square=rpq))
 
 d.view()
