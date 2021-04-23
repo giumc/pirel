@@ -36,10 +36,16 @@ base_params["ViaAreaY"]=200
 
 d.import_params(base_params)
 
-help(d)
+# help(d)
 
+p=PArraySeries(d)
+
+p.x_param=[\
+SweepParam({'IDTN_fingers':[5,10,15,20]}),\
+SweepParam({'IDTLength':[20,40,60]}),\
+SweepParam({'ViaSize':[10,20,50]})]
+
+p.view()
 # rpq=1
 
 # print(d.resistance(res_per_square=rpq))
-
-d.view()

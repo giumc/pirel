@@ -25,9 +25,11 @@ class SweepParam():
     def __len__(self):
         return len(self._dict[list(self._dict.keys())[0]])
 
-    def __repr__(self):
+    def __str__(self):
 
         return str(self._dict)
+
+    __repr__=__str__
 
     @property
     def labels(self):
@@ -226,23 +228,48 @@ class _SweepParamValidator():
 
         self._valid_names=opts
 
-class ParametricArray(LayoutPart):
+class _SweepArrayValidator(_SweepParamValidator):
+
+    def __set__(self,owner,layout_params):
+
+        if not isinstance(layout_params,list):
+
+            if not isinstance(layout_params,SweepParam):
+
+                raise ValueError("a SweepParam instance needs to be passed here")
+
+            else:
+
+                layout_params=[layout_params]
+
+        sweep_row=list()
+
+        # import pdb; pdb.set_trace()
+
+        for par in layout_params:
+
+            _SweepParamValidator.__set__(self,owner,par)
+            sweep_row.append(getattr(owner,self.private_name))
+
+        setattr(owner,self.private_name,sweep_row)
+
+class PArray(LayoutPart):
 
     x_param=_SweepParamValidator(ld.Arrayx_param)
 
-    def __init__(self,*args,**kwargs):
+    def __init__(self,device,*args,**kwargs):
 
         super().__init__(*args,**kwargs)
 
         try:
 
-            if isinstance(args[0],LayoutPart):
+            if isinstance(device,LayoutPart):
 
-                self.device=args[0]
+                self.device=device
 
         except Exception:
 
-            self.device=IDT(name="Hello")
+            raise ValueError("PArray needs a LayoutPart argument")
 
         self.x_spacing=ld.Arrayx_spacing
 
@@ -334,15 +361,21 @@ class ParametricArray(LayoutPart):
 
             if self.labels_top is not None:
 
+                self.text_params.update({\
+                    'location':'top',\
+                    'label':self.labels_top[index]})
+
                 self.add_text(new_cell,\
-                text_opts=self.text_params.update({\
-                    'location':'top','label':self.labels_top[index]}))
+                text_opts=self._text_params)
 
             if self.labels_bottom is not None:
 
+                self.text_params.update({\
+                    'location':'bottom',\
+                    'label':self.labels_bottom[index]})
+
                 self.add_text(new_cell,\
-                text_opts=self.text_params.update({\
-                    'location':'bottom','label':self.labels_bottom[index]}))
+                text_opts=self.text_params)
 
             master_cell<<new_cell
 
@@ -389,13 +422,13 @@ class ParametricArray(LayoutPart):
 
             self.labels_bottom=None
 
-class ParametricMatrix(ParametricArray):
+class PMatrix(PArray):
 
     y_param=_SweepParamValidator(ld.Matrixy_param)
 
-    def __init__(self,*args,**kwargs):
+    def __init__(self,device,*args,**kwargs):
 
-        super().__init__(*args,**kwargs)
+        super().__init__(device,*args,**kwargs)
 
         self.y_spacing=ld.Matrixy_spacing
         self.labels_top=ld.Matrixlabels_top
@@ -461,7 +494,7 @@ class ParametricMatrix(ParametricArray):
 
                     self.labels_bottom=None
 
-            new_cell=ParametricArray.draw(self)
+            new_cell=PArray.draw(self)
 
             new_cell.name=self.name+str(index)
 
@@ -558,3 +591,45 @@ class ParametricMatrix(ParametricArray):
                 data_tot=data_tot.append(df)
 
         return data_tot
+
+class PArraySeries(PArray):
+
+    x_param=_SweepArrayValidator(ld.Arrayx_param)
+
+    def __init__(self,device,*a,**k):
+
+        PArray.__init__(self,device,*a,*k)
+
+        self.y_spacing = 100
+
+    def draw(self):
+
+        # import pdb; pdb.set_trace()
+
+        cellparts=list()
+
+        for i,par in enumerate(self.x_param):
+
+            device=deepcopy(self.device)
+
+            p=PArray(device)
+
+            p.x_param=par
+
+            p.auto_labels(row_index=1,col_index=0)
+
+            cellparts.append(p.draw())
+
+        g=Group(cellparts)
+        g.distribute(direction='y',spacing=self.y_spacing)
+        g.align(alignment='xmin')
+
+        cell=Device(name=self.name)
+
+        [cell.add(x) for x in cellparts]
+
+        cell=join(cell)
+
+        self.cell=cell
+
+        return cell
