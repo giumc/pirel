@@ -31,7 +31,7 @@ from layout_tools import *
 ld=LayoutDefault()
 
 class LayoutPart(ABC) :
-    """ Abstract class that implements features common to all layout classes.
+    ''' Abstract class that implements features common to all layout classes.
 
         Attributes
         ---------
@@ -48,16 +48,16 @@ class LayoutPart(ABC) :
         text_params : property
             see help
 
-    """
+    '''
     def __init__(self,name='default',*args,**kwargs):
-        """ Constructor for LayoutPart.
+        ''' Constructor for LayoutPart.
 
         Parameters
         ----------
 
         name : str
             optional,default is 'default'.
-        """
+        '''
 
         self.name=name
 
@@ -68,28 +68,28 @@ class LayoutPart(ABC) :
         self.text_params=ld.TextParams
 
     def view(self):
-        """ Visualize cell layout with current parameters.
+        ''' Visualize cell layout with current parameters.
 
         Blocks scripts excecution until figure is closed
 
-        """
+        '''
 
         set_quickplot_options(blocking=True)
         qp(self.draw())
         return
 
     def view_gds(self):
-        """ Visualize gds cell layout with current parameters.
+        ''' Visualize gds cell layout with current parameters.
 
         Blocks scripts excecution until figure is closed
 
-        """
+        '''
         lib=gdspy.GdsLibrary('test')
         lib.add(self.draw())
         gdspy.LayoutViewer(lib)
 
     def print_params_name(self):
-        """ Print the available parameters to the class. """
+        ''' Print the available parameters to the class. '''
 
         df=self.export_params()
 
@@ -98,14 +98,14 @@ class LayoutPart(ABC) :
         print(*df.columns.values,sep='\n')
 
     def get_params_name(self):
-        """ Get a list of the available parameters in the class. """
+        ''' Get a list of the available parameters in the class. '''
 
         df=self.export_params()
 
         return [str(_) for _ in df.columns ]
 
     def bbox_mod(self,bbox):
-        """ Default method that returns bbox for the class .
+        ''' Default method that returns bbox for the class .
 
         Can be overridden by subclasses of LayoutPart that require customized
         bounding boxes.
@@ -120,7 +120,7 @@ class LayoutPart(ABC) :
         ------
         bbox : iterable of two iterables of length 2
             lower left, upper right.
-        """
+        '''
 
         msgerr="pass 2 (x,y) coordinates as a bbox"
 
@@ -149,7 +149,7 @@ class LayoutPart(ABC) :
 
     @property
     def text_params(self):
-        """ Attribute of LayoutPart.
+        ''' Attribute of LayoutPart.
 
         It controls how the text labels generated in LayoutPart.add_text() are
         formatted.
@@ -159,9 +159,9 @@ class LayoutPart(ABC) :
             - 'size'        (int)
             - 'location'    ('left','right','top','bottom')
             - 'distance'    (sketch.Point)
-            - 'label'       (string, can be multiline if '\n' is added)
+            - 'label'       (string, can be multiline if '\\n' is added)
             - 'layer'       (int).
-        """
+        '''
 
         if hasattr(self,'_text_params'):
 
@@ -194,39 +194,49 @@ class LayoutPart(ABC) :
 
     @abstractmethod
     def draw(self):
-        """ Draws cell based on current parameters.
+        ''' Draws cell based on current parameters.
+
+        Abstract Method, to be implemented when subclassing.
 
         Returns
         -------
         cell : phidl.Device.
-        """
+        '''
         pass
 
     @abstractmethod
     def export_params(self):
-        """ Returns cell parameters in a DataFrame.
+        ''' Returns cell parameters in a DataFrame.
 
-            Returns
-            -------
-            df : pandas.DataFrame.
-        """"
+        Abstract Method, to be implemented when subclassing.
+
+        Returns
+        -------
+        df : pandas.DataFrame.
+        '''
+
         return DataFrame({
-        'Type':self.__class__.__name__},index=[self.name])
+            'Type':self.__class__.__name__},index=[self.name])
 
     @abstractmethod
     def import_params(self,df):
-    """ Pass to cell parameters in a DataFrame.
+        ''' Pass to cell parameters in a DataFrame.
+
+        Abstract Method, to be implemented when subclassing.
 
         Parameters
         ----------
         df : pandas.DataFrame
             parameter table, needs to be of length 1.
-    """"
+        '''
+
         if len(df.index)>1:
 
             raise Exception("Single Row DataFrame is used to load parameters")
 
         self.name=df.index.values[0]
+
+        pass
 
     @staticmethod
     def _add_columns(d1,d2):
@@ -239,7 +249,7 @@ class LayoutPart(ABC) :
 
     @staticmethod
     def add_text(cell,text_opts=ld.TextParams):
-        """ Static method to add text to a cell.
+        ''' Static method to add text to a cell.
 
         Parameters
         ---------
@@ -252,7 +262,7 @@ class LayoutPart(ABC) :
         -------
 
         cell :phidl.Device.
-        """
+        '''
 
         package_directory = os.path.dirname(os.path.abspath(__file__))
 
@@ -317,7 +327,7 @@ class LayoutPart(ABC) :
         return df.transpose().to_string()
 
 class IDT(LayoutPart) :
-    """ Generates interdigitated structure.
+    ''' Generates interdigitated structure.
 
         Derived from LayoutPart.
 
@@ -338,7 +348,7 @@ class IDT(LayoutPart) :
             finger layer
         n  : int
             finger number.
-    """
+    '''
     def __init__(self,*args,**kwargs):
 
         super().__init__(*args,**kwargs)
@@ -404,13 +414,13 @@ class IDT(LayoutPart) :
         return cell
 
     def get_finger_size(self):
-        """ get finger length and width.
+        ''' get finger length and width.
 
         Returns
         -------
         size : sketch.Point
             finger size as coordinates lenght(y) and width(x).
-        """
+        '''
         dy=self.y
 
         dx=self.pitch*self.coverage
@@ -468,7 +478,7 @@ class IDT(LayoutPart) :
         return res_per_square*self.y/self.pitch/self.coverage/self.n*2/3
 
 class Bus(LayoutPart) :
-    """ Generates pair of bus structure.
+    ''' Generates pair of bus structure.
 
     Derived from LayoutPart.
 
@@ -480,7 +490,7 @@ class Bus(LayoutPart) :
         distance between buses coordinates
     layer : int
         bus layer.
-    """
+    '''
 
     def __init__(self,*args,**kwargs):
 
@@ -560,7 +570,7 @@ class Bus(LayoutPart) :
         return res_per_square*self.size.x/self.size.y/2
 
 class EtchPit(LayoutPart) :
-    """ Generates pair of etching trenches.
+    ''' Generates pair of etching trenches.
 
     Derived from LayoutPart.
 
@@ -572,7 +582,7 @@ class EtchPit(LayoutPart) :
         etch width
     layer : int
         etch pit layer
-    """
+    '''
     def __init__(self,*args,**kwargs):
 
         super().__init__(*args,**kwargs)
@@ -649,7 +659,7 @@ class EtchPit(LayoutPart) :
                 self.layer=df[cols].iat[0]
 
 class Anchor(LayoutPart):
-    """ Generates anchor structure.
+    ''' Generates anchor structure.
 
     Derived from LayoutPart.
 
@@ -673,7 +683,7 @@ class Anchor(LayoutPart):
 
     etch_layer : int
         etch layer.
-    """
+    '''
     def __init__(self,*args,**kwargs):
 
         super().__init__(*args,**kwargs)
@@ -802,7 +812,7 @@ class Anchor(LayoutPart):
         return res_per_square*self.size.y/self.size.x
 
 class Via(LayoutPart):
-    """ Generates via pattern.
+    ''' Generates via pattern.
 
     Derived from LayoutPart.
 
@@ -816,7 +826,7 @@ class Via(LayoutPart):
         via shape
     layer : int
         via layer.
-    """
+    '''
 
     def __init__(self,*args,**kwargs):
 
@@ -923,7 +933,7 @@ class Via(LayoutPart):
                 self.layer=df[cols].iat[0]
 
 class Routing(LayoutPart):
-    """ Generate automatic routing connection
+    ''' Generate automatic routing connection
 
     Derived from LayoutPart.
 
@@ -948,7 +958,7 @@ class Routing(LayoutPart):
 
     layer : int
         metal layer.
-    """
+    '''
 
     def __init__(self,side='auto',*args,**kwargs):
 
@@ -1282,7 +1292,7 @@ class Routing(LayoutPart):
         return res_per_square*self.draw().area/self.trace_width
 
 class GSProbe(LayoutPart):
-    """ Generates GS pattern.
+    ''' Generates GS pattern.
 
     Derived from LayoutPart.
 
@@ -1297,7 +1307,7 @@ class GSProbe(LayoutPart):
 
     layer : int
         via layer.
-    """
+    '''
 
     def __init__(self,*args,**kwargs):
 
@@ -1381,7 +1391,7 @@ class GSProbe(LayoutPart):
                 self.layer=df[cols].iat[0]
 
 class GSGProbe(LayoutPart):
-    """ Generates GSG pattern.
+    ''' Generates GSG pattern.
 
     Derived from LayoutPart.
 
@@ -1396,7 +1406,7 @@ class GSGProbe(LayoutPart):
 
     layer : int
         via layer.
-    """
+    '''
 
     def __init__(self,*args,**kwargs):
 
@@ -1489,7 +1499,7 @@ class GSGProbe(LayoutPart):
                 self.layer=df[cols].iat[0]
 
 class Pad(LayoutPart):
-    """ Generates GSG pattern.
+    ''' Generates GSG pattern.
 
     Derived from LayoutPart.
 
@@ -1507,7 +1517,7 @@ class Pad(LayoutPart):
 
     layer : int
         via layer.
-    """
+    '''
     def __init__(self,*args,**kwargs):
 
         super().__init__(*args,**kwargs)

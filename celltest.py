@@ -36,6 +36,8 @@ base_params["ViaAreaY"]=200
 
 d.import_params(base_params)
 
+help(d)
+
 # rpq=1
 
 # print(d.resistance(res_per_square=rpq))

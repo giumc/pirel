@@ -8,6 +8,7 @@ from phidl import set_quickplot_options
 from phidl import quickplot as qp
 
 class LayoutDefault:
+    '''container of PyResLayout constants.'''
 
     def __init__(self):
 
@@ -127,6 +128,13 @@ class LayoutDefault:
             orientation=-90)
 
 class Point:
+    ''' Handles 2-d coordinates.
+
+    Arguments
+    --------
+    x : float
+    y : float.
+    '''
 
     def __init__(self,x=0,y=0):
 
@@ -134,6 +142,7 @@ class Point:
         self.y=np.around(np.single(y),decimals=2)
 
     def get_coord(self):
+        ''' returns coordinates in a 2-d tuple'''
 
         return (self.x,self.y)
 
@@ -190,6 +199,18 @@ class Point:
     # __truediv = __floordiv__
 
     def from_iter(self,l):
+        '''build a new Point from an iterable.
+
+        Parameters
+        ----------
+
+        l : length 2 iterable of floats
+
+        Returns
+        -------
+        p : sketch.Point
+            a new point.
+        '''
 
         if not len(l)==2:
 
@@ -216,18 +237,47 @@ class Point:
     __rmul__=__mul__
 
 def add_compass(device):
+    ''' add four ports at the bbox of a cell.
+
+    Parameters
+    ----------
+    device : phidl.Device
+
+    Returns
+    -------
+    device : phidl.Device.
+    '''
 
     bound_cell=pg.compass(size=device.size).move(\
     origin=(0,0),destination=device.center)
 
     ports=port=bound_cell.get_ports()
 
-    device.add_port(port=ports[0],name=device.name+'N')
-    device.add_port(port=ports[1],name=device.name+'S')
-    device.add_port(port=ports[2],name=device.name+'E')
-    device.add_port(port=ports[3],name=device.name+'W')
+    device.add_port(port=ports[0],name='N')
+    device.add_port(port=ports[1],name='S')
+    device.add_port(port=ports[2],name='E')
+    device.add_port(port=ports[3],name='W')
 
 def draw_array(cell,x,y,row_spacing=0,column_spacing=0):
+    ''' returns a spaced matrix of identical cells.
+
+    Parameters
+    ----------
+    cell : phidl.Device
+
+    x : int
+        columns of copies
+    y : int
+        rows of copies
+
+    row_spacing: float
+    column_spacing: float
+
+    Returns
+    -------
+
+    cell : phidl.Device.
+    '''
 
     new_cell=pg.Device(name=cell.name+"array")
 
@@ -252,17 +302,46 @@ def draw_array(cell,x,y,row_spacing=0,column_spacing=0):
     return new_cell
 
 def print_ports(device):
+    ''' print a list of ports in the cell.
+
+    Parameters
+    ----------
+    device : phidl.Device.
+    '''
 
     for i,p in enumerate(device.get_ports()):
 
         print(i,p,'\n')
 
 def join(device):
+    ''' returns a copy of device with all polygons joined.
 
+    Parameters
+    ----------
+    device : phidl.Device.
+    '''
     return pg.union(device,by_layer=True, precision=0.1,join_first=False)
 
 def get_corners(device):
+    ''' get corners of a device.
 
+    Parameters
+    ---------
+    device : phidl.Device
+
+    Returns:
+    ll : sketch.Point
+        lower left
+
+    lr : sketch.Point
+        lower right
+
+    ul : sketch.Point
+        upper left
+
+    ur : sketch.Point
+        upper right.
+    '''
     bbox=device.bbox
     ll=Point(bbox[0,0],bbox[0,1])
     lr=Point(bbox[1,0],bbox[0,1])
@@ -272,18 +351,40 @@ def get_corners(device):
     return ll,lr,ul,ur
 
 def check_cell(device):
+    ''' Shows the device layout.
 
+    Blocks script until window is closed.
+    '''
     set_quickplot_options(blocking=True)
     qp(device)
 
-def if_match_import(obj,col,tag,df):
+def if_match_import(obj,param,tag,df):
+    ''' used to load data in subclasses.
 
+    Parameters
+    ---------
+    obj : LayoutPart
+        a instance that might contain parameters in 'df'
+
+    param : str
+
+    tag : str
+
+    df : pd.DataFrame
+
+    Use:
+        if_match_import() looks for 'tag' in 'param' string;
+        if 'tag' is found at begignning of 'param',
+        'tag' it is removed from 'param'.
+        A copy of 'df' with 'param' key changed into the new string
+         is passed to obj.import_params().
+    '''
     from re import search
 
-    match=search(tag,col)
+    match=search(tag,param)
 
     if match and match.start()==0:
 
-        varname=col.replace(tag,"")
+        varname=param.replace(tag,"")
         # print(varname)
-        obj.import_params(df.rename(columns={col:varname}))
+        obj.import_params(df.rename(columns={param:varname}))
