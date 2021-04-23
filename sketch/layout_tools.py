@@ -22,6 +22,11 @@ class LayoutDefault:
         self.layerBackSide = 7
         self.layerMask = 99
 
+        #text
+
+        self.TextParams={'font':"BebasNeue-Regular.otf",'size':125,'location':'top',\
+            'distance':Point(0,100),'label':"default",'layer':self.layerTop}
+
         #IDT
 
         self.IDT_y = 200
@@ -222,7 +227,29 @@ def add_compass(device):
     device.add_port(port=ports[2],name=device.name+'E')
     device.add_port(port=ports[3],name=device.name+'W')
 
-    # return device
+def draw_array(cell,x,y,row_spacing=0,column_spacing=0):
+
+    new_cell=pg.Device(name=cell.name+"array")
+
+    cell_size=Point().from_iter(cell.size)
+
+    new_cell.add_array(cell,rows=y,columns=x,\
+        spacing=(row_spacing+cell_size.x,column_spacing+cell_size.y))
+
+    _,_,ul,ur=get_corners(new_cell)
+
+    midpoint=ul/2+ur/2
+
+    p=Port(name=new_cell.name,\
+        orientation=90,\
+        midpoint=midpoint(),\
+        width=(ur.x-ul.x))
+
+    new_cell=join(new_cell)
+
+    new_cell.add_port(p)
+
+    return new_cell
 
 def print_ports(device):
 

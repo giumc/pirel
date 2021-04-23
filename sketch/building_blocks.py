@@ -42,64 +42,15 @@ class LayoutPart(ABC) :
 
         self.cell=Device()
 
-    def view(self,*args,**kwargs):
+    def view(self):
         set_quickplot_options(blocking=True)
-        qp(self.draw(*args,**kwargs))
+        qp(self.draw())
         return
 
-    def view_gds(self,*args,**kwargs):
+    def view_gds(self):
         lib=gdspy.GdsLibrary('test')
-        lib.add(self.draw(*args,**kwargs))
+        lib.add(self.draw())
         gdspy.LayoutViewer(lib)
-
-    def add_text(self,text_location='top',text_size=25,\
-        text_label='default',text_font='BebasNeue-Regular.otf',\
-        text_layer=ld.layerTop,text_distance=Point(0,100)):
-
-        package_directory = os.path.dirname(os.path.abspath(__file__))
-
-        font=os.path.join(package_directory,text_font)
-
-        cell=self.cell
-
-        o=Point(0,0)
-
-        ll,lr,ul,ur=get_corners(cell)
-
-        text_cell=pg.text(size=text_size,text=text_label,font=font,layer=text_layer)
-
-        text_size=Point().from_iter(text_cell.size)
-
-        if text_location=='top':
-
-            o=ul+text_distance
-
-        elif text_location=='bottom':
-
-            o=ll-Point(0,text_size.y)-text_distance
-
-        elif text_location=='right':
-
-            o=ur+text_distance
-
-            text_cell.rotate(angle=-90)
-
-        elif text_location=='left':
-
-            o=ll-text_distance
-
-            text_cell.rotate(angle=90)
-
-        text_ref=cell<<text_cell
-
-        text_ref.move(origin=(0,0),\
-            destination=o())
-
-        cell.absorb(text_ref)
-
-        del text_cell
-
-        self.cell=cell
 
     def print_params_name(self):
 
@@ -142,8 +93,41 @@ class LayoutPart(ABC) :
 
         return bbox
 
+    @property
+    def text_params(self):
+
+        if hasattr(self,'_text_params'):
+
+            return self._text_params
+
+        else :
+
+            return ld.TextParams
+
+    @text_params.setter
+
+    def text_params(self,df):
+
+        if not isinstance(df,dict):
+
+            raise ValueError("text params is set by a dict")
+
+        else:
+
+            valid_names={'font','size','location','distance','label','layer'}
+
+            for key in df.keys():
+
+                if not key in valid_names:
+
+                    raise ValueError("Invalid key for text_param.Valid options are :{}".format("\n".join(valid_names)))
+
+            else:
+
+                self._text_params=df
+
     @abstractmethod
-    def draw(self,*args,**kwargs):
+    def draw(self):
         pass
 
     @abstractmethod
@@ -171,29 +155,59 @@ class LayoutPart(ABC) :
         return d1
 
     @staticmethod
-    def draw_array(cell,x,y,row_spacing=0,column_spacing=0,*args,**kwargs):
 
-        new_cell=Device(name=cell.name+"array")
+    def add_text(cell,text_opts=ld.TextParams):
 
-        cell_size=Point().from_iter(cell.size)
+        package_directory = os.path.dirname(os.path.abspath(__file__))
 
-        new_cell.add_array(cell,rows=y,columns=x,\
-            spacing=(row_spacing+cell_size.x,column_spacing+cell_size.y))
+        import pdb; pdb.set_trace()
+        font=os.path.join(package_directory,text_opts['font'])
 
-        _,_,ul,ur=get_corners(new_cell)
+        o=Point(0,0)
 
-        midpoint=ul/2+ur/2
+        ll,lr,ul,ur=get_corners(cell)
 
-        p=Port(name=new_cell.name,\
-            orientation=90,\
-            midpoint=midpoint(),\
-            width=(ur.x-ul.x))
+        text_cell=pg.text(size=text_opts['size'],\
+            text=text_opts['label'],\
+            font=font,\
+            layer=text_opts['layer'])
 
-        new_cell=join(new_cell)
+        text_location=text_opts['location']
 
-        new_cell.add_port(p)
+        text_size=Point().from_iter(text_cell.size)
 
-        return new_cell
+        text_distance=text_opts['distance']
+
+        if text_location=='top':
+
+            o=ul+text_distance
+
+        elif text_location=='bottom':
+
+            o=ll-Point(0,text_size.y)-text_distance
+
+        elif text_location=='right':
+
+            o=ur+text_distance
+
+            text_cell.rotate(angle=-90)
+
+        elif text_location=='left':
+
+            o=ll-text_distance
+
+            text_cell.rotate(angle=90)
+
+        text_ref=cell<<text_cell
+
+        text_ref.move(origin=(0,0),\
+            destination=o())
+
+        cell.absorb(text_ref)
+
+        del text_cell
+
+        return cell
 
     def __repr__(self):
 
@@ -702,7 +716,7 @@ class Via(LayoutPart):
 
             if cols=='Shape':
 
-                self.shape=df[cols].iat[0]
+                self.type=df[cols].iat[0]
 
             elif cols =='Layer':
 
@@ -1268,7 +1282,7 @@ class Pad(LayoutPart):
         self.distance=ld.Paddistance
         self.port=ld.Padport
 
-    def draw(self,*args,**kwargs):
+    def draw(self):
 
         r1=pg.compass(size=(self.port.width,self.distance),\
             layer=self.layer)
