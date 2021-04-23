@@ -81,6 +81,7 @@ def addVia(res,side='top',bottom_conn=False):
             self.padlayers=[ld.layerTop,ld.layerBottom]
             self.overvia=2
             self.viadistance=100
+            self.via_area=Point(100,100)
 
         def draw(self):
 
@@ -90,17 +91,13 @@ def addVia(res,side='top',bottom_conn=False):
 
             active_width=rescell.xsize
 
-            import numpy as np
+            nvias_x,nvias_y=self.get_n_vias()
 
-            nvias=max(1,int(np.floor(active_width/3/self.via.size/self.overvia)))
-
-            viacell=draw_array(self._draw_padded_via(),nvias,3)
+            viacell=draw_array(self._draw_padded_via(),nvias_x,nvias_y)
 
             cell=Device(name=self.name)
 
             cell<<rescell
-
-            pad=pg.compass(size=(viacell.xsize,self.viadistance),layer=self.padlayers[0])
 
             try:
 
@@ -124,25 +121,29 @@ def addVia(res,side='top',bottom_conn=False):
 
                     try :
 
-                        rescell.ports['top']
+                        top_port=rescell.ports['top']
 
                     except Exception:
 
                         raise ValueError ("Cannot add a top via in a cell with no top port")
 
-                    top_port=self._attach_instance(cell, pad, pad.ports['S'], viacell, rescell.ports['top'])
+                    pad=pg.compass(size=(top_port.width,self.viadistance),layer=self.padlayers[0])
+
+                    top_port=self._attach_instance(cell, pad, pad.ports['S'], viacell, top_port)
 
                 if sides=='bottom':
 
                     try :
 
-                        rescell.ports['bottom']
+                        bottom_port=rescell.ports['bottom']
 
                     except Exception:
 
                         raise ValueError ("Cannot add a bottom via in a cell with no bottom port")
 
-                    bottom_port=self._attach_instance(cell, pad, pad.ports['N'], viacell, rescell.ports['bottom'])
+                    pad=pg.compass(size=(bottom_port.width,self.viadistance),layer=self.padlayers[0])
+
+                    bottom_port=self._attach_instance(cell, pad, pad.ports['N'], viacell, bottom_port)
 
             cell=join(cell)
 
@@ -172,7 +173,8 @@ def addVia(res,side='top',bottom_conn=False):
 
             t_via['Overvia']=self.overvia
             t_via['ViaDistance']=self.viadistance
-
+            t_via['ViaAreaX']=self.via_area.x
+            t_via['ViaAreaY']=self.via_area.y
             t=LayoutPart._add_columns(t,t_via)
 
             return t
@@ -193,20 +195,31 @@ def addVia(res,side='top',bottom_conn=False):
 
                     self.viadistance=df[col].iat[0]
 
+                if col=='ViaAreaX':
+
+                    self.via_area.x=df[col].iat[0]
+
+                if col=='ViaAreaY':
+
+                    self.via_area.y=df[col].iat[0]
+
         def bbox_mod(self,bbox):
 
             LayoutPart.bbox_mod(self,bbox)
 
             ll=Point().from_iter(bbox[0])
+
             ur=Point().from_iter(bbox[1])
+
+            nvias_x,nvias_y=self.get_n_vias()
 
             if any([_=='top' for _ in side]):
 
-                ur=ur-Point(0,float(self.via.size*self.overvia*3*1.5))
+                ur=ur-Point(0,float(self.via.size*self.overvia*nvias_y-self.viadistance))
 
             if any([_=='bottom' for _ in side]):
 
-                ll=ll+Point(0,float(self.via.size*self.overvia*3*1.5))
+                ll=ll+Point(0,float(self.via.size*self.overvia*nvias_y+self.viadistance))
 
             return (ll(),ur())
 
@@ -245,8 +258,6 @@ def addVia(res,side='top',bottom_conn=False):
 
         def _attach_instance(self,cell,padcell,padport,viacell,port):
 
-            # import pdb; pdb.set_trace()
-
             padref=cell<<padcell
 
             padref.connect(padport,\
@@ -260,12 +271,16 @@ def addVia(res,side='top',bottom_conn=False):
             destination=port,\
             overlap=-self.viadistance)
 
-            port=Port(name=port.name,\
-                midpoint=(port.midpoint[0],port.midpoint[1]),\
-                width=viacell.xsize,\
-                orientation=port.orientation)
-
             return port
+
+        def get_n_vias(self):
+
+            import numpy as np
+
+            nvias_x=max(1,int(np.floor(self.via_area.x/self.via.size/self.overvia)))
+            nvias_y=max(1,int(np.floor(self.via_area.y/self.via.size/self.overvia)))
+
+            return nvias_x,nvias_y
 
     return addVia
 
