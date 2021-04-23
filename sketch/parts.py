@@ -59,6 +59,7 @@ def Scaled(res):
             ranchor=self.anchor.resistance(res_per_square)*self.idt.pitch/self.idt.active_area.x
 
             return ridt+rbus+ranchor
+
     return Scaled
 
 def addVia(res,side='top',bottom_conn=False):
@@ -421,7 +422,7 @@ def addProbe(res,probe):
             routing=Routing()
             routing.layer=self.probe.layer
             routing.clearance=bbox
-            routing.trace_width=self.routing_width
+            routing.trace_width=self.gnd_routing_width
             routing.ports=(p1,p2)
             cell=routing.draw()
             del routing
@@ -474,11 +475,11 @@ def addProbe(res,probe):
         def resistance(self,res_per_square=0.1):
 
             self.draw()
-            
-            rdut=res.resistance(self,res_per_square)
 
-            rprobe_gnd=res_per_square*(self._routing_lx_length/self.routing_width+\
-                self._routing_rx_length/self.routing_width)/2
+            rdut=res.resistance(self,res_per_square=res_per_square)
+
+            rprobe_gnd=res_per_square*(self._routing_lx_length/self.gnd_routing_width+\
+                self._routing_rx_length/self.gnd_routing_width)/2
 
             sig_width=res.draw(self).ports['bottom'].width
 
@@ -487,6 +488,75 @@ def addProbe(res,probe):
             return rprobe_sig+rdut+rprobe_gnd
 
     return addProbe
+
+def addLargeGnd(probe):
+
+    class addLargeGnd(probe):
+
+        def __init__(self,*args,**kwargs):
+
+            probe.__init__(self,*args,**kwargs)
+
+            self.groundsize=ld.GSGProbe_LargePadground_size
+
+        def draw(self):
+
+            cell=probe.draw(self)
+
+            oldports=[_ for _ in cell.get_ports()]
+
+            groundpad=pg.rectangle(size=(self.groundsize,self.groundsize),\
+            layer=self.layer)
+
+            [_,_,ul,ur]=get_corners(groundpad)
+
+            for p in cell.get_ports():
+
+                name=p.name
+
+                if 'gnd' in name:
+
+                    groundref=cell<<groundpad
+
+                    if 'left' in name:
+
+                        groundref.move(origin=ur(),\
+                        destination=p.endpoints[1])
+
+                    elif 'right' in name:
+
+                        groundref.move(origin=ul(),\
+                        destination=p.endpoints[0])
+
+                    cell.absorb(groundref)
+
+            cell=join(cell)
+
+            [cell.add_port(_) for _ in oldports]
+
+            self.cell=cell
+
+            return cell
+
+        def export_params(self):
+
+            t=probe.export_params(self)
+
+            t["GroundPadSize"]=self.groundsize
+
+            return t
+
+        def import_params(self,df):
+
+            probe.import_params(self,df)
+
+            for cols in df.columns:
+
+                if cols=='GroundPadSize':
+
+                    self.groundsize=df[cols].iat[0]
+
+    return addLargeGnd
 
 class LFERes(LayoutPart):
 
@@ -600,13 +670,13 @@ class LFERes(LayoutPart):
         cell_out.add_port(Port(name="top",\
         midpoint=(Point().from_iter(ports[1].center)+\
         Point(0,self.anchor.size.y))(),\
-        width=self.anchor.size.x,\
+        width=self.anchor.size.x-2*self.anchor.etch_margin.x,\
         orientation=90))
 
         cell_out.add_port(Port(name="bottom",\
         midpoint=(Point().from_iter(ports[0].center)-\
         Point(0,self.anchor.size.y))(),\
-        width=self.anchor.size.x,\
+        width=self.anchor.size.x-2*self.anchor.etch_margin.x,\
         orientation=-90))
 
         del idt_cell,bus_cell,etch_cell,anchor_cell
@@ -658,6 +728,8 @@ class LFERes(LayoutPart):
             if_match_import(self.anchor,col,"Anchor",df)
 
     def resistance(self,res_per_square=0.1):
+
+        self.draw()
 
         ridt=self.idt.resistance(res_per_square)
         rbus=self.bus.resistance(res_per_square)

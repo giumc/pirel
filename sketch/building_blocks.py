@@ -522,14 +522,19 @@ class Anchor(LayoutPart):
 
     def draw(self):
 
+        if self.size.x<=self.etch_margin.x*2:
+
+            warnings.warn("Malformed Anchor,device will be fixed")
+            self.size.x=self.size.x+self.etch_margin.x*2
+
         o=self.origin
 
         anchor=pg.rectangle(\
-            size=self.size(),\
+            size=(self.size-Point(2*self.etch_margin.x,0))(),\
             layer=self.layer)
 
-        etch_size_mid=Point(\
-        (self.etch_x-2*self.etch_margin.x-self.size.x)/2,\
+        etch_size=Point(\
+        (self.etch_x-self.size.x)/2,\
         self.size.y-2*self.etch_margin.y)
 
         offset=Point(self.x_offset,0)
@@ -537,11 +542,11 @@ class Anchor(LayoutPart):
         cell=Device(name=self.name)
 
         etch_sx=pg.rectangle(\
-            size=(etch_size_mid-offset)(),\
+            size=(etch_size-offset)(),\
             layer=self.etch_layer)
 
         etch_dx=pg.rectangle(\
-            size=(etch_size_mid+offset)(),\
+            size=(etch_size+offset)(),\
             layer=self.etch_layer)
 
         etch_sx_ref=(cell<<etch_sx).move(origin=(0,0),\
@@ -558,8 +563,8 @@ class Anchor(LayoutPart):
         destination=etchdx_transl())
 
         cell.add_port(name=self.name,\
-        midpoint=(anchor_transl+Point(self.size.x/2,self.size.y))(),\
-        width=self.size.x,\
+        midpoint=(anchor_transl+Point(self.size.x/2-self.etch_margin.x,self.size.y))(),\
+        width=self.size.x-2*self.etch_margin.x,\
         orientation=90)
 
         if self.etch_choice==True:
@@ -1091,12 +1096,12 @@ class GSProbe(LayoutPart):
         pad_sig.move(origin=o(),\
         destination=(o+dp)())
 
-        cell.add_port(Port(name=self.name+'_rx',\
+        cell.add_port(Port(name='gnd_left',\
         midpoint=(o+Point(pad_x/2+self.pitch,self.size.y))(),\
         width=pad_x,\
         orientation=90))
 
-        cell.add_port(Port(name=self.name+'_lx',\
+        cell.add_port(Port(name='sig',\
         midpoint=(o+Point(pad_x/2,self.size.y))(),\
         width=pad_x,\
         orientation=90))
@@ -1178,17 +1183,17 @@ class GSGProbe(LayoutPart):
         pad_gnd_dx.move(origin=o(),\
         destination=(o+dp*2)())
 
-        cell.add_port(Port(name=self.name+'_c',\
+        cell.add_port(Port(name='sig',\
         midpoint=(o+Point(pad_x/2+self.pitch,self.size.y))(),\
         width=pad_x,\
         orientation=90))
 
-        cell.add_port(Port(name=self.name+'_lx',\
+        cell.add_port(Port(name='gnd_left',\
         midpoint=(o+Point(pad_x/2,self.size.y))(),\
         width=pad_x,\
         orientation=90))
 
-        cell.add_port(Port(name=self.name+'_rx',\
+        cell.add_port(Port(name='gnd_right',\
         midpoint=(o+Point(pad_x/2+2*self.pitch,self.size.y))(),\
         width=pad_x,\
         orientation=90))
@@ -1227,68 +1232,6 @@ class GSGProbe(LayoutPart):
             elif cols =='Layer':
 
                 self.layer=df[cols].iat[0]
-
-class GSGProbe_LargePad(GSGProbe):
-
-    def __init__(self,*args,**kwargs):
-
-        super().__init__(*args,**kwargs)
-
-        self.groundsize=ld.GSGProbe_LargePadground_size
-
-    def draw(self):
-
-        cell=GSGProbe.draw(self)
-
-        groundpad_new=pg.rectangle(size=(self.groundsize,self.groundsize),\
-        layer=self.layer)
-
-        groundpad_lx=cell<<groundpad_new
-
-        port_lx=cell.get_ports()[1]
-
-        groundpad_lx.move(origin=groundpad_new.bbox[1],\
-        destination=(Point().from_iter(port_lx.midpoint)+Point(port_lx.width/2,0))())
-
-        groundpad_rx=cell<<groundpad_new
-
-        port_rx=cell.get_ports()[2]
-
-        _,_,ur,_=get_corners(groundpad_new)
-        groundpad_rx.move(origin=ur(),\
-        destination=(Point().from_iter(port_rx.midpoint)-Point(port_rx.width/2,0))())
-
-        port_c=cell.get_ports()[0]
-
-        cell.absorb(groundpad_lx)
-        cell.absorb(groundpad_rx)
-
-        cell=join(cell)
-        cell.add_port(port=port_c)
-        cell.add_port(port=port_lx)
-        cell.add_port(port=port_rx)
-
-        self.cell=cell
-
-        return cell
-
-    def export_params(self):
-
-        t=GSGProbe.export_params(self)
-
-        t["GroundPadSize"]=self.groundsize
-
-        return t
-
-    def import_params(self,df):
-
-        GSGProbe.import_params(self,df)
-
-        for cols in df.columns:
-
-            if cols=='GroundPadSize':
-
-                self.groundsize=df[cols].iat[0]
 
 class Pad(LayoutPart):
 
