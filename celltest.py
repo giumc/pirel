@@ -6,35 +6,42 @@ from phidl import quickplot as qp
 
 import pandas as pd
 
-d=addProbe(addVia(Scaled(LFERes)),addLargeGnd(GSGProbe)())(name="DEF")
+d=addProbe(\
+    array(Scaled(LFERes),3),\
+    addLargeGnd(GSGProbe))(name="DEF")
 
 base_params=d.export_params()
 
-base_params["EtchWidth"]=0.5
-base_params["AnchorWidth"]=0.3
-base_params["AnchorLength"]=5
-base_params["AnchorEtchMarginX"]=2
-base_params["AnchorEtchMarginY"]=0.5
-base_params["BusLength"]=1
+base_params["ProbeGroundPadSize"]=400
+base_params["ProbeWidth"]=100
+base_params["ProbePitch"]=200
+base_params["ProbeLength"]=100
+base_params["ProbeDistance"]=180
+base_params["GNDRoutingWidth"]=350
+
+base_params["IDTPitch"]=7
+base_params["IDTN_fingers"]=38
 base_params["IDTOffset"]=1
-base_params["IDTN_fingers"]=20
-base_params["IDTLength"]=40
-base_params["ViaSize"]=50
-base_params["ViaShape"]='rectangle'
-base_params["Overvia"]=2
-base_params["ViaSize"]=40
-base_params["Overvia"]=2
-base_params["IDTLength"]=20
-base_params["IDTN_fingers"]=10
-base_params["PadSize"]=50
-base_params["SignalRoutingWidth"]=10
-base_params["GndRoutingWidth"]=200
-base_params["DutProbeDistance"]=100
-base_params["ViaDistance"]=100
-base_params["ViaAreaX"]=200
-base_params["ViaAreaY"]=200
+base_params["IDTLength"]=105
+base_params["IDTCoverage"]=0.5
+base_params["BusLength"]=1
+base_params["EtchWidth"]=0.4
+base_params["AnchorLength"]=4
+base_params["AnchorWidth"]=0.5
+base_params["AnchorEtchMarginX"]=0.4
+base_params["AnchorEtchMarginY"]=0.5
+
+base_params["ExtConnLength"]=3
+# base_params["ViaSize"]=20
+# base_params["ViaAreaX"]=200
+# base_params["ViaAreaY"]=200
+# base_params["ViaShape"]='rectangle'
+# base_params["Overvia"]=3
 
 d.import_params(base_params)
+
+d.view()
+exit()
 
 # help(d)
 

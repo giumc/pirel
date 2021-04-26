@@ -14,12 +14,6 @@ def Scaled(res):
 
         def __init__(self,*args,**kwargs):
 
-            # self._valid_classes=(LFERes,FBERes,TFERes)
-            #
-            # if not any([res.__name__==x.__name__ for x in self._valid_classes]):
-            #
-            #     raise ValueError("Wrong init of scaled design. You can scale {}".format(",".join(self._valid_classes)))
-
             res.__init__(self,*args,**kwargs)
 
         def draw(self):
@@ -40,7 +34,7 @@ def Scaled(res):
 
             selfcopy.anchor.size.y=self.anchor.size.y*p
 
-            selfcopy.anchor.etch_margin.x=self.anchor.etch_margin.x*p
+            selfcopy.anchor.etch_margin.x=self.anchor.etch_margin.x*selfcopy.anchor.size.x
 
             selfcopy.anchor.etch_margin.y=self.anchor.etch_margin.y*p
 
@@ -55,8 +49,10 @@ def Scaled(res):
         def resistance(self,res_per_square=0.1):
 
             ridt=self.idt.resistance(res_per_square)*self.idt.pitch
-            rbus=self.bus.resistance(res_per_square)/self.idt.pitch
-            ranchor=self.anchor.resistance(res_per_square)*self.idt.pitch/self.idt.active_area.x
+            rbus=self.bus.resistance(res_per_square)/self.idt.pitch/2
+            ranchor=self.anchor.resistance(res_per_square)\
+                *self.idt.pitch/self.idt.active_area.x/\
+                (1-2*self.anchor.etch_margin.x)
 
             return ridt+rbus+ranchor
 
@@ -354,7 +350,9 @@ def addProbe(res,probe):
 
             res.__init__(self,*args,**kwargs)
 
-            self.probe=probe
+            # import pdb; pdb.set_trace()
+
+            self.probe=probe(self.name+"Probe")
 
             self.gnd_routing_width=ld.DUTrouting_width
 
@@ -378,38 +376,37 @@ def addProbe(res,probe):
 
             probe_ref=cell<<probe_cell
 
-            ports=cell.get_ports()
+            import pdb; pdb.set_trace()
 
-            probe_ref.connect(ports[2],\
-            destination=ports[1],overlap=-probe_dut_distance.y)
+            probe_ref.connect(probe_cell.ports['sig'],\
+            destination=device_cell.ports['bottom'],overlap=-probe_dut_distance.y)
 
-            ports=cell.get_ports()
-
-            dut_port_bottom=ports[1]
-            dut_port_top=ports[0]
+            dut_port_bottom=device_cell.ports['bottom']
+            dut_port_top=device_cell.ports['top']
 
             bbox=super().bbox_mod(bbox)
 
             if isinstance(self.probe,GSGProbe):
 
-                probe_port_lx=ports[3]
-                probe_port_center=ports[2]
-                probe_port_rx=ports[4]
+                probe_port_lx=probe_ref.ports['gnd_left']
+                probe_port_center=probe_ref.ports['sig']
+                probe_port_rx=probe_ref.ports['gnd_right']
 
                 routing_lx=self._route(bbox,probe_port_lx,dut_port_top)
 
                 self._routing_lx_length=routing_lx.area()/self.gnd_routing_width
 
                 routing_c=pg.compass(size=(dut_port_bottom.width,\
-                    self.gnd_routing_width),layer=self.probe.layer)
+                    self.probe_dut_distance),layer=self.probe.layer)
 
                 routing_rx=self._route(bbox,probe_port_rx,dut_port_top)
 
                 self._routing_rx_length=routing_rx.area()/self.gnd_routing_width
 
-                routing_tot=pg.boolean(routing_lx,routing_rx,'or',layer=probe.layer)
+                routing_tot=pg.boolean(routing_lx,routing_rx,'or',layer=self.probe.layer)
 
                 cell<<routing_tot
+
                 center_routing=cell<<routing_c
 
                 center_routing.connect(center_routing.ports['S'],destination=dut_port_bottom)
@@ -477,7 +474,7 @@ def addProbe(res,probe):
 
                 if col == "GNDRoutingWidth" :
                     # import pdb; pdb.set_trace()
-                    self.routing_width=df[col].iat[0]
+                    self.gnd_routing_width=df[col].iat[0]
 
                 if col == "ProbeDistance" :
 
@@ -520,7 +517,7 @@ def addLargeGnd(probe):
 
             oldports=[_ for _ in cell.get_ports()]
 
-            groundpad=pg.rectangle(size=(self.groundsize,self.groundsize),\
+            groundpad=pg.compass(size=(self.groundsize,self.groundsize),\
             layer=self.layer)
 
             [_,_,ul,ur]=get_corners(groundpad)
@@ -538,16 +535,40 @@ def addLargeGnd(probe):
                         groundref.move(origin=ur(),\
                         destination=p.endpoints[1])
 
+                        left_port=groundref.ports['N']
+                        left_port.name=p.name
+
                     elif 'right' in name:
 
                         groundref.move(origin=ul(),\
                         destination=p.endpoints[0])
+
+                        right_port=groundref.ports['N']
+                        right_port.name=p.name
 
                     cell.absorb(groundref)
 
             cell=join(cell)
 
             [cell.add_port(_) for _ in oldports]
+
+            for p in cell.get_ports():
+
+                name=p.name
+
+                # import pdb; pdb.set_trace()
+
+                if 'gnd' in name:
+
+                    if 'left' in name:
+
+                        cell.remove(cell.ports[name])
+                        cell.add_port(left_port)
+
+                    elif 'right' in name:
+
+                        cell.remove(cell.ports[name])
+                        cell.add_port(right_port)
 
             self.cell=cell
 
@@ -572,6 +593,81 @@ def addLargeGnd(probe):
                     self.groundsize=df[cols].iat[0]
 
     return addLargeGnd
+
+def array(res,n):
+
+    class array(res):
+
+        def __init__(self,*args,**kwargs):
+
+            res.__init__(self,*args,**kwargs)
+            self.bus_ext=Bus(name=self.name+'ExtBus')
+            self.n=n
+
+        def export_params(self):
+
+            t=res.export_params(self)
+
+            t["NArrays"]=self.n
+            t["ExtConnLength"]=self.bus_ext.size.y
+
+            return t
+
+        def import_params(self,df):
+
+            res.import_params(self,df)
+
+            for cols in df.columns:
+
+                if cols=='NCopies':
+
+                    self.n=df[cols].iat[0]
+
+                if cols=='ExtConnLength':
+
+                    self.bus_ext.size.y=df[cols].iat[0]
+
+        def draw(self):
+
+            unit_cell=res.draw(self)
+
+            cell=draw_array(unit_cell,\
+                self.n,1)
+
+            port=cell.get_ports()[0]
+
+            celly=cell.ysize
+
+            self.bus_ext.size.x=port.width
+            self.bus_ext.distance=Point(0,celly+self.bus_ext.size.y)
+            self.bus_ext.layer=self.idt.layer
+
+            buscell=self.bus_ext.draw()
+
+            busres=cell<<buscell
+
+            busres.connect(buscell.get_ports()[0],\
+                destination=port)
+
+            cell=join(cell)
+
+            cell.add_port(Port(name='top',\
+            midpoint=(port.midpoint[0],port.midpoint[1]+self.bus_ext.size.y),
+            width=port.width,\
+            orientation=90))
+
+            cell.add_port(Port(name='bottom',\
+            midpoint=(port.midpoint[0],port.midpoint[1]-self.bus_ext.size.y-celly),
+            width=port.width,\
+            orientation=-90))
+
+            self.cell=cell
+
+            check_cell(cell)
+
+            return cell
+
+    return array
 
 class LFERes(LayoutPart):
 

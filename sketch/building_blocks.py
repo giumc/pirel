@@ -67,14 +67,17 @@ class LayoutPart(ABC) :
 
         self.text_params=ld.TextParams
 
-    def view(self):
+    def view(self,blocking=True):
         ''' Visualize cell layout with current parameters.
 
-        Blocks scripts excecution until figure is closed
+        Parameters
+        ----------
+        blocking : boolean
 
+            if true,block scripts until window is closed.
         '''
 
-        set_quickplot_options(blocking=True)
+        set_quickplot_options(blocking=blocking)
         qp(self.draw())
         return
 
@@ -701,6 +704,7 @@ class Anchor(LayoutPart):
         if self.size.x<=self.etch_margin.x*2:
 
             warnings.warn("Malformed Anchor,device will be fixed")
+
             self.size.x=self.size.x+self.etch_margin.x*2
 
         o=self.origin
@@ -1066,7 +1070,7 @@ class Routing(LayoutPart):
                 elif self.side=='right':
 
                     source=self._add_ramp_rx(cell,source,len=taper_len)
-                    destination=self._add_taper(cell,destination,len=self.trace_width/4)
+                    # destination=self._add_taper(cell,destination,len=self.trace_width/4)
 
                 source.name='source'
                 destination.name='destination'
