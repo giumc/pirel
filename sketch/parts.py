@@ -21,7 +21,6 @@ def Scaled(res):
         (i.e. Scaled(LFE)(name="normalized LFE")).
     '''
 
-
     class Scaled(res):
 
         def __init__(self,*args,**kwargs):
@@ -29,17 +28,18 @@ def Scaled(res):
             res.__init__(self,*args,**kwargs)
 
         def draw(self):
-        ''' Denormalizes parameters and passes to regular draw.
 
-            Descaling rules:
-                IDT gap (d) = IDT gap (n) * pitch
-                IDT length (d) = IDT length (n) * pitch
-                Bus length (d) = Bus length (n) * pitch
-                Etch pit width (d) = Etch pit width (d) * active region width
-                Anchor width (d) = Anchor width (n) * active region width
-                Anchor length (d) = Anchor length (n) * active region width
-                Anchor Margin Y (d) = Anchor Margin Y (n) * Anchor length
-                Anchor Margin X (d) = Anchor Margin X (n) * Anchor width.
+            ''' Denormalizes parameters and passes to regular draw.
+
+                Descaling rules:
+                    IDT gap (d) = IDT gap (n) * pitch
+                    IDT length (d) = IDT length (n) * pitch
+                    Bus length (d) = Bus length (n) * pitch
+                    Etch pit width (d) = Etch pit width (d) * active region width
+                    Anchor width (d) = Anchor width (n) * active region width
+                    Anchor length (d) = Anchor length (n) * active region width
+                    Anchor Margin Y (d) = Anchor Margin Y (n) * Anchor length
+                    Anchor Margin X (d) = Anchor Margin X (n) * Anchor width.
             '''
 
             selfcopy=deepcopy(self)
@@ -147,7 +147,14 @@ def addVia(res,side='top',bottom_conn=False):
 
             viacell=CellArray(unit_cell,\
                 columns=nvias_x,rows=nvias_y,\
-                spacing=(unit_cell.xsize,unitcell.ysize))
+                spacing=(unit_cell.xsize,unit_cell.ysize))
+
+            viacell=join(viacell)
+
+            viacell.add_port(Port(name='top',\
+                midpoint=(viacell.x,viacell.ymax),\
+                width=viacell.xsize,\
+                orientation=90))
 
             cell=Device(name=self.name)
 
@@ -339,82 +346,82 @@ def addVia(res,side='top',bottom_conn=False):
     return addVia
 
 def addPad(res):
-''' Class decorator to add probing pads to existing cells.
+    ''' Class decorator to add probing pads to existing cells.
 
 
-    class addPad(res):
+        class addPad(res):
 
-        def __init__(self,*args,**kwargs):
+            def __init__(self,*args,**kwargs):
 
-            res.__init__(self,*args,**kwargs)
-            self.pad=Pad(name=self.name+'Pad')
+                res.__init__(self,*args,**kwargs)
+                self.pad=Pad(name=self.name+'Pad')
 
-        def draw(self):
+            def draw(self):
 
-            destcell=res.draw(self)
+                destcell=res.draw(self)
 
-            for port in destcell.get_ports():
+                for port in destcell.get_ports():
 
-                self.pad.port=port
+                    self.pad.port=port
 
-                ref=destcell<<self.pad.draw()
+                    ref=destcell<<self.pad.draw()
 
-                ref.connect(ref.ports['conn'],\
-                    destination=port)
+                    ref.connect(ref.ports['conn'],\
+                        destination=port)
 
-                destcell.absorb(ref)
+                    destcell.absorb(ref)
 
-            self.cell=destcell
+                self.cell=destcell
 
-            return destcell
+                return destcell
 
-        def export_params(self):
+            def export_params(self):
 
-            t_pad=self.pad.export_params().drop(columns=['Type'])
+                t_pad=self.pad.export_params().drop(columns=['Type'])
 
-            t_pad=t_pad.rename(columns=lambda x: "Pad"+x)
+                t_pad=t_pad.rename(columns=lambda x: "Pad"+x)
 
-            t=res.export_params(self)
+                t=res.export_params(self)
 
-            t=LayoutPart._add_columns(t,t_pad)
+                t=LayoutPart._add_columns(t,t_pad)
 
-            return t
+                return t
 
-        def import_params(self, df):
+            def import_params(self, df):
 
-            res.import_params(self,df)
+                res.import_params(self,df)
 
-            for col in df.columns:
+                for col in df.columns:
 
-                if_match_import(self.pad,col,"Pad",df)
+                    if_match_import(self.pad,col,"Pad",df)
 
-        def resistance(self,res_per_square=0.1):
+            def resistance(self,res_per_square=0.1):
 
-            r0=super().resistance(res_per_square)
+                r0=super().resistance(res_per_square)
 
-            for port in res.draw(self).get_ports():
+                for port in res.draw(self).get_ports():
 
-                self.pad.port=port
+                    self.pad.port=port
 
-                r0=r0+self.pad.resistance(res_per_square)
+                    r0=r0+self.pad.resistance(res_per_square)
 
-            return r0
+                return r0
 
-    return addPad
+        return addPad
 
-    Parameters
-    ----------
-    res : PyResLayout.LayoutPart
-        design where pads have to be added
+        Parameters
+        ----------
+        res : PyResLayout.LayoutPart
+            design where pads have to be added
 
-    Attributes
-    ----------
-    pad : PyResLayout.Pad
-        pad design for the cell
+        Attributes
+        ----------
+        pad : PyResLayout.Pad
+            pad design for the cell
 
-    The pad design needs a port to attach to the existing cell,
-        see help for more info.
-    '''
+        The pad design needs a port to attach to the existing cell,
+            see help for more info.
+        '''
 
 def addProbe(res,probe):
 
@@ -497,6 +504,21 @@ def addProbe(res,probe):
             cell=join(cell)
 
             self.cell=cell
+
+            if hasattr(self,'_stretch_top_margin'):
+
+                if self._stretch_top_margin:
+
+                    patch_top=pg.rectangle(\
+                    size=(dut_port_top.width,cell.ymax-dut_port_top.midpoint[1]),\
+                    layer=self.probe.layer)
+
+                    patch_top.move(origin=(patch_top.x,0),\
+                        destination=dut_port_top.midpoint)
+
+                    cell.add(patch_top)
+
+                    cell=join(cell)
 
             return cell
 
@@ -670,7 +692,7 @@ def array(res,n):
         def __init__(self,*args,**kwargs):
 
             res.__init__(self,*args,**kwargs)
-            self.bus_ext=Bus(name=self.name+'ExtBus')
+            self.bus_ext_length=30
             self.n=n
 
         def export_params(self):
@@ -678,7 +700,7 @@ def array(res,n):
             t=res.export_params(self)
 
             t["NArrays"]=self.n
-            t["ExtConnLength"]=self.bus_ext.size.y
+            t["ExtConnLength"]=self.bus_ext_length
 
             return t
 
@@ -694,7 +716,7 @@ def array(res,n):
 
                 if cols=='ExtConnLength':
 
-                    self.bus_ext.size.y=df[cols].iat[0]
+                    self.bus_ext_length=df[cols].iat[0]
 
         def draw(self):
 
@@ -705,33 +727,68 @@ def array(res,n):
             cell=draw_array(unit_cell,\
                 self.n,1)
 
-            lx=cell.ports[port_names[0]+str(0)]
-            rx=cell.ports[port_names[0]+str(self.n-1)]
+            lx_bottom=cell.ports[port_names[1]+str(0)]
+            rx_bottom=cell.ports[port_names[1]+str(self.n-1)]
 
-            xsize=rx.midpoint[0]+rx.width/2-(lx.midpoint[0]-lx.width/2)
+            xsize_bottom=rx_bottom.midpoint[0]+rx_bottom.width/2-\
+                (lx_bottom.midpoint[0]-lx_bottom.width/2)
 
             ydist=cell.ysize
 
-            self.bus_ext.size.x=xsize
-            self.bus_ext.distance=Point(0,ydist+self.bus_ext.size.y)
-            self.bus_ext.layer=self.idt.layer
+            bus_bottom=pg.compass(size=(xsize_bottom,self.bus_ext_length),\
+                layer=self.idt.layer)
 
-            bus_cell=self.bus_ext.draw()
+            bus_bottom.move(origin=bus_bottom.ports['N'].midpoint,\
+                destination=(cell.center[0],cell.ymin))
 
-            bus_cell.move(origin=bus_cell.center,\
-                destination=cell.center)
+            lx_top=cell.ports[port_names[0]+str(0)]
+            rx_top=cell.ports[port_names[0]+str(self.n-1)]
 
-            cell=join(cell.add(bus_cell))
+            xsize_top=rx_top.midpoint[0]+rx_top.width/2-\
+                (lx_top.midpoint[0]-lx_top.width/2)
 
-            bc=add_compass(join(bus_cell))
-            bc.ports['N'].width=lx.width
-            bc.ports['S'].width=lx.width
-            cell.add_port(port=bc.ports['N'],name='top')
+            bus_top=pg.compass(size=(xsize_top,self.bus_ext_length),\
+                layer=self.idt.layer)
+
+            bus_top.move(origin=bus_top.ports['S'].midpoint,\
+                destination=(cell.center[0],cell.ymax))
+
+            cell.add(bus_bottom)
+            cell.add(bus_top)
+
+            cell=join(cell)
+
+            bc=add_compass(join(cell))
+            bc.ports['N'].width=lx_top.width
+            bc.ports['S'].width=lx_bottom.width
+            cell.add_port(port=bus_top.ports['N'],name='top')
             cell.add_port(port=bc.ports['S'],name='bottom')
 
             self.cell=cell
 
             return cell
+
+        def resistance(self,res_per_square=0.1):
+
+            r=res.resistance(self,res_per_square=res_per_square)
+
+            cell=res.draw(self)
+
+            for p in cell.get_ports():
+
+                if 'bottom' in p.name:
+
+                    p_bot=p
+
+                    break
+
+            w=p_bot.width
+
+            l=self.bus_ext_length
+
+            rb=res_per_square*l/w/n
+
+            return (rb+r)/n
 
     return array
 
@@ -750,6 +807,8 @@ class LFERes(LayoutPart):
         self.etchpit=EtchPit(name=self.name+'EtchPit')
 
         self.anchor=Anchor(name=self.name+'Anchor')
+
+        self._stretch_top_margin=False
 
     def draw(self):
 
@@ -824,7 +883,20 @@ class LFERes(LayoutPart):
         anchor_bottom.move(origin=(0,0),\
         destination=(-self.anchor.x_offset,0))
 
-        anchor_top=(cell<<anchor_cell)
+        if not self._stretch_top_margin:
+
+            anchor_top=(cell<<anchor_cell)
+
+        else:
+
+            anchor_top_dev=deepcopy(self.anchor)
+
+            anchor_top_dev.etch_margin.x=0.5*self.idt.pitch
+
+            anchor_top=cell<<anchor_top_dev.draw()
+
+            del anchor_top_dev
+
         anchor_top.move(origin=anchor_top.center,\
         destination=anchor_bottom.center)
         anchor_pivot=ports[2]
@@ -844,11 +916,22 @@ class LFERes(LayoutPart):
 
         cell_out=join(cell)
 
-        cell_out.add_port(Port(name="top",\
-        midpoint=(Point().from_iter(ports[1].center)+\
-        Point(0,self.anchor.size.y))(),\
-        width=self.anchor.size.x-2*self.anchor.etch_margin.x,\
-        orientation=90))
+        if not self._stretch_top_margin:
+
+            cell_out.add_port(Port(name="top",\
+            midpoint=(Point().from_iter(ports[1].center)+\
+            Point(0,self.anchor.size.y))(),\
+            width=self.anchor.size.x-2*self.anchor.etch_margin.x,\
+            orientation=90))
+
+        else:
+
+            cell_out.add_port(Port(name="top",\
+            midpoint=(Point().from_iter(ports[1].center)+\
+            Point(0,self.anchor.size.y))(),\
+            width=self.anchor.size.x-self.idt.pitch,\
+            orientation=90))
+
 
         cell_out.add_port(Port(name="bottom",\
         midpoint=(Point().from_iter(ports[0].center)-\

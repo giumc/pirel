@@ -997,8 +997,8 @@ class Routing(LayoutPart):
 
                     raise Exception("Routing error: non-hindered routing needs +90 -> -90 oriented ports")
 
-            source=self._add_taper(cell,source,len=taper_len)
-            destination=self._add_taper(cell,destination,len=self.trace_width/4)
+            # source=self._add_taper(cell,source,len=taper_len)
+            # destination=self._add_taper(cell,destination,len=self.trace_width/4)
 
             source.name='source'
             destination.name='destination'
