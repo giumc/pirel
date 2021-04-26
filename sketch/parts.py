@@ -347,68 +347,6 @@ def addVia(res,side='top',bottom_conn=False):
 
 def addPad(res):
     ''' Class decorator to add probing pads to existing cells.
-
-
-        class addPad(res):
-
-            def __init__(self,*args,**kwargs):
-
-                res.__init__(self,*args,**kwargs)
-                self.pad=Pad(name=self.name+'Pad')
-
-            def draw(self):
-
-                destcell=res.draw(self)
-
-                for port in destcell.get_ports():
-
-                    self.pad.port=port
-
-                    ref=destcell<<self.pad.draw()
-
-                    ref.connect(ref.ports['conn'],\
-                        destination=port)
-
-                    destcell.absorb(ref)
-
-                self.cell=destcell
-
-                return destcell
-
-            def export_params(self):
-
-                t_pad=self.pad.export_params().drop(columns=['Type'])
-
-                t_pad=t_pad.rename(columns=lambda x: "Pad"+x)
-
-                t=res.export_params(self)
-
-                t=LayoutPart._add_columns(t,t_pad)
-
-                return t
-
-            def import_params(self, df):
-
-                res.import_params(self,df)
-
-                for col in df.columns:
-
-                    if_match_import(self.pad,col,"Pad",df)
-
-            def resistance(self,res_per_square=0.1):
-
-                r0=super().resistance(res_per_square)
-
-                for port in res.draw(self).get_ports():
-
-                    self.pad.port=port
-
-                    r0=r0+self.pad.resistance(res_per_square)
-
-                return r0
-
-        return addPad
-
         Parameters
         ----------
         res : PyResLayout.LayoutPart
@@ -422,6 +360,66 @@ def addPad(res):
         The pad design needs a port to attach to the existing cell,
             see help for more info.
         '''
+
+    class addPad(res):
+
+        def __init__(self,*args,**kwargs):
+
+            res.__init__(self,*args,**kwargs)
+            self.pad=Pad(name=self.name+'Pad')
+
+        def draw(self):
+
+            destcell=res.draw(self)
+
+            for port in destcell.get_ports():
+
+                self.pad.port=port
+
+                ref=destcell<<self.pad.draw()
+
+                ref.connect(ref.ports['conn'],\
+                    destination=port)
+
+                destcell.absorb(ref)
+
+            self.cell=destcell
+
+            return destcell
+
+        def export_params(self):
+
+            t_pad=self.pad.export_params().drop(columns=['Type'])
+
+            t_pad=t_pad.rename(columns=lambda x: "Pad"+x)
+
+            t=res.export_params(self)
+
+            t=LayoutPart._add_columns(t,t_pad)
+
+            return t
+
+        def import_params(self, df):
+
+            res.import_params(self,df)
+
+            for col in df.columns:
+
+                if_match_import(self.pad,col,"Pad",df)
+
+        def resistance(self,res_per_square=0.1):
+
+            r0=super().resistance(res_per_square)
+
+            for port in res.draw(self).get_ports():
+
+                self.pad.port=port
+
+                r0=r0+self.pad.resistance(res_per_square)
+
+            return r0
+
+    return addPad
 
 def addProbe(res,probe):
 
@@ -687,6 +685,10 @@ def addLargeGnd(probe):
 
 def array(res,n):
 
+    if not isinstance(n,int):
+
+        raise ValueError(" n needs to be integer")
+
     class array(res):
 
         def __init__(self,*args,**kwargs):
@@ -824,12 +826,16 @@ class LFERes(LayoutPart):
 
         idt_ref=cell<<idt_cell
 
+        idt_top_port=idt_ref.ports['top']
+
+        idt_bottom_port=idt_ref.ports['bottom']
+
         self.bus.size=Point(\
-            2*self.idt.pitch*(self.idt.n-1)+(self.idt.coverage)*self.idt.pitch,\
+            idt_bottom_port.width,\
             self.bus.size.y)
 
         self.bus.distance=Point(\
-            self.idt.pitch,self.bus.size.y+self.idt.y+self.idt.y_offset)
+            0,idt_top_port.y-idt_bottom_port.y+self.bus.size.y)
 
         self.bus.layer=self.layer
 
@@ -837,12 +843,8 @@ class LFERes(LayoutPart):
 
         bus_ref= cell<<bus_cell
 
-        ports=cell.get_ports()
-
-        bus_ref.connect(port=ports[1],\
-        destination=ports[0])
-
-        cell.absorb(idt_ref)
+        bus_ref.connect(port=bus_cell.ports['conn'],\
+        destination=idt_bottom_port)
 
         self.etchpit.active_area=Point().from_iter(cell.size)+\
         Point(self.idt.pitch*(1-self.idt.coverage),self.anchor.etch_margin.y*2)
@@ -851,17 +853,13 @@ class LFERes(LayoutPart):
 
         etch_ref=cell<<etch_cell
 
-        ports=cell.get_ports()
-        etch_ref.connect(ports[2],\
-        destination=ports[0])
-
-        etch_ref.move(origin=etch_ref.center,\
-        destination=(Point().from_iter(etch_ref.center)+\
-            Point(self.idt.pitch/2,-self.bus.size.y-self.anchor.etch_margin.y))())
-
         cell.absorb(bus_ref)
 
-        # return cell
+        etch_ref.connect(etch_ref.ports['bottom'],\
+        destination=idt_ref.ports['bottom'],\
+        overlap=-self.bus.size.y-self.anchor.etch_margin.y)
+
+        cell.absorb(etch_ref)
 
         self.anchor.etch_x=self.etchpit.x*2+self.etchpit.active_area.x
 
@@ -876,12 +874,9 @@ class LFERes(LayoutPart):
 
         anchor_bottom=cell<<anchor_cell
 
-        ports=cell.get_ports()
 
-        anchor_bottom.connect(ports[2],
-        destination=ports[1],overlap=self.anchor.etch_margin.y)
-        anchor_bottom.move(origin=(0,0),\
-        destination=(-self.anchor.x_offset,0))
+        anchor_bottom.connect(anchor_bottom.ports['conn'],
+        destination=idt_ref.ports['bottom'],overlap=-self.bus.size.y)
 
         if not self._stretch_top_margin:
 
@@ -897,47 +892,31 @@ class LFERes(LayoutPart):
 
             del anchor_top_dev
 
-        anchor_top.move(origin=anchor_top.center,\
-        destination=anchor_bottom.center)
-        anchor_pivot=ports[2]
+        anchor_top.connect(anchor_top.ports['conn'],\
+            idt_ref.ports['top'],overlap=-self.bus.size.y)
 
-        anchor_top.rotate(angle=180,center=ports[1].center)
-        anchor_top.move(origin=(0,0),\
-        destination=(0,self.etchpit.active_area.y))
+        cell.absorb(idt_ref)
 
-        cell.absorb(etch_ref)
-
-        ports=cell.get_ports()
-        ports[0].rotate(180,center=ports[0].center)
-        ports[1].rotate(180,center=ports[1].center)
+        outport_top=anchor_top.ports['conn']
+        outport_bottom=anchor_bottom.ports['conn']
+        outport_top.name='top'
+        outport_top.orientation=90
+        outport_bottom.name='bottom'
+        outport_bottom.orientation=-90
+        outport_top.midpoint=(\
+            outport_top.x,\
+            outport_top.y+self.anchor.size.y)
+        outport_bottom.midpoint=(\
+            outport_bottom.x,\
+            outport_bottom.y-self.anchor.size.y)
 
         cell.absorb(anchor_top)
         cell.absorb(anchor_bottom)
 
         cell_out=join(cell)
 
-        if not self._stretch_top_margin:
-
-            cell_out.add_port(Port(name="top",\
-            midpoint=(Point().from_iter(ports[1].center)+\
-            Point(0,self.anchor.size.y))(),\
-            width=self.anchor.size.x-2*self.anchor.etch_margin.x,\
-            orientation=90))
-
-        else:
-
-            cell_out.add_port(Port(name="top",\
-            midpoint=(Point().from_iter(ports[1].center)+\
-            Point(0,self.anchor.size.y))(),\
-            width=self.anchor.size.x-self.idt.pitch,\
-            orientation=90))
-
-
-        cell_out.add_port(Port(name="bottom",\
-        midpoint=(Point().from_iter(ports[0].center)-\
-        Point(0,self.anchor.size.y))(),\
-        width=self.anchor.size.x-2*self.anchor.etch_margin.x,\
-        orientation=-90))
+        cell_out.add_port(outport_top)
+        cell_out.add_port(outport_bottom)
 
         del idt_cell,bus_cell,etch_cell,anchor_cell
 
@@ -960,7 +939,7 @@ class LFERes(LayoutPart):
 
         t=self._add_columns(t,t_bus)
 
-        t_etch=self.etchpit.export_params().drop(columns=['Type','ActiveArea'])
+        t_etch=self.etchpit.export_params().drop(columns=['Type','ActiveAreaX','ActiveAreaY'])
         t_etch=t_etch.rename(columns=lambda x: "Etch"+x)
 
         t=self._add_columns(t,t_etch)
@@ -1015,8 +994,10 @@ class FBERes(LFERes):
         plate_ref=cell<<plate
 
         transl_rel=Point(self.etchpit.x,self.anchor.size.y-self.anchor.etch_margin.y)
+
         lr_cell=get_corners(cell)[0]
         lr_plate=get_corners(plate_ref)[0]
+
         plate_ref.move(origin=lr_plate(),\
         destination=(lr_plate+lr_cell+transl_rel)())
 
@@ -1041,30 +1022,30 @@ class TFERes(LFERes):
         cell=LFERes.draw(self)
 
         idt_bottom=copy(self.idt)
+
         idt_bottom.layer=self.bottomlayer
 
         idt_ref=cell<<idt_bottom.draw()
 
-        idt_ref.mirror(p1=(idt_ref.xmin,idt_ref.ymin),\
-        p2=(idt_ref.xmin,idt_ref.ymax))
+        p_bott=idt_ref.ports['bottom']
+        p_bott_coord=Point().from_iter(p_bott.midpoint)
 
-        idt_ref.move(origin=(0,0),\
-        destination=(idt_bottom.pitch*(idt_bottom.n*2-(1-idt_bottom.coverage)),0))
+        idt_ref.mirror(p1=(p_bott_coord-Point(p_bott.width/2,0))(),\
+            p2=(p_bott_coord+Point(p_bott.width/2,0))())
+
+        idt_ref.move(origin=(idt_ref.xmin,idt_ref.ymax),\
+            destination=(idt_ref.xmin,idt_ref.ymax+self.idt.y+self.idt.y_offset))
 
         cell.absorb(idt_ref)
 
         bus_bottom=copy(self.bus)
+
         bus_bottom.layer=self.bottomlayer
 
         bus_ref=cell<<bus_bottom.draw()
 
-        bus_ref.mirror(p1=(bus_ref.xmin,bus_ref.ymin),\
-         p2=(bus_ref.xmin,bus_ref.ymax))
-
         bus_ref.move(origin=(0,0),\
-        destination=\
-            (idt_bottom.pitch*(idt_bottom.n*2-(1-idt_bottom.coverage)),\
-            -bus_bottom.size.y))
+        destination=(0,-self.bus.size.y))
 
         cell.absorb(bus_ref)
 
@@ -1074,31 +1055,30 @@ class TFERes(LFERes):
         anchor_bottom.etch_choice=False
 
         anchor_ref=cell<<anchor_bottom.draw()
-        anchor_ref.rotate(angle=180)
 
-        ports=cell.get_ports()
-        anchor_ref.connect(ports[2],ports[0])
+        anchor_ref.connect(anchor_ref.ports['conn'],\
+            destination=cell.ports['top'],\
+            overlap=self.anchor.size.y)
 
         cell.absorb(anchor_ref)
 
-        anchor_ref_2=cell<<anchor_bottom.cell
-        anchor_ref_2.rotate(angle=180)
-        ports=cell.get_ports()
+        anchor_ref_2=cell<<anchor_bottom.draw()
 
-        anchor_ref_2.connect(ports[2],ports[1])
+        anchor_ref_2.connect(anchor_ref_2.ports['conn'],\
+            destination=cell.ports['bottom'],\
+            overlap=self.anchor.size.y)
 
         cell.absorb(anchor_ref_2)
 
-        join(cell)
+        out_ports=cell.get_ports()
 
-        # anchor_ref.move(origin=(0,0),\
-        # destination=(50,0))
+        cell=join(cell)
 
-        del idt_bottom
+        for p in out_ports:
 
-        del bus_bottom
+            cell.add_port(p)
 
-        del anchor_bottom
+        del idt_bottom, bus_bottom, anchor_bottom
 
         self.cell=cell
 

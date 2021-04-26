@@ -368,7 +368,31 @@ class IDT(LayoutPart) :
 
         self.n = ld.IDTn
 
+    @property
+    def n(self):
+
+        return self._n
+
+    @n.setter
+    def n(self,n_new):
+        #
+        # if not isinstance(n_new,int):
+        #
+        #     raise ValueError("NFingers needs to be integer")
+        #
+        # else:
+
+        self._n=n_new
+
     def draw(self):
+        ''' Generates layout cell based on current parameters.
+
+        'top' and 'bottom' ports are included in the cell.
+
+        Returns
+        -------
+        cell : phidl.Device.
+        '''
 
         o=self.origin
 
@@ -385,8 +409,15 @@ class IDT(LayoutPart) :
 
         r2.move(origin=o(),\
         destination=(o+Point(self.pitch,self.y_offset))())
-        
+
+        r3= unitcell<< rect
+
+        r3.move(origin=o(),\
+            destination=(o+Point(2*self.pitch,0))())
+
         unitcell.absorb(r2)
+
+        unitcell.absorb(r3)
 
         cell=Device()
 
@@ -397,18 +428,25 @@ class IDT(LayoutPart) :
 
         cell.flatten()
 
-        totx=self.pitch*(self.n*2-1)-self.pitch*(1-self.coverage)
+        totx=self.pitch*(self.n*2+1)-self.pitch*(1-self.coverage)
 
         midx=totx/2
 
         finger_dist=Point(self.pitch*1,\
         self.y+self.y_offset)
 
-        cell.add_port(Port(name=self.name,\
+        cell=join(cell)
+        cell.add_port(Port(name='bottom',\
         midpoint=(o+\
         Point(midx,0))(),\
         width=totx,
         orientation=-90))
+
+        cell.add_port(Port(name='top',\
+        midpoint=(o+\
+        Point(midx,self.y+self.y_offset))(),\
+        width=totx,
+        orientation=90))
 
         del unitcell,rect
 
@@ -433,7 +471,7 @@ class IDT(LayoutPart) :
     @property
     def active_area(self):
 
-        return Point(self.pitch*self.n*2,self.y+self.y_offset)
+        return Point(self.pitch*(self.n*2+1),self.y+self.y_offset)
 
     def export_params(self):
 
@@ -504,7 +542,14 @@ class Bus(LayoutPart) :
         self.layer = ld.layerTop
 
     def draw(self):
+        ''' Generates layout cell based on current parameters.
 
+        'conn' port is included in the cell.
+
+        Returns
+        -------
+        cell : phidl.Device.
+        '''
         o=self.origin
 
         pad=pg.rectangle(size=self.size(),\
@@ -522,7 +567,7 @@ class Bus(LayoutPart) :
 
         cell.absorb(r2)
 
-        cell.add_port(name=self.name,\
+        cell.add_port(name='conn',\
         midpoint=(o+Point(self.size.x/2,self.size.y))(),\
         width=self.size.x,\
         orientation=90)
@@ -597,7 +642,14 @@ class EtchPit(LayoutPart) :
         self.layer=ld.EtchPitlayer
 
     def draw(self):
+        ''' Generates layout cell based on current parameters.
 
+        'top' and 'bottom' ports is included in the cell.
+
+        Returns
+        -------
+        cell : phidl.Device.
+        '''
         o=self.origin
 
         b_main=Bus()
@@ -616,15 +668,15 @@ class EtchPit(LayoutPart) :
 
         etch.absorb(etch<<main_etch)
 
-        port_up=Port(self.name+'up',\
+        port_up=Port('top',\
         midpoint=(o+Point(self.x+self.active_area.x/2,self.active_area.y))(),\
         width=self.active_area.x,\
-        orientation=90)
+        orientation=-90)
 
-        port_down=Port(self.name+'down',\
+        port_down=Port('bottom',\
         midpoint=(o+Point(self.x+self.active_area.x/2,0))(),\
         width=self.active_area.x,\
-        orientation=-90)
+        orientation=90)
 
         etch.add_port(port_up)
         etch.add_port(port_down)
@@ -638,7 +690,8 @@ class EtchPit(LayoutPart) :
     def export_params(self):
 
         t=LayoutPart.export_params(self)
-        t["ActiveArea"]=self.active_area
+        t["ActiveAreaX"]=self.active_area.x
+        t["ActiveAreaY"]=self.active_area.y
         t["Width"]=self.x
 
         return t
@@ -649,9 +702,13 @@ class EtchPit(LayoutPart) :
 
         for cols in df.columns:
 
-            if cols =='ActiveArea':
+            if cols =='ActiveAreaX':
 
-                self.active_area=df[cols].iat[0]
+                self.active_area.x=df[cols].iat[0]
+
+            if cols =='ActiveAreaY':
+
+                self.active_area.y=df[cols].iat[0]
 
             elif cols =='Width':
 
@@ -700,7 +757,14 @@ class Anchor(LayoutPart):
         self.etch_layer=ld.Anchoretch_layer
 
     def draw(self):
+        ''' Generates layout cell based on current parameters.
 
+        'conn' port is included in the cell.
+
+        Returns
+        -------
+        cell : phidl.Device.
+        '''
         if self.size.x<=self.etch_margin.x*2:
 
             warnings.warn("Malformed Anchor,device will be fixed")
@@ -742,7 +806,7 @@ class Anchor(LayoutPart):
         etch_dx_ref=(cell<<etch_dx).move(origin=(0,0),\
         destination=etchdx_transl())
 
-        cell.add_port(name=self.name,\
+        cell.add_port(name='conn',\
         midpoint=(anchor_transl+Point(self.size.x/2-self.etch_margin.x,self.size.y))(),\
         width=self.size.x-2*self.etch_margin.x,\
         orientation=90)
