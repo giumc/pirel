@@ -216,10 +216,6 @@ def addVia(res,side='top',bottom_conn=False):
 
                 cell.add_port(bottom_port)
 
-            if bottom_conn==False:
-
-                cell.remove_layers(layers=[self.padlayers[1]])
-
             self.cell=cell
 
             return cell
@@ -314,6 +310,10 @@ def addVia(res,side='top',bottom_conn=False):
             cell=join(cell)
 
             cell.add_port(port)
+
+            if bottom_conn==False:
+
+                cell.remove_layers(layers=[self.padlayers[1]])
 
             return cell
 

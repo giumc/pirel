@@ -4,5 +4,4 @@ import sys
 file_dir = os.path.dirname(__file__)
 sys.path.append(file_dir)
 
-from sketch import *
-from standard import *
+from standard_parts import *
