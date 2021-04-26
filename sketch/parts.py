@@ -70,8 +70,6 @@ def addVia(res,side='top',bottom_conn=False):
 
         def __init__(self,*args,**kwargs):
 
-            # import pdb; pdb.set_trace()
-
             res.__init__(self,*args,**kwargs)
             self.via=Via(name=self.name+'Via')
             self.padlayers=[ld.layerTop,ld.layerBottom]
@@ -81,15 +79,17 @@ def addVia(res,side='top',bottom_conn=False):
 
         def draw(self):
 
-            # import pdb; pdb.set_trace()
-
             rescell=res.draw(self)
 
             active_width=rescell.xsize
 
             nvias_x,nvias_y=self.get_n_vias()
 
-            viacell=draw_array(self._draw_padded_via(),nvias_x,nvias_y)
+            unit_cell=self._draw_padded_via()
+
+            viacell=CellArray(unit_cell,\
+                columns=nvias_x,rows=nvias_y,\
+                spacing=(unit_cell.xsize,unitcell.ysize))
 
             cell=Device(name=self.name)
 
@@ -350,8 +350,6 @@ def addProbe(res,probe):
 
             res.__init__(self,*args,**kwargs)
 
-            # import pdb; pdb.set_trace()
-
             self.probe=probe(self.name+"Probe")
 
             self.gnd_routing_width=ld.DUTrouting_width
@@ -376,12 +374,11 @@ def addProbe(res,probe):
 
             probe_ref=cell<<probe_cell
 
-            import pdb; pdb.set_trace()
-
             probe_ref.connect(probe_cell.ports['sig'],\
             destination=device_cell.ports['bottom'],overlap=-probe_dut_distance.y)
 
             dut_port_bottom=device_cell.ports['bottom']
+
             dut_port_top=device_cell.ports['top']
 
             bbox=super().bbox_mod(bbox)
@@ -473,7 +470,7 @@ def addProbe(res,probe):
                 if_match_import(self.probe,col,"Probe",df)
 
                 if col == "GNDRoutingWidth" :
-                    # import pdb; pdb.set_trace()
+
                     self.gnd_routing_width=df[col].iat[0]
 
                 if col == "ProbeDistance" :
@@ -556,8 +553,6 @@ def addLargeGnd(probe):
 
                 name=p.name
 
-                # import pdb; pdb.set_trace()
-
                 if 'gnd' in name:
 
                     if 'left' in name:
@@ -631,39 +626,36 @@ def array(res,n):
 
             unit_cell=res.draw(self)
 
+            port_names=list(unit_cell.ports.keys())
+
             cell=draw_array(unit_cell,\
                 self.n,1)
 
-            port=cell.get_ports()[0]
+            lx=cell.ports[port_names[0]+str(0)]
+            rx=cell.ports[port_names[0]+str(self.n-1)]
 
-            celly=cell.ysize
+            xsize=rx.midpoint[0]+rx.width/2-(lx.midpoint[0]-lx.width/2)
 
-            self.bus_ext.size.x=port.width
-            self.bus_ext.distance=Point(0,celly+self.bus_ext.size.y)
+            ydist=cell.ysize
+
+            self.bus_ext.size.x=xsize
+            self.bus_ext.distance=Point(0,ydist+self.bus_ext.size.y)
             self.bus_ext.layer=self.idt.layer
 
-            buscell=self.bus_ext.draw()
+            bus_cell=self.bus_ext.draw()
 
-            busres=cell<<buscell
+            bus_cell.move(origin=bus_cell.center,\
+                destination=cell.center)
 
-            busres.connect(buscell.get_ports()[0],\
-                destination=port)
+            cell=join(cell.add(bus_cell))
 
-            cell=join(cell)
-
-            cell.add_port(Port(name='top',\
-            midpoint=(port.midpoint[0],port.midpoint[1]+self.bus_ext.size.y),
-            width=port.width,\
-            orientation=90))
-
-            cell.add_port(Port(name='bottom',\
-            midpoint=(port.midpoint[0],port.midpoint[1]-self.bus_ext.size.y-celly),
-            width=port.width,\
-            orientation=-90))
+            bc=add_compass(join(bus_cell))
+            bc.ports['N'].width=lx.width
+            bc.ports['S'].width=lx.width
+            cell.add_port(port=bc.ports['N'],name='top')
+            cell.add_port(port=bc.ports['S'],name='bottom')
 
             self.cell=cell
-
-            check_cell(cell)
 
             return cell
 
@@ -1023,17 +1015,6 @@ class WBArray(LayoutPart):
         cell=draw_array(device.draw(),\
             self.n,1)
 
-        port=cell.get_ports()[0]
-
-        cell=join(cell)
-
-        out_port=Port(name='bottom',\
-        midpoint=(port.midpoint[0],port.midpoint[1]-cell.ysize+device.pad.size),\
-        width=cell.xsize,\
-        orientation=-90)
-
-        cell.add_port(out_port)
-
         gnd_width=self.gnd_width
 
         gndpad=pg.compass(size=(cell.xsize,gnd_width),layer=device.pad.layer)
@@ -1053,15 +1034,11 @@ class WBArray(LayoutPart):
 
             dut=addProbe(self.device,GSGProbe())
 
-            # import pdb; pdb.set_trace()
-
             dut.import_params(self._unpadded_device.export_params())
 
             dut.draw()
 
             cell.add(dut.cell)
-
-            import pdb; pdb.set_trace()
 
             self.text_params.update({'location':'left'})
             self.add_text(cell,\

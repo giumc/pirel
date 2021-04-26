@@ -61,11 +61,11 @@ class LayoutPart(ABC) :
 
         self.name=name
 
-        self.origin=ld.origin
+        self.origin=copy(ld.origin)
 
         self.cell=Device(name=name)
 
-        self.text_params=ld.TextParams
+        self.text_params=copy(ld.TextParams)
 
     def view(self,blocking=True):
         ''' Visualize cell layout with current parameters.
@@ -499,8 +499,8 @@ class Bus(LayoutPart) :
 
         super().__init__(*args,**kwargs)
 
-        self.size=ld.Bussize
-        self.distance=ld.distance
+        self.size=copy(ld.Bussize)
+        self.distance=copy(ld.distance)
         self.layer = ld.layerTop
 
     def draw(self):
@@ -691,8 +691,8 @@ class Anchor(LayoutPart):
 
         super().__init__(*args,**kwargs)
 
-        self.size=ld.Anchorsize
-        self.etch_margin=ld.Anchoretch_margin
+        self.size=copy(ld.Anchorsize)
+        self.etch_margin=copy(ld.Anchoretch_margin)
         self.etch_choice=ld.Anchoretch_choice
         self.etch_x=ld.Anchoretch_x
         self.x_offset=ld.Anchoretchx_offset
@@ -859,42 +859,13 @@ class Via(LayoutPart):
 
         if self.type=='rectangle':
 
-            if isinstance(self.size,Point):
-
-                cell=pg.rectangle(size=self.size(),\
-                    layer=self.layer)
-            else:
-
-                try:
-
-                    cell=pg.rectangle(size=(self.size,self.size),\
-                        layer=self.layer)
-
-                except Exception:
-
-                    raise Exception("Via.size has to be Point or int/float")
+            cell=pg.rectangle(size=(self.size,self.size),\
+                layer=self.layer)
 
         elif self.type=='circle':
 
-            if isinstance(self.size,Point):
-
-                cell=pg.circle(radius=self.size.x/2,\
-                layer=self.layer)
-
-            else:
-
-                try:
-
-                    cell=pg.circle(radius=self.size/2,\
-                    layer=self.layer)
-
-                except Exception:
-
-                    raise Exception("Via.size has to be Point or int/float")
-
-        else:
-
-            raise Exception("Something went wrong,abort")
+            cell=pg.circle(radius=self.size/2,\
+            layer=self.layer)
 
         cell.move(origin=(0,0),\
             destination=self.origin())
@@ -1319,7 +1290,7 @@ class GSProbe(LayoutPart):
 
         self.layer=ld.GSProbelayer
         self.pitch=ld.GSProbepitch
-        self.size=ld.GSProbesize
+        self.size=copy(ld.GSProbesize)
 
     def draw(self):
 
@@ -1418,7 +1389,7 @@ class GSGProbe(LayoutPart):
 
         self.layer=ld.GSGProbelayer
         self.pitch=ld.GSGProbepitch
-        self.size=ld.GSGProbesize
+        self.size=copy(ld.GSGProbesize)
 
     def draw(self):
 
@@ -1527,7 +1498,7 @@ class Pad(LayoutPart):
         super().__init__(*args,**kwargs)
         self.size=ld.Padsize
         self.layer=ld.Padlayer
-        self.distance=ld.Paddistance
+        self.distance=copy(ld.Paddistance)
         self.port=ld.Padport
 
     def draw(self):

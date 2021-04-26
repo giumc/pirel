@@ -2,7 +2,7 @@ import numpy as np
 
 import phidl.geometry as pg
 
-from phidl.device_layout import Port
+from phidl.device_layout import Port,CellArray
 
 from phidl import set_quickplot_options
 from phidl import quickplot as qp
@@ -12,7 +12,7 @@ class LayoutDefault:
 
     def __init__(self):
 
-        self.origin= Point(0,0)
+        self.origin=Point(0,0)
         self.layerSi = 0
         self.layerBottom = 1
         self.layerTop = 2
@@ -258,9 +258,12 @@ def add_compass(device):
     device.add_port(port=ports[2],name='E')
     device.add_port(port=ports[3],name='W')
 
+    return device
+
 def draw_array(cell,x,y,row_spacing=0,column_spacing=0):
     ''' returns a spaced matrix of identical cells.
 
+        draw_array() preserves ports in the original cells
     Parameters
     ----------
     cell : phidl.Device
@@ -283,21 +286,35 @@ def draw_array(cell,x,y,row_spacing=0,column_spacing=0):
 
     cell_size=Point().from_iter(cell.size)
 
-    new_cell.add_array(cell,rows=y,columns=x,\
-        spacing=(row_spacing+cell_size.x,column_spacing+cell_size.y))
+    o,_,_,_=get_corners(new_cell)
 
-    _,_,ul,ur=get_corners(new_cell)
+    cellmat=[[]]
 
-    midpoint=ul/2+ur/2
+    ports=[]
 
-    p=Port(name=new_cell.name,\
-        orientation=90,\
-        midpoint=midpoint(),\
-        width=(ur.x-ul.x))
+    for j in range(y):
+
+        for i in range(x):
+
+            cellmat[j].append(new_cell<<cell)
+
+            cellmat[j][i].move(origin=o(),
+                destination=(o+Point(cell_size.x*i,cell_size.y*j))())
+
+            for p in cellmat[j][i].ports.values():
+
+                ports.append(Port(name=p.name+str(i),\
+                    midpoint=p.midpoint,\
+                    width=p.width,\
+                    orientation=p.orientation))
 
     new_cell=join(new_cell)
 
-    new_cell.add_port(p)
+    for p in ports:
+
+        new_cell.add_port(p)
+
+    del cellmat
 
     return new_cell
 
