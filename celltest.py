@@ -1,5 +1,5 @@
 from sketch import *
-
+from standard import *
 import gdspy
 
 from phidl import quickplot as qp
@@ -7,7 +7,7 @@ from phidl import quickplot as qp
 import pandas as pd
 
 d=addProbe(\
-    addVia(array(Scaled(LFERes),8)),\
+    addVia(array(Scaled(FBERes),4)),\
     addLargeGnd(GSGProbe))(name="DEF")
 
 base_params=d.export_params()
@@ -16,8 +16,8 @@ base_params["ProbeGroundPadSize"]=400
 base_params["ProbeWidth"]=100
 base_params["ProbePitch"]=200
 base_params["ProbeLength"]=100
-base_params["ProbeDistance"]=150
-base_params["GNDRoutingWidth"]=100
+base_params["ProbeDistance"]=50
+base_params["GNDRoutingWidth"]=250
 
 base_params["IDTPitch"]=7
 base_params["IDTN_fingers"]=4
@@ -44,9 +44,9 @@ d.import_params(base_params)
 d._stretch_top_margin=True
 
 d.view()
-print(d.resistance())
+# print(d.resistance())
 # p=PArraySeries(d)
-
+# v=check_cell(verniers([0.25,0.5,1 ]))
 # p.x_param=[\
 # SweepParam({'IDTN_fingers':[5,10,15,20]}),\
 # SweepParam({'IDTLength':[20,40,60]})]

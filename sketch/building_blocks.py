@@ -385,7 +385,7 @@ class IDT(LayoutPart) :
 
         r2.move(origin=o(),\
         destination=(o+Point(self.pitch,self.y_offset))())
-
+        
         unitcell.absorb(r2)
 
         cell=Device()
