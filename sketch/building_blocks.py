@@ -1031,12 +1031,12 @@ class Routing(LayoutPart):
                 if self.side=='auto':
 
                     source=self._add_taper(cell,source,len=taper_len)
-                    destination=self._add_taper(cell,destination,len=self.trace_width/4)
+                    # destination=self._add_taper(cell,destination,len=self.trace_width/4)
 
                 elif self.side=='left':
 
                     source=self._add_ramp_lx(cell,source,len=taper_len)
-                    destination=self._add_taper(cell,destination,len=self.trace_width/4)
+                    # destination=self._add_taper(cell,destination,len=self.trace_width/4)
 
                 elif self.side=='right':
 

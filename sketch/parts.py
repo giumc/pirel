@@ -9,6 +9,18 @@ import pandas as pd
 import warnings
 
 def Scaled(res):
+    ''' Class Decorator that accept normalized parameters for resonator designs.
+
+    For details on scaling, see help on draw function.
+
+    Parameters
+    ----------
+    res : class
+
+        pass class of resonator to be decorated.
+        (i.e. Scaled(LFE)(name="normalized LFE")).
+    '''
+
 
     class Scaled(res):
 
@@ -17,6 +29,18 @@ def Scaled(res):
             res.__init__(self,*args,**kwargs)
 
         def draw(self):
+        ''' Denormalizes parameters and passes to regular draw.
+
+            Descaling rules:
+                IDT gap (d) = IDT gap (n) * pitch
+                IDT length (d) = IDT length (n) * pitch
+                Bus length (d) = Bus length (n) * pitch
+                Etch pit width (d) = Etch pit width (d) * active region width
+                Anchor width (d) = Anchor width (n) * active region width
+                Anchor length (d) = Anchor length (n) * active region width
+                Anchor Margin Y (d) = Anchor Margin Y (n) * Anchor length
+                Anchor Margin X (d) = Anchor Margin X (n) * Anchor width.
+            '''
 
             selfcopy=deepcopy(self)
 
@@ -36,7 +60,7 @@ def Scaled(res):
 
             selfcopy.anchor.etch_margin.x=self.anchor.etch_margin.x*selfcopy.anchor.size.x
 
-            selfcopy.anchor.etch_margin.y=self.anchor.etch_margin.y*p
+            selfcopy.anchor.etch_margin.y=self.anchor.etch_margin.y*selfcopy.anchor.size.y
 
             cell=res.draw(selfcopy)
 
@@ -59,6 +83,40 @@ def Scaled(res):
     return Scaled
 
 def addVia(res,side='top',bottom_conn=False):
+    ''' Class decorator to add vias to resonators.
+
+    you can select side (top,bottom or both) and if keep the bottom pad of the via.
+
+    Parameters
+    ----------
+    res : class
+        the class that needs vias
+
+    side : 'top','bottom', or iterable of both
+        decides the port to attach vias to.
+
+    bottom_conn : boolean
+        as the vias are drawn by default with top-bottom pads, you can decide here to
+        remove the second pad by default from all the designs.
+
+    Attributes
+    ----------
+
+        via : PyResLayout.Via
+            instance of a PyResLayout.Via class
+
+        padlayers : lenght 2 iterable of int
+            top/bottom layers to draw vias pads
+
+        overvia : float
+            ratio pad size / via size
+
+        viadistance : float
+            y distance between connecting port and via center
+
+        via_area : PyResLayout.Point
+            size (in coordinates) to be filled with vias.
+    '''
 
     if isinstance(side,str):
 
@@ -281,6 +339,8 @@ def addVia(res,side='top',bottom_conn=False):
     return addVia
 
 def addPad(res):
+''' Class decorator to add probing pads to existing cells.
+
 
     class addPad(res):
 
@@ -341,6 +401,20 @@ def addPad(res):
             return r0
 
     return addPad
+
+    Parameters
+    ----------
+    res : PyResLayout.LayoutPart
+        design where pads have to be added
+
+    Attributes
+    ----------
+    pad : PyResLayout.Pad
+        pad design for the cell
+
+    The pad design needs a port to attach to the existing cell,
+        see help for more info.
+    '''
 
 def addProbe(res,probe):
 

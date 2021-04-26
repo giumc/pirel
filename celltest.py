@@ -25,12 +25,12 @@ base_params["IDTN_fingers"]=13
 base_params["IDTOffset"]=1
 base_params["IDTLength"]=105
 base_params["IDTCoverage"]=0.5
-base_params["BusLength"]=5
+base_params["BusLength"]=0.5
 base_params["EtchWidth"]=0.4
 base_params["AnchorLength"]=4
 base_params["AnchorWidth"]=0.5
-base_params["AnchorEtchMarginX"]=2
-base_params["AnchorEtchMarginY"]=0.5
+base_params["AnchorEtchMarginX"]=0.45
+base_params["AnchorEtchMarginY"]=0.2
 
 base_params["ExtConnLength"]=10
 
@@ -48,8 +48,8 @@ p=PArraySeries(d)
 
 p.x_param=[\
 SweepParam({'IDTN_fingers':[5,10,15,20]}),\
-SweepParam({'IDTLength':[20,40,60]}),\
-SweepParam({'ViaSize':[10,20,50]})]
+SweepParam({'IDTLength':[20,40,60]})]
+# SweepParam({'ViaSize':[10,20,50]})]
 
 p.view()
 # rpq=1
