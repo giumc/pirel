@@ -30,6 +30,63 @@ from layout_tools import *
 
 ld=LayoutDefault()
 
+class LayoutParam():
+
+    def __init__(self,name,value):
+
+        self.name=name
+        self.value=value
+
+    @property
+    def label(self):
+
+        import re
+
+        return re.sub(r'(?:^|_)([a-z])', lambda x: x.group(1).upper(), self.name)
+
+    def denormalize(self,val):
+
+        return self.value*val
+
+class _LayoutParamInterface():
+
+    def __set_name__(self,owner,name):
+
+        self.private_name="_"+name
+
+    def __set__(self,owner,value):
+
+        if not hasattr(owner,self.private_name):
+
+                setattr(owner,self.private_name,value)
+
+                if not hasattr(owner,self._params_list):
+
+                    owner._params_list=[getattr(owner,self.private_name)]
+
+                else:
+
+                    owner._params_list.append(getattr(owner,self.private_name))
+
+
+        else:
+
+            if isinstance(value,getattr(owner,self.private_name).value.__class__):
+
+                old_param=getattr(owner,self.private_name)
+
+                old_param.value=value
+
+    def __get__(self,owner):
+
+        if not hasattr(owner,self.private_name):
+
+            raise Error("Doesn't exist")
+
+        else:
+
+            return getattr(owner,self.private_name).value
+
 class LayoutPart(ABC) :
     ''' Abstract class that implements features common to all layout classes.
 
