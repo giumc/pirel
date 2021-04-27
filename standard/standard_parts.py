@@ -122,9 +122,11 @@ def chip_frame(name="Default",size=(20e3,20e3),layer=ld.layerTop,\
 
     test_cell=resistivity_test_cell()
 
+    test_cell.name='Test Features'
+
     cell=Device(name="Frame")
 
-    r1=cell<<die_cell
+    cell.absorb(cell<<die_cell)
 
     LayoutPart.add_text(cell,\
         {'size':700,'label':name,\
@@ -147,26 +149,6 @@ def chip_frame(name="Default",size=(20e3,20e3),layer=ld.layerTop,\
 
     cell<<test_cell
 
-    test_ul=cell<<test_cell
-
-    test_ul.move(origin=(test_ul.xmin,g.ymax),\
-        destination=(cell.xmin+g.xsize/8,\
-            cell.ymax-g.ysize/2))
-
-    test_ll=cell<<test_cell
-
-    test_ll.move(origin=(test_ll.xmin,test_ll.ymin),\
-        destination=(cell.xmin+g.xsize/8,\
-            cell.ymin+g.ysize))
-
-    test_lr=cell<<test_cell
-
-    test_lr.move(origin=(test_lr.xmax,test_lr.ymin),\
-        destination=(cell.xmax-g.xsize/8,\
-            cell.ymin+g.ysize/2))
-
-    cell=join(cell)
-
     cell.name='Frame'
-
+    
     return cell

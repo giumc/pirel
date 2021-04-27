@@ -512,12 +512,6 @@ class PMatrix(PArray):
 
         self.device=original_device
 
-        master_cell.flatten()
-
-        master_cell=join(master_cell)
-
-        self.device=original_device
-
         self.cell=master_cell
 
         self.labels_top=top_label_matrix
@@ -626,10 +620,29 @@ class PArraySeries(PArray):
 
         cell=Device(name=self.name)
 
-        [cell.add(x) for x in cellparts]
-
-        cell=join(cell)
+        [cell<<x for x in cellparts]
 
         self.cell=cell
 
         return cell
+
+    @property
+    def table(self):
+
+        x_param=self.x_param
+
+        data_tot=DataFrame()
+
+        # import pdb; pdb.set_trace()
+
+        for p in x_param:
+
+            device=deepcopy(self.device)
+
+            parr=PArray(device)
+
+            parr.x_param=p
+
+            data_tot.append(parr.table)
+
+        return data_tot
