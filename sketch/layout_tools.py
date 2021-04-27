@@ -282,7 +282,7 @@ def draw_array(cell,x,y,row_spacing=0,column_spacing=0):
     cell : phidl.Device.
     '''
 
-    new_cell=pg.Device(name=cell.name+"array")
+    new_cell=pg.Device(cell.name+"array")
 
     cell_size=Point().from_iter(cell.size)
 

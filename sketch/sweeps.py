@@ -9,7 +9,7 @@ class SweepParam():
             self._dict=params
 
         else:
-            # import pdb; pdb.set_trace()
+
             raise ValueError("SweepParam is init by dict of names:values")
 
     def __call__(self,*args):
@@ -46,7 +46,7 @@ class SweepParam():
 
         stringout=[]
 
-        # import pdb; pdb.set_trace()
+
 
         unique={name:list(dict.fromkeys(values)) for name,values in zip(param.names,param.values)}
 
@@ -58,7 +58,7 @@ class SweepParam():
 
             for lab,name in zip(sweep_label,param.names):
 
-                # import pdb; pdb.set_trace()
+
 
                 tmp_lab=tmp_lab+" " +lab+str(unique[name].index(param()[name][i]))
 
@@ -150,11 +150,11 @@ class SweepParam():
 
         tot_values=[_ for _ in flatten(tot_values)]
 
-        # import pdb; pdb.set_trace()
+
 
         dict_new={x : [] for x in init_names+new_names}
 
-        # import pdb; pdb.set_trace()
+
 
         for index in range(new_length):
 
@@ -202,7 +202,7 @@ class _SweepParamValidator():
 
             if not all([names in self._valid_names for names in layout_param.names]):
 
-                import pdb; pdb.set_trace()
+
 
                 raise ValueError("At least one param key in {} is invalid".format(*layout_param.names))
 
@@ -244,7 +244,7 @@ class _SweepArrayValidator(_SweepParamValidator):
 
         sweep_row=list()
 
-        # import pdb; pdb.set_trace()
+
 
         for par in layout_params:
 
@@ -341,7 +341,7 @@ class PArray(LayoutPart):
 
         df=device.export_params()
 
-        master_cell=Device(name=self.name)
+        master_cell=Device(self.name)
 
         cells=list()
 
@@ -388,8 +388,6 @@ class PArray(LayoutPart):
         g.align(alignment='ymin')
 
         del device, cells ,g
-
-        # master_cell.flatten()
 
         master_cell=join(master_cell)
 
@@ -442,7 +440,7 @@ class PMatrix(PArray):
 
         df=device.export_params()
 
-        master_cell=Device(name=self.name)
+        master_cell=Device(self.name)
 
         cells=list()
 
@@ -496,8 +494,6 @@ class PMatrix(PArray):
 
             new_cell=PArray.draw(self)
 
-            new_cell.name=self.name+str(index)
-
             master_cell<<new_cell
 
             cells.append(new_cell)
@@ -522,8 +518,6 @@ class PMatrix(PArray):
 
     def auto_labels(self,top=True,bottom=True,top_label='',bottom_label='',\
         col_index=0,row_index=0):
-
-        # import pdb; pdb.set_trace()
 
         y_label=[top_label+x for x  in self.y_param.labels]
 
@@ -562,7 +556,7 @@ class PMatrix(PArray):
 
         data_tot=DataFrame()
 
-        # import pdb; pdb.set_trace()
+
 
         for j in range(len(y_param)):
 
@@ -598,8 +592,6 @@ class PArraySeries(PArray):
 
     def draw(self):
 
-        # import pdb; pdb.set_trace()
-
         cellparts=list()
 
         for i,par in enumerate(self.x_param):
@@ -607,6 +599,8 @@ class PArraySeries(PArray):
             device=deepcopy(self.device)
 
             p=PArray(device)
+
+            p.x_spacing=self.x_spacing
 
             p.x_param=par
 
@@ -618,7 +612,7 @@ class PArraySeries(PArray):
         g.distribute(direction='y',spacing=self.y_spacing)
         g.align(alignment='xmin')
 
-        cell=Device(name=self.name)
+        cell=Device(self.name)
 
         [cell<<x for x in cellparts]
 
@@ -633,7 +627,7 @@ class PArraySeries(PArray):
 
         data_tot=DataFrame()
 
-        # import pdb; pdb.set_trace()
+
 
         for p in x_param:
 

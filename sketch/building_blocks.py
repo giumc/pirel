@@ -63,7 +63,7 @@ class LayoutPart(ABC) :
 
         self.origin=copy(ld.origin)
 
-        self.cell=Device(name=name)
+        self.cell=Device(name)
 
         self.text_params=copy(ld.TextParams)
 
@@ -401,7 +401,7 @@ class IDT(LayoutPart) :
 
         rect.move(origin=(0,0),destination=o())
 
-        unitcell=Device(name=self.name)
+        unitcell=Device(self.name)
 
         r1=unitcell << rect
         unitcell.absorb(r1)
@@ -419,7 +419,7 @@ class IDT(LayoutPart) :
 
         unitcell.absorb(r3)
 
-        cell=Device()
+        cell=Device(self.name)
 
         cell.name=self.name
 
@@ -564,7 +564,7 @@ class Bus(LayoutPart) :
         layer=self.layer).move(origin=(0,0),\
         destination=o())
 
-        cell=Device(name=self.name)
+        cell=Device(self.name)
 
         r1=cell<<pad
         cell.absorb(r1)
@@ -672,7 +672,7 @@ class EtchPit(LayoutPart) :
 
         main_etch=b_main.draw()
 
-        etch=Device(name=self.name)
+        etch=Device(self.name)
 
         etch.absorb(etch<<main_etch)
 
@@ -791,7 +791,7 @@ class Anchor(LayoutPart):
 
         offset=Point(self.x_offset,0)
 
-        cell=Device(name=self.name)
+        cell=Device(self.name)
 
         etch_sx=pg.rectangle(\
             size=(etch_size-offset)(),\
@@ -1043,7 +1043,7 @@ class Routing(LayoutPart):
 
     def draw(self):
 
-        cell=Device(name=self.name)
+        cell=Device(self.name)
 
         bbox=pg.bbox(self.clearance)
 
@@ -1060,7 +1060,7 @@ class Routing(LayoutPart):
 
         y_overtravel=ll.y-source.midpoint[1]-self.trace_width
 
-        taper_len=min([max(y_overtravel,-self.trace_width/4),self.trace_width/4])
+        taper_len=abs(min([y_overtravel,self.trace_width/4]))
 
         if destination.y<=ll.y : # destination is below clearance
 
@@ -1092,105 +1092,140 @@ class Routing(LayoutPart):
 
         else: #destination is above clearance
 
-            if not(destination.orientation==source.orientation):
+            if not destination.orientation==90 :
 
-                raise Exception("Routing error: non-hindered routing needs +90 -> -90 oriented ports")
+                raise ValueError("Routing case not covered yet")
 
-            ll,lr,ul,ur=get_corners(bbox)
-
-            if source.x+self.trace_width>ll.x and source.x-self.trace_width<lr.x: #source tucked inside clearance
-
-                if self.side=='auto':
-
-                    source=self._add_taper(cell,source,len=taper_len)
-                    # destination=self._add_taper(cell,destination,len=self.trace_width/4)
-
-                elif self.side=='left':
-
-                    source=self._add_ramp_lx(cell,source,len=taper_len)
-                    # destination=self._add_taper(cell,destination,len=self.trace_width/4)
-
-                elif self.side=='right':
-
-                    source=self._add_ramp_rx(cell,source,len=taper_len)
-                    # destination=self._add_taper(cell,destination,len=self.trace_width/4)
-
-                source.name='source'
-                destination.name='destination'
-
-                p0=Point().from_iter(source.midpoint)
-
-                center_box=Point().from_iter(bbox.center)
-
-                #left path
-                p1=p0+Point(0,y_overtravel)
-                p2=Point(ll.x-self.trace_width,p1.y)
-                p3=Point(p2.x,self.trace_width+destination.y)
-                p4=Point(destination.x,p3.y)
-                p5=Point(destination.x,destination.y)
-
-                list_points_lx=[p0(),p1(),p2(),p3(),p4(),p5()]
-
-                path_lx=pp.smooth(points=list_points_lx)
-                #right path
-                p1=p0+Point(0,y_overtravel)
-                p2=Point(lr.x+self.trace_width,p1.y)
-                p3=Point(p2.x,self.trace_width+destination.y)
-                p4=Point(destination.x,p3.y)
-                p5=Point(destination.x,destination.y)
-
-                list_points_rx=[p0(),p1(),p2(),p3(),p4(),p5()]
-
-                path_rx=pp.smooth(points=list_points_rx)
-
-                if self.side=='auto':
-
-                    if path_lx.length()<path_rx.length():
-
-                        path=path_lx
-
-                    else:
-
-                        path=path_rx
-
-                elif self.side=='left':
-
-                    path=path_lx
-
-                elif self.side=='right':
-
-                    path=path_rx
-
-                else:
-
-                    raise Exception("Invalid option for side :{}".format(self.side))
-
-            else:
-
-                # source is not tucked under the clearance
-
-                source=self._add_taper(cell,source,len=self.trace_width/4)
-                destination=self._add_taper(cell,destination,len=self.trace_width/4)
-
-                source.name='source'
-                destination.name='destination'
-
-                p0=Point().from_iter(source.midpoint)
+            if source.orientation==90 :
 
                 ll,lr,ul,ur=get_corners(bbox)
 
-                y_overtravel=ll.y-p0.y
+                if source.x+self.trace_width>ll.x and source.x-self.trace_width<lr.x: #source tucked inside clearance
 
-                center_box=Point().from_iter(bbox.center)
+                    # if self.side=='auto':
 
-                #left path
-                p1=Point(p0.x,destination.y+self.trace_width)
-                p2=Point(destination.x,p1.y)
-                p3=Point(destination.x,destination.y)
+                        # source=self._add_taper(cell,source,len=taper_len)
+                        # destination=self._add_taper(cell,destination,len=self.trace_width/4)
 
-                list_points=[p0(),p1(),p2(),p3()]
+                    # elif self.side=='left':
 
-                path=pp.smooth(points=list_points)#source tucked inside clearance
+                        # source=self._add_ramp_lx(cell,source,len=taper_len)
+                        # destination=self._add_taper(cell,destination,len=self.trace_width/4)
+
+                    # elif self.side=='right':
+
+                        # source=self._add_ramp_rx(cell,source,len=taper_len)
+                        # destination=self._add_taper(cell,destination,len=self.trace_width/4)
+
+                    source.name='source'
+                    destination.name='destination'
+
+                    p0=Point().from_iter(source.midpoint)
+
+                    center_box=Point().from_iter(bbox.center)
+
+                    #left path
+                    p1=p0+Point(0,y_overtravel)
+                    p2=Point(ll.x-self.trace_width,p1.y)
+                    p3=Point(p2.x,self.trace_width+destination.y)
+                    p4=Point(destination.x,p3.y)
+                    p5=Point(destination.x,destination.y)
+
+                    list_points_lx=[p0(),p1(),p2(),p3(),p4(),p5()]
+
+                    path_lx=pp.smooth(points=list_points_lx)
+                    #right path
+                    p1=p0+Point(0,y_overtravel)
+                    p2=Point(lr.x+self.trace_width,p1.y)
+                    p3=Point(p2.x,self.trace_width+destination.y)
+                    p4=Point(destination.x,p3.y)
+                    p5=Point(destination.x,destination.y)
+
+                    list_points_rx=[p0(),p1(),p2(),p3(),p4(),p5()]
+
+                    path_rx=pp.smooth(points=list_points_rx)
+
+                    if self.side=='auto':
+
+                        if path_lx.length()<path_rx.length():
+
+                            path=path_lx
+
+                        else:
+
+                            path=path_rx
+
+                    elif self.side=='left':
+
+                        path=path_lx
+
+                    elif self.side=='right':
+
+                        path=path_rx
+
+                    else:
+
+                        raise Exception("Invalid option for side :{}".format(self.side))
+
+                else:
+
+                    # source is not tucked under the clearance
+
+                    source=self._add_taper(cell,source,len=self.trace_width/4)
+                    destination=self._add_taper(cell,destination,len=self.trace_width/4)
+
+                    source.name='source'
+                    destination.name='destination'
+
+                    p0=Point().from_iter(source.midpoint)
+
+                    ll,lr,ul,ur=get_corners(bbox)
+
+                    y_overtravel=ll.y-p0.y
+
+                    center_box=Point().from_iter(bbox.center)
+
+                    #left path
+                    p1=Point(p0.x,destination.y+self.trace_width)
+                    p2=Point(destination.x,p1.y)
+                    p3=Point(destination.x,destination.y)
+
+                    list_points=[p0(),p1(),p2(),p3()]
+
+                    path=pp.smooth(points=list_points)#source tucked inside clearance
+
+            elif source.orientation==0 : #right path
+                    source=self._add_taper(cell,source,len=-taper_len)
+                    source.name='source'
+                    destination.name='destination'
+
+                    p0=Point().from_iter(source.midpoint)
+
+
+                    p1=Point(ur.x+self.trace_width,p0.y)
+                    p2=Point(p1.x,ur.y+self.trace_width)
+                    p3=Point(destination.x,p2.y)
+                    p4=Point(destination.x,destination.y)
+                    list_points_rx=[p0(),p1(),p2(),p3(),p4()]
+
+                    path=pp.smooth(points=list_points_rx)
+
+            elif source.orientation==180 : #left path
+                    source=self._add_taper(cell,source,len=-taper_len)
+                    source.name='source'
+                    destination.name='destination'
+
+                    p0=Point().from_iter(source.midpoint)
+
+
+                    p1=Point(ll.x-self.trace_width,p0.y)
+                    p2=Point(p1.x,ur.y+self.trace_width)
+                    p3=Point(destination.x,p2.y)
+                    p4=Point(destination.x,destination.y)
+
+                    list_points_lx=[p0(),p1(),p2(),p3(),p4()]
+
+                    path=pp.smooth(points=list_points_lx)
 
         x=CrossSection()
 
@@ -1384,7 +1419,7 @@ class GSProbe(LayoutPart):
         pad_cell.move(origin=(0,0),\
         destination=o())
 
-        cell=Device(name=self.name)
+        cell=Device(self.name)
 
         dp=Point(self.pitch,0)
         pad_gnd_sx=cell<<pad_cell
@@ -1483,7 +1518,7 @@ class GSGProbe(LayoutPart):
         pad_cell.move(origin=(0,0),\
         destination=o())
 
-        cell=Device(name=self.name)
+        cell=Device(self.name)
 
         dp=Point(self.pitch,0)
         pad_gnd_sx=cell<<pad_cell

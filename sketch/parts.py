@@ -157,7 +157,7 @@ def addVia(res,side='top',bottom_conn=False):
                 width=viacell.xsize,\
                 orientation=90))
 
-            cell=Device(name=self.name)
+            cell=Device(self.name)
 
             cell<<rescell
 
@@ -273,7 +273,7 @@ def addVia(res,side='top',bottom_conn=False):
 
             if any([_=='top' for _ in side]):
 
-                ur=ur-Point(0,float(self.via.size*self.overvia*nvias_y-self.viadistance))
+                ur=ur-Point(0,float(self.via.size*self.overvia*nvias_y+self.viadistance))
 
             if any([_=='bottom' for _ in side]):
 
@@ -296,7 +296,7 @@ def addVia(res,side='top',bottom_conn=False):
 
             trace2=pg.copy_layer(trace,layer=self.padlayers[0],new_layer=self.padlayers[1])
 
-            cell=Device(name=self.name)
+            cell=Device(self.name)
 
             cell.absorb((cell<<trace))
 
@@ -444,7 +444,7 @@ def addProbe(res,probe):
 
             probe_cell=self.probe.draw()
 
-            cell=Device(name=self.name)
+            cell=Device(self.name)
 
             probe_dut_distance=Point(0,self.probe_dut_distance)
 
@@ -653,11 +653,23 @@ def addLargeGnd(probe):
                     if 'left' in name:
 
                         cell.remove(cell.ports[name])
+
+                        left_port.midpoint=(left_port.midpoint[0]-self.groundsize/2,\
+                            left_port.midpoint[1]-self.groundsize/2)
+
+                        left_port.orientation=180
+
                         cell.add_port(left_port)
 
                     elif 'right' in name:
 
                         cell.remove(cell.ports[name])
+
+                        right_port.midpoint=(right_port.midpoint[0]+self.groundsize/2,\
+                            right_port.midpoint[1]-self.groundsize/2)
+
+                        right_port.orientation=0
+
                         cell.add_port(right_port)
 
             self.cell=cell
@@ -823,7 +835,7 @@ class LFERes(LayoutPart):
 
         idt_cell=self.idt.draw()
 
-        cell=Device(name=self.name)
+        cell=Device(self.name)
 
         idt_ref=cell<<idt_cell
 
@@ -989,12 +1001,13 @@ class FBERes(LFERes):
 
         cell=LFERes.draw(self)
 
-        plate=pg.rectangle(size=self.etchpit.active_area(),\
+        plate=pg.rectangle(size=(self.etchpit.active_area.x,self.idt.y-self.idt.y_offset),\
         layer=self.platelayer)
 
         plate_ref=cell<<plate
 
-        transl_rel=Point(self.etchpit.x,self.anchor.size.y-self.anchor.etch_margin.y)
+        transl_rel=Point(self.etchpit.x,self.anchor.size.y+self.bus.size.y\
+            +self.idt.y_offset)
 
         lr_cell=get_corners(cell)[0]
         lr_plate=get_corners(plate_ref)[0]
