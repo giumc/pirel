@@ -50,24 +50,29 @@ class LayoutParam():
 
 class _LayoutParamInterface():
 
+    def __init__(self,def_value=1):
+
+        self._def_value=def_value
+
     def __set_name__(self,owner,name):
 
+        self.public_name=name
         self.private_name="_"+name
+        self.__set__(owner,self._def_value)
 
     def __set__(self,owner,value):
 
         if not hasattr(owner,self.private_name):
 
-                setattr(owner,self.private_name,value)
+                setattr(owner,self.private_name,LayoutParam(self.public_name,value))
 
-                if not hasattr(owner,self._params_list):
+                if not hasattr(owner,'_params_list'):
 
                     owner._params_list=[getattr(owner,self.private_name)]
 
                 else:
 
                     owner._params_list.append(getattr(owner,self.private_name))
-
 
         else:
 
@@ -77,11 +82,13 @@ class _LayoutParamInterface():
 
                 old_param.value=value
 
-    def __get__(self,owner):
+    def __get__(self,owner,objtype=None):
 
         if not hasattr(owner,self.private_name):
 
-            raise Error("Doesn't exist")
+            # warnings.Warn("{} not correctly initialized".format(self.private_name))
+
+            return self._def_value
 
         else:
 
@@ -386,6 +393,46 @@ class LayoutPart(ABC) :
 
         return df.transpose().to_string()
 
+class TestCell(LayoutPart):
+
+    test_param=_LayoutParamInterface(3)
+
+    # x_param2=_LayoutParamInterface(2)
+
+    def __init__(self,*a,**k):
+
+        super().__init__(*a,**k)
+        self.test_param2=_LayoutParamInterface(3)
+
+    def draw(self):
+
+        cell1=pg.rectangle(size=(self.test_param,self.test_param))
+
+        self.test_param=10
+        cell2=pg.rectangle(size=(self.test_param,self.test_param),layer=2)
+
+        cell2<<cell1
+
+        return cell2
+
+    def export_params(self):
+
+        out_dict={}
+
+        for paramdict in self._params_list:
+
+            if paramdict.label in out_dict.keys():
+
+                    raise ValueError("{} is a duplicate parameter name".format(paramdict.label))
+
+            out_dict[paramdict.label]=paramdict.value
+
+        return out_dict
+
+    def import_params(self,dict):
+
+        pass
+
 class IDT(LayoutPart) :
     ''' Generates interdigitated structure.
 
@@ -409,6 +456,7 @@ class IDT(LayoutPart) :
         n  : int
             finger number.
     '''
+
     def __init__(self,*args,**kwargs):
 
         super().__init__(*args,**kwargs)

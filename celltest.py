@@ -61,5 +61,9 @@ import pandas as pd
 # rpq=1
 
 # print(d.resistance(res_per_square=rpq))
-x=LayoutParam("x_param_t",3)
-print(x.label)
+t=TestCell(name="hello")
+t2=TestCell(name="2")
+t2.test_param2=12
+t2.test_param=4
+print(t.export_params())
+print(t2.export_params())
