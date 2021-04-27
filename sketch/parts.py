@@ -9,6 +9,7 @@ import pandas as pd
 import warnings
 
 def Scaled(res):
+
     ''' Class Decorator that accept normalized parameters for resonator designs.
 
     For details on scaling, see help on draw function.

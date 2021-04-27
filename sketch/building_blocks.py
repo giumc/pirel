@@ -518,6 +518,14 @@ class IDT(LayoutPart) :
 
         return res_per_square*self.y/self.pitch/self.coverage/self.n*2/3
 
+    @classmethod
+    def calc_n_fingers(self,c0_dens,z0,f,len):
+
+        from numpy import ceil
+        from math import pi
+
+        return int(ceil(1/2/pi/f/c0_dens/z0/len))
+
 class Bus(LayoutPart) :
     ''' Generates pair of bus structure.
 
