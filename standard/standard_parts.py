@@ -124,7 +124,7 @@ def chip_frame(name="Default",size=(20e3,20e3),layer=ld.layerTop,\
 
     test_cell.name='Test Features'
 
-    cell=Device(name="Frame")
+    cell=Device(name=name)
 
     cell.absorb(cell<<die_cell)
 
@@ -149,6 +149,4 @@ def chip_frame(name="Default",size=(20e3,20e3),layer=ld.layerTop,\
 
     cell<<test_cell
 
-    cell.name='Frame'
-    
     return cell
