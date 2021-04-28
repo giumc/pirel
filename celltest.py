@@ -12,7 +12,7 @@ import pandas as pd
 # #
 # base_params=d.export_params()
 # #
-# base_params["ProbeGroundPadSize"]=200
+# base_params["P5robeGroundPadSize"]=200
 # base_params["ProbeWidth"]=100
 # base_params["ProbePitch"]=200
 # base_params["ProbeLength"]=100
@@ -61,9 +61,3 @@ import pandas as pd
 # rpq=1
 
 # print(d.resistance(res_per_square=rpq))
-t=TestCell(name="hello")
-t2=TestCell(name="2")
-t2.test_param2=12
-t2.test_param=4
-print(t.export_params())
-print(t2.export_params())

@@ -2,6 +2,8 @@ from building_blocks import *
 
 from layout_tools import *
 
+from building_blocks import _LayoutParamInterface
+
 ld=LayoutDefault()
 
 import pandas as pd
@@ -32,36 +34,10 @@ def Scaled(res):
 
             ''' Denormalizes parameters and passes to regular draw.
 
-                Descaling rules:
-                    IDT gap (d) = IDT gap (n) * pitch
-                    IDT length (d) = IDT length (n) * pitch
-                    Bus length (d) = Bus length (n) * pitch
-                    Etch pit width (d) = Etch pit width (d) * active region width
-                    Anchor width (d) = Anchor width (n) * active region width
-                    Anchor length (d) = Anchor length (n) * active region width
-                    Anchor Margin Y (d) = Anchor Margin Y (n) * Anchor length
-                    Anchor Margin X (d) = Anchor Margin X (n) * Anchor width.
+                Descaling rules in method denormalize().
             '''
 
-            selfcopy=deepcopy(self)
-
-            p=selfcopy.idt.pitch
-
-            selfcopy.idt.y_offset=self.idt.y_offset*p
-
-            selfcopy.idt.y=self.idt.y*p
-
-            selfcopy.bus.size.y=self.bus.size.y*p
-
-            selfcopy.etchpit.x=self.etchpit.x*selfcopy.idt.active_area.x
-
-            selfcopy.anchor.size.x=self.anchor.size.x*selfcopy.idt.active_area.x
-
-            selfcopy.anchor.size.y=self.anchor.size.y*p
-
-            selfcopy.anchor.etch_margin.x=self.anchor.etch_margin.x*selfcopy.anchor.size.x
-
-            selfcopy.anchor.etch_margin.y=self.anchor.etch_margin.y*selfcopy.anchor.size.y
+            selfcopy=self.denormalize()
 
             cell=res.draw(selfcopy)
 
@@ -80,6 +56,47 @@ def Scaled(res):
                 (1-2*self.anchor.etch_margin.x)
 
             return ridt+rbus+ranchor
+
+        def denormalize(self):
+            ''' Applies descaling rules and returns a copy of the descaled object.
+
+            Descaling rules:
+                IDT gap (d) = IDT gap (n) * pitch
+                IDT length (d) = IDT length (n) * pitch
+                Bus length (d) = Bus length (n) * pitch
+                Etch pit width (d) = Etch pit width (d) * active region width
+                Anchor width (d) = Anchor width (n) * active region width
+                Anchor length (d) = Anchor length (n) * active region width
+                Anchor Margin Y (d) = Anchor Margin Y (n) * Anchor length
+                Anchor Margin X (d) = Anchor Margin X (n) * Anchor width.
+
+            Returns
+            -------
+            selfcopy : object
+                 a deep copy of the calling object, with descaled parameters.
+            '''
+            
+            selfcopy=deepcopy(self)
+
+            p=selfcopy.idt.pitch
+
+            selfcopy.idt.y_offset=self.idt.y_offset*p
+
+            selfcopy.idt.length=self.idt.length*p
+
+            selfcopy.bus.size.y=self.bus.size.y*p
+
+            selfcopy.etchpit.x=self.etchpit.x*selfcopy.idt.active_area.x
+
+            selfcopy.anchor.size.x=self.anchor.size.x*selfcopy.idt.active_area.x
+
+            selfcopy.anchor.size.y=self.anchor.size.y*p
+
+            selfcopy.anchor.etch_margin.x=self.anchor.etch_margin.x*selfcopy.anchor.size.x
+
+            selfcopy.anchor.etch_margin.y=self.anchor.etch_margin.y*selfcopy.anchor.size.y
+
+            return selfcopy
 
     return Scaled
 
@@ -109,10 +126,10 @@ def addVia(res,side='top',bottom_conn=False):
         padlayers : lenght 2 iterable of int
             top/bottom layers to draw vias pads
 
-        overvia : float
+        over_via : float
             ratio pad size / via size
 
-        viadistance : float
+        via_distance : float
             y distance between connecting port and via center
 
         via_area : PyResLayout.Point
@@ -127,13 +144,19 @@ def addVia(res,side='top',bottom_conn=False):
 
     class addVia(res):
 
+        over_via=_LayoutParamInterface()
+
+        via_distance=_LayoutParamInterface()
+
+        via_area=_LayoutParamInterface()
+
         def __init__(self,*args,**kwargs):
 
             res.__init__(self,*args,**kwargs)
             self.via=Via(name=self.name+'Via')
             self.padlayers=[ld.layerTop,ld.layerBottom]
-            self.overvia=2
-            self.viadistance=100
+            self.over_via=2
+            self.via_distance=100
             self.via_area=Point(100,100)
 
         def draw(self):
@@ -189,7 +212,7 @@ def addVia(res,side='top',bottom_conn=False):
 
                         raise ValueError ("Cannot add a top via in a cell with no top port")
 
-                    pad=pg.compass(size=(top_port.width,self.viadistance),layer=self.padlayers[0])
+                    pad=pg.compass(size=(top_port.width,self.via_distance),layer=self.padlayers[0])
 
                     top_port=self._attach_instance(cell, pad, pad.ports['S'], viacell, top_port)
 
@@ -203,7 +226,7 @@ def addVia(res,side='top',bottom_conn=False):
 
                         raise ValueError ("Cannot add a bottom via in a cell with no bottom port")
 
-                    pad=pg.compass(size=(bottom_port.width,self.viadistance),layer=self.padlayers[0])
+                    pad=pg.compass(size=(bottom_port.width,self.via_distance),layer=self.padlayers[0])
 
                     bottom_port=self._attach_instance(cell, pad, pad.ports['N'], viacell, bottom_port)
 
@@ -225,41 +248,21 @@ def addVia(res,side='top',bottom_conn=False):
 
             t=res.export_params(self)
 
-            t_via=self.via.export_params().drop(columns=['Type'])
+            t_via=self.via.export_params()
 
-            t_via=t_via.rename(columns=lambda x: "Via"+x)
+            t_via.pop('Name')
 
-            t_via['Overvia']=self.overvia
-            t_via['ViaDistance']=self.viadistance
-            t_via['ViaAreaX']=self.via_area.x
-            t_via['ViaAreaY']=self.via_area.y
-            t=LayoutPart._add_columns(t,t_via)
+            t_via=add_prefix_dict(t_via,'Via')
+
+            t.update(t_via)
 
             return t
 
         def import_params(self, df):
 
-            res.import_params(self, df)
+            LayoutPart.import_params(self,df)
 
-            for col in df.columns:
-
-                if_match_import(self.via,col,"Via",df)
-
-                if col=='Overvia':
-
-                    self.overvia=df[col].iat[0]
-
-                if col=='ViaDistance':
-
-                    self.viadistance=df[col].iat[0]
-
-                if col=='ViaAreaX':
-
-                    self.via_area.x=df[col].iat[0]
-
-                if col=='ViaAreaY':
-
-                    self.via_area.y=df[col].iat[0]
+            if_match_import(self.via,df,"Via")
 
         def bbox_mod(self,bbox):
 
@@ -273,11 +276,11 @@ def addVia(res,side='top',bottom_conn=False):
 
             if any([_=='top' for _ in side]):
 
-                ur=ur-Point(0,float(self.via.size*self.overvia*nvias_y+self.viadistance))
+                ur=ur-Point(0,float(self.via.size*self.over_via*nvias_y+self.via_distance))
 
             if any([_=='bottom' for _ in side]):
 
-                ll=ll+Point(0,float(self.via.size*self.overvia*nvias_y+self.viadistance))
+                ll=ll+Point(0,float(self.via.size*self.over_via*nvias_y+self.via_distance))
 
             return (ll(),ur())
 
@@ -285,7 +288,7 @@ def addVia(res,side='top',bottom_conn=False):
 
             viacell=self.via.draw()
 
-            size=float(self.via.size*self.overvia)
+            size=float(self.via.size*self.over_via)
 
             port=viacell.get_ports()[0]
 
@@ -331,7 +334,7 @@ def addVia(res,side='top',bottom_conn=False):
 
             viaref.connect(viacell.get_ports()[0],\
             destination=port,\
-            overlap=-self.viadistance)
+            overlap=-self.via_distance)
 
             return port
 
@@ -339,8 +342,8 @@ def addVia(res,side='top',bottom_conn=False):
 
             import numpy as np
 
-            nvias_x=max(1,int(np.floor(self.via_area.x/self.via.size/self.overvia)))
-            nvias_y=max(1,int(np.floor(self.via_area.y/self.via.size/self.overvia)))
+            nvias_x=max(1,int(np.floor(self.via_area.x/self.via.size/self.over_via)))
+            nvias_y=max(1,int(np.floor(self.via_area.y/self.via.size/self.over_via)))
 
             return nvias_x,nvias_y
 
@@ -390,13 +393,14 @@ def addPad(res):
 
         def export_params(self):
 
-            t_pad=self.pad.export_params().drop(columns=['Type'])
+            t_pad=self.pad.export_params()
+            t_pad.pop("Name")
 
-            t_pad=t_pad.rename(columns=lambda x: "Pad"+x)
+            t_pad=add_prefix_dict(t_pad,"Pad")
 
             t=res.export_params(self)
 
-            t=LayoutPart._add_columns(t,t_pad)
+            t.update(t_pad)
 
             return t
 
@@ -404,9 +408,7 @@ def addPad(res):
 
             res.import_params(self,df)
 
-            for col in df.columns:
-
-                if_match_import(self.pad,col,"Pad",df)
+            if_match_import(self.pad,df,"Pad")
 
         def resistance(self,res_per_square=0.1):
 
@@ -426,15 +428,19 @@ def addProbe(res,probe):
 
     class addProbe(res):
 
+        gnd_routing_width=_LayoutParamInterface()
+
+        probe_dut_distance=_LayoutParamInterface()
+
         def __init__(self,*args,**kwargs):
 
             res.__init__(self,*args,**kwargs)
 
             self.probe=probe(self.name+"Probe")
 
-            self.gnd_routing_width=ld.DUTrouting_width
-
             # self.signal_routing_width=ld.DUTrouting_width
+
+            self.gnd_routing_width=ld.DUTrouting_width
 
             self.probe_dut_distance=ld.DUTprobe_dut_distance
 
@@ -536,23 +542,11 @@ def addProbe(res,probe):
 
             t=super().export_params()
 
-            t=t.rename(columns={"Type":"DUT_Type"})
-
             t_probe=self.probe.export_params()
 
-            t_probe=t_probe.rename(columns=lambda x : "Probe"+x )
+            t_probe=add_prefix_dict(t_probe,'Probe')
 
-            t=self._add_columns(t,t_probe)
-
-            t["GNDRoutingWidth"]=self.gnd_routing_width
-
-            # t["SignalRoutingWidth"]=self.signal_routing_width
-
-            t["ProbeDistance"]=self.probe_dut_distance
-
-            t.index=[self.name]
-
-            t=t.reindex(columns=["Type"]+[cols for cols in t.columns if not cols=="Type"])
+            t.update(t_probe)
 
             return t
 
@@ -560,21 +554,7 @@ def addProbe(res,probe):
 
             super().import_params(df)
 
-            for col in df.columns:
-
-                if_match_import(self.probe,col,"Probe",df)
-
-                if col == "GNDRoutingWidth" :
-
-                    self.gnd_routing_width=df[col].iat[0]
-
-                if col == "ProbeDistance" :
-
-                    self.probe_dut_distance=df[col].iat[0]
-
-                # if col =="SignalRoutingWidth":
-                #
-                #     self.signal_routing_width=df[col].iat[0]
+            if_match_import(self.probe,df,"Probe")
 
         def resistance(self,res_per_square=0.1):
 
@@ -597,11 +577,13 @@ def addLargeGnd(probe):
 
     class addLargeGnd(probe):
 
+        ground_size=_LayoutParamInterface()
+
         def __init__(self,*args,**kwargs):
 
             probe.__init__(self,*args,**kwargs)
 
-            self.groundsize=ld.GSGProbe_LargePadground_size
+            self.ground_size=ld.GSGProbe_LargePadground_size
 
         def draw(self):
 
@@ -609,7 +591,7 @@ def addLargeGnd(probe):
 
             oldports=[_ for _ in cell.get_ports()]
 
-            groundpad=pg.compass(size=(self.groundsize,self.groundsize),\
+            groundpad=pg.compass(size=(self.ground_size,self.ground_size),\
             layer=self.layer)
 
             [_,_,ul,ur]=get_corners(groundpad)
@@ -654,8 +636,8 @@ def addLargeGnd(probe):
 
                         cell.remove(cell.ports[name])
 
-                        left_port.midpoint=(left_port.midpoint[0]-self.groundsize/2,\
-                            left_port.midpoint[1]-self.groundsize/2)
+                        left_port.midpoint=(left_port.midpoint[0]-self.ground_size/2,\
+                            left_port.midpoint[1]-self.ground_size/2)
 
                         left_port.orientation=180
 
@@ -665,8 +647,8 @@ def addLargeGnd(probe):
 
                         cell.remove(cell.ports[name])
 
-                        right_port.midpoint=(right_port.midpoint[0]+self.groundsize/2,\
-                            right_port.midpoint[1]-self.groundsize/2)
+                        right_port.midpoint=(right_port.midpoint[0]+self.ground_size/2,\
+                            right_port.midpoint[1]-self.ground_size/2)
 
                         right_port.orientation=0
 
@@ -675,24 +657,6 @@ def addLargeGnd(probe):
             self.cell=cell
 
             return cell
-
-        def export_params(self):
-
-            t=probe.export_params(self)
-
-            t["GroundPadSize"]=self.groundsize
-
-            return t
-
-        def import_params(self,df):
-
-            probe.import_params(self,df)
-
-            for cols in df.columns:
-
-                if cols=='GroundPadSize':
-
-                    self.groundsize=df[cols].iat[0]
 
     return addLargeGnd
 
@@ -704,34 +668,15 @@ def array(res,n):
 
     class array(res):
 
+        bus_ext_length=_LayoutParamInterface()
+
+        n_copies=_LayoutParamInterface()
+
         def __init__(self,*args,**kwargs):
 
             res.__init__(self,*args,**kwargs)
             self.bus_ext_length=30
-            self.n=n
-
-        def export_params(self):
-
-            t=res.export_params(self)
-
-            t["NArrays"]=self.n
-            t["ExtConnLength"]=self.bus_ext_length
-
-            return t
-
-        def import_params(self,df):
-
-            res.import_params(self,df)
-
-            for cols in df.columns:
-
-                if cols=='NCopies':
-
-                    self.n=df[cols].iat[0]
-
-                if cols=='ExtConnLength':
-
-                    self.bus_ext_length=df[cols].iat[0]
+            self.n_copies=n
 
         def draw(self):
 
@@ -740,10 +685,10 @@ def array(res,n):
             port_names=list(unit_cell.ports.keys())
 
             cell=draw_array(unit_cell,\
-                self.n,1)
+                self.n_copies,1)
 
             lx_bottom=cell.ports[port_names[1]+str(0)]
-            rx_bottom=cell.ports[port_names[1]+str(self.n-1)]
+            rx_bottom=cell.ports[port_names[1]+str(self.n_copies-1)]
 
             xsize_bottom=rx_bottom.midpoint[0]+rx_bottom.width/2-\
                 (lx_bottom.midpoint[0]-lx_bottom.width/2)
@@ -757,7 +702,7 @@ def array(res,n):
                 destination=(cell.center[0],cell.ymin))
 
             lx_top=cell.ports[port_names[0]+str(0)]
-            rx_top=cell.ports[port_names[0]+str(self.n-1)]
+            rx_top=cell.ports[port_names[0]+str(self.n_copies-1)]
 
             xsize_top=rx_top.midpoint[0]+rx_top.width/2-\
                 (lx_top.midpoint[0]-lx_top.width/2)
@@ -801,9 +746,9 @@ def array(res,n):
 
             l=self.bus_ext_length
 
-            rb=res_per_square*l/w/n
+            rb=res_per_square*l/w/self.n_copies
 
-            return (rb+r)/n
+            return (rb+r)/self.n_copies
 
     return array
 
@@ -941,43 +886,44 @@ class LFERes(LayoutPart):
 
         t=super().export_params()
 
-        t_res=self.idt.export_params().drop(columns=['Type'])
+        t_res=self.idt.export_params()
 
-        t_res=t_res.rename(columns=lambda x: "IDT"+x)
+        t_res.pop('Name')
 
-        t=self._add_columns(t,t_res)
+        t_res=add_prefix_dict(t_res,"IDT")
 
-        t_bus=self.bus.export_params().drop(columns=['Type','DistanceX','DistanceY','Width'])
-        t_bus=t_bus.rename(columns=lambda x: "Bus"+x)
+        t_bus=self.bus.export_params()
 
-        t=self._add_columns(t,t_bus)
+        t_bus=pop_all_dict(t_bus, ['Name','DistanceX','DistanceY','SizeX'])
 
-        t_etch=self.etchpit.export_params().drop(columns=['Type','ActiveAreaX','ActiveAreaY'])
-        t_etch=t_etch.rename(columns=lambda x: "Etch"+x)
+        t_bus=add_prefix_dict(t_bus,"Bus")
 
-        t=self._add_columns(t,t_etch)
+        t_etch=self.etchpit.export_params()
 
-        t_anchor=self.anchor.export_params().drop(columns=['Type','EtchWidth','Offset','EtchChoice'])
-        t_anchor=t_anchor.rename(columns=lambda x: "Anchor"+x)
+        t_etch=pop_all_dict(t_etch,['Name','ActiveAreaX','ActiveAreaY'])
 
-        t=self._add_columns(t,t_anchor)
+        t_etch=add_prefix_dict(t_etch,"Etch")
 
-        t.index=[self.name]
+        t_anchor=self.anchor.export_params()
 
-        t=t.reindex(columns=['Type']+[col for col in t.columns if not col=='Type'])
+        t_anchor=pop_all_dict(t_anchor,['Name','EtchX','XOffset','EtchChoice'])
 
+        t_anchor=add_prefix_dict(t_anchor,'Anchor')
+
+        t.update(t_res)
+        t.update(t_bus)
+        t.update(t_etch)
+        t.update(t_anchor)
         return t
 
     def import_params(self,df):
 
-        LayoutPart.import_params(self,df)
+        # LayoutPart.import_params(self,df)
 
-        for col in df.columns:
-
-            if_match_import(self.idt,col,"IDT",df)
-            if_match_import(self.bus,col,"Bus",df)
-            if_match_import(self.etchpit,col,"Etch",df)
-            if_match_import(self.anchor,col,"Anchor",df)
+        if_match_import(self.idt,df,"IDT")
+        if_match_import(self.bus,df,"Bus")
+        if_match_import(self.etchpit,df,"Etch")
+        if_match_import(self.anchor,df,"Anchor")
 
     def resistance(self,res_per_square=0.1):
 
@@ -1001,7 +947,7 @@ class FBERes(LFERes):
 
         cell=LFERes.draw(self)
 
-        plate=pg.rectangle(size=(self.etchpit.active_area.x,self.idt.y-self.idt.y_offset),\
+        plate=pg.rectangle(size=(self.etchpit.active_area.x,self.idt.length-self.idt.y_offset),\
         layer=self.platelayer)
 
         plate_ref=cell<<plate
@@ -1048,7 +994,7 @@ class TFERes(LFERes):
             p2=(p_bott_coord+Point(p_bott.width/2,0))())
 
         idt_ref.move(origin=(idt_ref.xmin,idt_ref.ymax),\
-            destination=(idt_ref.xmin,idt_ref.ymax+self.idt.y+self.idt.y_offset))
+            destination=(idt_ref.xmin,idt_ref.ymax+self.idt.length+self.idt.y_offset))
 
         cell.absorb(idt_ref)
 

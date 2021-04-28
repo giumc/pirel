@@ -24,7 +24,7 @@ import matplotlib.pyplot as plt
 
 import warnings
 
-from pandas import DataFrame
+from pandas import Series,DataFrame
 
 from layout_tools import *
 
@@ -34,19 +34,56 @@ class LayoutParam():
 
     def __init__(self,name,value):
 
-        self.name=name
-        self.value=value
+        self._name=name
+        self._value=value
 
     @property
     def label(self):
 
         import re
 
-        return re.sub(r'(?:^|_)([a-z])', lambda x: x.group(1).upper(), self.name)
+        return re.sub(r'(?:^|_)([a-z])', lambda x: x.group(1).upper(), self._name)
 
     def denormalize(self,val):
 
-        return self.value*val
+        return self._value*val
+
+    @property
+    def param(self):
+
+        if not isinstance(self._value,Point):
+
+            return {self.label:self._value}
+
+        else:
+
+            return {self.label+"X":self._value.x,self.label+"Y":self._value.y}
+
+    @param.setter
+    def param(self,df):
+
+        if len(df)>1:
+
+            raise ValueError("Pass a single element dict to set a LayoutParam")
+
+        name=[*df][0]
+        value=[*df.values()][0]
+
+        if isinstance(self._value,Point):
+
+            if name==self.label+"X":
+
+                self._value.x=value
+
+            elif name==self.label+"Y":
+
+                self._value.y=value
+
+        else:
+
+            if name==self.label:
+
+                self._value=value
 
 class _LayoutParamInterface():
 
@@ -58,7 +95,7 @@ class _LayoutParamInterface():
 
         self.public_name=name
         self.private_name="_"+name
-        self.__set__(owner,self._def_value)
+        # self.__set__(owner,self._def_value)
 
     def __set__(self,owner,value):
 
@@ -76,11 +113,11 @@ class _LayoutParamInterface():
 
         else:
 
-            if isinstance(value,getattr(owner,self.private_name).value.__class__):
+            if isinstance(value,getattr(owner,self.private_name)._value.__class__):
 
                 old_param=getattr(owner,self.private_name)
 
-                old_param.value=value
+                old_param._value=value
 
     def __get__(self,owner,objtype=None):
 
@@ -92,7 +129,7 @@ class _LayoutParamInterface():
 
         else:
 
-            return getattr(owner,self.private_name).value
+            return getattr(owner,self.private_name)._value
 
 class LayoutPart(ABC) :
     ''' Abstract class that implements features common to all layout classes.
@@ -113,6 +150,9 @@ class LayoutPart(ABC) :
             see help
 
     '''
+
+    name=_LayoutParamInterface('default')
+
     def __init__(self,name='default',*args,**kwargs):
         ''' Constructor for LayoutPart.
 
@@ -271,21 +311,20 @@ class LayoutPart(ABC) :
         '''
         pass
 
-    @abstractmethod
     def export_params(self):
-        ''' Returns cell parameters in a DataFrame.
 
-        Abstract Method, to be implemented when subclassing.
+        out_dict={}
 
-        Returns
-        -------
-        df : pandas.DataFrame.
-        '''
+        for param in self._params_list:
 
-        return DataFrame({
-            'Type':self.__class__.__name__},index=[self.name])
+            if param.label in out_dict.keys():
 
-    @abstractmethod
+                    raise ValueError("{} is a duplicate parameter name".format(paramdict.label))
+
+            out_dict.update(param.param)
+
+        return out_dict
+
     def import_params(self,df):
         ''' Pass to cell parameters in a DataFrame.
 
@@ -297,13 +336,11 @@ class LayoutPart(ABC) :
             parameter table, needs to be of length 1.
         '''
 
-        if len(df.index)>1:
+        for param in self._params_list:
 
-            raise Exception("Single Row DataFrame is used to load parameters")
+            for name,value in df.items():
 
-        self.name=df.index.values[0]
-
-        pass
+                param.param={name:value}
 
     @staticmethod
     def _add_columns(d1,d2):
@@ -383,55 +420,13 @@ class LayoutPart(ABC) :
 
     def __repr__(self):
 
-        df=self.export_params()
+        df=Series(self.export_params())
 
-        df["Name"]=df.index.values[0]
+        # df=df.rename(index={df.index.values[0]:'Values'})
 
-        df=df.rename(index={df.index.values[0]:'Values'})
+        # df=df.rename_axis("Parameters",axis=1)
 
-        df=df.rename_axis("Parameters",axis=1)
-
-        return df.transpose().to_string()
-
-class TestCell(LayoutPart):
-
-    test_param=_LayoutParamInterface(3)
-
-    # x_param2=_LayoutParamInterface(2)
-
-    def __init__(self,*a,**k):
-
-        super().__init__(*a,**k)
-        self.test_param2=_LayoutParamInterface(3)
-
-    def draw(self):
-
-        cell1=pg.rectangle(size=(self.test_param,self.test_param))
-
-        self.test_param=10
-        cell2=pg.rectangle(size=(self.test_param,self.test_param),layer=2)
-
-        cell2<<cell1
-
-        return cell2
-
-    def export_params(self):
-
-        out_dict={}
-
-        for paramdict in self._params_list:
-
-            if paramdict.label in out_dict.keys():
-
-                    raise ValueError("{} is a duplicate parameter name".format(paramdict.label))
-
-            out_dict[paramdict.label]=paramdict.value
-
-        return out_dict
-
-    def import_params(self,dict):
-
-        pass
+        return df.to_string()
 
 class IDT(LayoutPart) :
     ''' Generates interdigitated structure.
@@ -457,37 +452,25 @@ class IDT(LayoutPart) :
             finger number.
     '''
 
+    length =_LayoutParamInterface()
+
+    pitch = _LayoutParamInterface()
+
+    y_offset =_LayoutParamInterface()
+
+    coverage =_LayoutParamInterface()
+
+    n =_LayoutParamInterface()
+
     def __init__(self,*args,**kwargs):
 
         super().__init__(*args,**kwargs)
-
-        self.y = ld.IDT_y
-
-        self.pitch = ld.IDTpitch
-
-        self.y_offset = ld.IDTy_offset
-
-        self.coverage = ld.IDTcoverage
-
-        self.layer = ld.IDTlayer
-
-        self.n = ld.IDTn
-
-    @property
-    def n(self):
-
-        return self._n
-
-    @n.setter
-    def n(self,n_new):
-        #
-        # if not isinstance(n_new,int):
-        #
-        #     raise ValueError("NFingers needs to be integer")
-        #
-        # else:
-
-        self._n=n_new
+        self.length=ld.IDT_y
+        self.pitch=ld.IDTpitch
+        self.y_offset=ld.IDTy_offset
+        self.coverage=ld.IDTcoverage
+        self.n=ld.IDTn
+        self.layer=ld.IDTlayer
 
     def draw(self):
         ''' Generates layout cell based on current parameters.
@@ -501,7 +484,7 @@ class IDT(LayoutPart) :
 
         o=self.origin
 
-        rect=pg.rectangle(size=(self.coverage*self.pitch,self.y),\
+        rect=pg.rectangle(size=(self.coverage*self.pitch,self.length),\
             layer=self.layer)
 
         rect.move(origin=(0,0),destination=o())
@@ -538,7 +521,7 @@ class IDT(LayoutPart) :
         midx=totx/2
 
         finger_dist=Point(self.pitch*1,\
-        self.y+self.y_offset)
+        self.length+self.y_offset)
 
         cell=join(cell)
         cell.add_port(Port(name='bottom',\
@@ -549,7 +532,7 @@ class IDT(LayoutPart) :
 
         cell.add_port(Port(name='top',\
         midpoint=(o+\
-        Point(midx,self.y+self.y_offset))(),\
+        Point(midx,self.length+self.y_offset))(),\
         width=totx,
         orientation=90))
 
@@ -565,9 +548,9 @@ class IDT(LayoutPart) :
         Returns
         -------
         size : sketch.Point
-            finger size as coordinates lenght(y) and width(x).
+            finger size as coordinates lenght(length) and width(x).
         '''
-        dy=self.y
+        dy=self.length
 
         dx=self.pitch*self.coverage
 
@@ -576,52 +559,11 @@ class IDT(LayoutPart) :
     @property
     def active_area(self):
 
-        return Point(self.pitch*(self.n*2+1),self.y+self.y_offset)
-
-    def export_params(self):
-
-        t=LayoutPart.export_params(self)
-        t["Length"]=self.y
-        t["Pitch"]=self.pitch
-        t["Offset"]=self.y_offset
-        t["Coverage"]=self.coverage
-        t["N_fingers"]=self.n
-
-        return t
-
-    def import_params(self,df):
-
-        LayoutPart.import_params(self,df)
-
-        for cols in df.columns:
-
-            if cols=='Length':
-
-                self.y=df[cols].iat[0]
-
-            elif cols=='Pitch':
-
-                self.pitch=df[cols].iat[0]
-
-            elif cols=='Offset':
-
-                self.y_offset=df[cols].iat[0]
-
-            elif cols=='Coverage':
-
-                self.coverage=df[cols].iat[0]
-
-            elif cols=='N_fingers':
-
-                self.n=df[cols].iat[0]
-
-            elif cols=='Layer':
-
-                self.layer=df[cols].iat[0]
+        return Point(self.pitch*(self.n*2+1),self.length+self.y_offset)
 
     def resistance(self,res_per_square=0.1):
 
-        return res_per_square*self.y/self.pitch/self.coverage/self.n*2/3
+        return res_per_square*self.length/self.pitch/self.coverage/self.n*2/3
 
     @classmethod
     def calc_n_fingers(self,c0_dens,z0,f,len):
@@ -645,14 +587,19 @@ class Bus(LayoutPart) :
     layer : int
         bus layer.
     '''
+    size=_LayoutParamInterface()
+
+    distance=_LayoutParamInterface()
 
     def __init__(self,*args,**kwargs):
 
         super().__init__(*args,**kwargs)
 
-        self.size=copy(ld.Bussize)
-        self.distance=copy(ld.distance)
         self.layer = ld.layerTop
+
+        self.size=copy(ld.Bussize)
+
+        self.distance=copy(ld.Busdistance)
 
     def draw(self):
         ''' Generates layout cell based on current parameters.
@@ -691,41 +638,6 @@ class Bus(LayoutPart) :
 
         return cell
 
-    def export_params(self):
-
-        t=LayoutPart.export_params(self)
-        t["Width"]=self.size.x
-        t["Length"]=self.size.y
-        t["DistanceX"]=self.distance.x
-        t["DistanceY"]=self.distance.y
-        return t
-
-    def import_params(self,df):
-
-        LayoutPart.import_params(self,df)
-
-        for cols in df.columns:
-
-            if cols=='Width':
-
-                self.size.x=df[cols].iat[0]
-
-            if cols=='Length':
-
-                self.size.y=df[cols].iat[0]
-
-            elif cols=='DistanceX':
-
-                self.distance.x=df[cols].iat[0]
-
-            elif cols=='DistanceY':
-
-                self.distance.y=df[cols].iat[0]
-
-            elif cols=='Layer':
-
-                self.layer=df[cols].iat[0]
-
     def resistance(self,res_per_square=0.1):
 
         return res_per_square*self.size.x/self.size.y/2
@@ -744,11 +656,16 @@ class EtchPit(LayoutPart) :
     layer : int
         etch pit layer
     '''
+
+    active_area=_LayoutParamInterface()
+
+    x=_LayoutParamInterface()
+
     def __init__(self,*args,**kwargs):
 
         super().__init__(*args,**kwargs)
 
-        self.active_area=ld.EtchPitactive_area
+        self.active_area=copy(ld.EtchPitactive_area)
 
         self.x=ld.EtchPit_x
 
@@ -800,37 +717,6 @@ class EtchPit(LayoutPart) :
 
         return etch
 
-    def export_params(self):
-
-        t=LayoutPart.export_params(self)
-        t["ActiveAreaX"]=self.active_area.x
-        t["ActiveAreaY"]=self.active_area.y
-        t["Width"]=self.x
-
-        return t
-
-    def import_params(self,df):
-
-        LayoutPart.import_params(self,df)
-
-        for cols in df.columns:
-
-            if cols =='ActiveAreaX':
-
-                self.active_area.x=df[cols].iat[0]
-
-            if cols =='ActiveAreaY':
-
-                self.active_area.y=df[cols].iat[0]
-
-            elif cols =='Width':
-
-                self.x=df[cols].iat[0]
-
-            elif cols=='Layer':
-
-                self.layer=df[cols].iat[0]
-
 class Anchor(LayoutPart):
     ''' Generates anchor structure.
 
@@ -857,6 +743,13 @@ class Anchor(LayoutPart):
     etch_layer : int
         etch layer.
     '''
+
+    size=_LayoutParamInterface()
+    etch_margin=_LayoutParamInterface()
+    etch_choice=_LayoutParamInterface()
+    etch_x=_LayoutParamInterface()
+    x_offset=_LayoutParamInterface()
+
     def __init__(self,*args,**kwargs):
 
         super().__init__(*args,**kwargs)
@@ -865,7 +758,8 @@ class Anchor(LayoutPart):
         self.etch_margin=copy(ld.Anchoretch_margin)
         self.etch_choice=ld.Anchoretch_choice
         self.etch_x=ld.Anchoretch_x
-        self.x_offset=ld.Anchoretchx_offset
+        self.x_offset=ld.Anchorx_offset
+
         self.layer=ld.Anchorlayer
         self.etch_layer=ld.Anchoretch_layer
 
@@ -941,53 +835,6 @@ class Anchor(LayoutPart):
 
         return cell
 
-    def export_params(self):
-
-        t=LayoutPart.export_params(self)
-        t["Width"]=self.size.x
-        t["Length"]=self.size.y
-        t["EtchMarginX"]=self.etch_margin.x
-        t["EtchMarginY"]=self.etch_margin.y
-        t["EtchChoice"]=self.etch_choice
-        t["EtchWidth"]=self.etch_x
-        t["Offset"]=self.x_offset
-
-        return t
-
-    def import_params(self,df):
-
-        LayoutPart.import_params(self,df)
-
-        for cols in df.columns:
-
-            if cols=='Width':
-
-                self.size.x=df[cols].iat[0]
-
-            if cols=='Length':
-
-                self.size.y=df[cols].iat[0]
-
-            elif cols=="EtchMarginX":
-
-                self.etch_margin.x=df[cols].iat[0]
-
-            elif cols=="EtchMarginY":
-
-                self.etch_margin.y=df[cols].iat[0]
-
-            elif cols == "EtchChoice":
-
-                self.etch_choice=df[cols].iat[0]
-
-            elif cols == "Offset":
-
-                self.x_offset=df[cols].iat[0]
-
-            elif cols =='Layer':
-
-                self.layer=df[cols].iat[0]
-
     def resistance(self,res_per_square=0.1):
 
         return res_per_square*self.size.y/self.size.x
@@ -1008,33 +855,21 @@ class Via(LayoutPart):
     layer : int
         via layer.
     '''
+    size=_LayoutParamInterface()
+
+    type=_LayoutParamInterface()
 
     def __init__(self,*args,**kwargs):
 
         super().__init__(*args,**kwargs)
 
         self.layer=ld.Vialayer
-        self.__type=ld.Viatype
+        self.type=ld.Viatype
         self.size=ld.Viasize
-
-    @property
-    def type(self):
-        return self.__type
-
-    @type.setter
-    def type(self,string):
-
-            if not (string=='circle' or string=='rectangle'):
-
-                raise Exception("Vias can be only 'circle' or 'rectangle' for now")
-
-            else:
-
-                self.__type=string
 
     def draw(self):
 
-        if self.type=='rectangle':
+        if self.type=='square':
 
             cell=pg.rectangle(size=(self.size,self.size),\
                 layer=self.layer)
@@ -1044,6 +879,9 @@ class Via(LayoutPart):
             cell=pg.circle(radius=self.size/2,\
             layer=self.layer)
 
+        else:
+
+            raise ValueError("Via Type can be \'square\' or \'circle\'")
         cell.move(origin=(0,0),\
             destination=self.origin())
 
@@ -1057,32 +895,6 @@ class Via(LayoutPart):
         self.cell=cell
 
         return cell
-
-    def export_params(self):
-
-        t=LayoutPart.export_params(self)
-        t["Shape"]=self.type
-        t["Size"]=self.size
-
-        return t
-
-    def import_params(self,df):
-
-        LayoutPart.import_params(self,df)
-
-        for cols in df.columns:
-
-            if cols=='Size':
-
-                self.size=df[cols].iat[0]
-
-            if cols=='Shape':
-
-                self.type=df[cols].iat[0]
-
-            elif cols =='Layer':
-
-                self.layer=df[cols].iat[0]
 
 class Routing(LayoutPart):
     ''' Generate automatic routing connection
@@ -1111,6 +923,8 @@ class Routing(LayoutPart):
     layer : int
         metal layer.
     '''
+
+    trace_width=_LayoutParamInterface()
 
     def __init__(self,side='auto',*args,**kwargs):
 
@@ -1438,42 +1252,6 @@ class Routing(LayoutPart):
 
         return cell_frame
 
-    def export_params(self):
-
-        t=LayoutPart.export_params(self)
-        t["TraceWidth"]=self.trace_width
-        t["Clearance"]=self.clearance
-        t["Ports"]=self.ports
-        t["Side"]=self.side
-
-        return t
-
-    def import_params(self,df):
-
-        LayoutPart.import_params(self,df)
-
-        for cols in df.columns:
-
-            if cols=='TraceWidth':
-
-                self.trace_width=df[cols].iat[0]
-
-            elif cols=='Clearance':
-
-                self.clearance=df[cols].iat[0]
-
-            elif cols=='Ports':
-
-                self.ports=df[cols].iat[0]
-
-            elif cols=='Side':
-
-                self.side=df[cols].iat[0]
-
-            elif cols =='Layer':
-
-                self.layer=df[cols].iat[0]
-
     def resistance(self,res_per_square=0.1):
 
         return res_per_square*self.draw().area/self.trace_width
@@ -1495,6 +1273,9 @@ class GSProbe(LayoutPart):
     layer : int
         via layer.
     '''
+
+    pitch=_LayoutParamInterface()
+    size=_LayoutParamInterface()
 
     def __init__(self,*args,**kwargs):
 
@@ -1546,37 +1327,6 @@ class GSProbe(LayoutPart):
 
         return cell
 
-    def export_params(self):
-
-        t=LayoutPart.export_params(self)
-        t["Width"]=self.size.x
-        t["Length"]=self.size.y
-        t["Pitch"]=self.pitch
-
-        return t
-
-    def import_params(self,df):
-
-        LayoutPart.import_params(self,df)
-
-        for cols in df.columns:
-
-            if cols=='Width':
-
-                self.size.x=df[cols].iat[0]
-
-            elif cols=='Length':
-
-                self.size.y=df[cols].iat[0]
-
-            elif cols =='Pitch':
-
-                self.pitch=df[cols].iat[0]
-
-            elif cols =='Layer':
-
-                self.layer=df[cols].iat[0]
-
 class GSGProbe(LayoutPart):
     ''' Generates GSG pattern.
 
@@ -1594,6 +1344,9 @@ class GSGProbe(LayoutPart):
     layer : int
         via layer.
     '''
+
+    pitch=_LayoutParamInterface()
+    size=_LayoutParamInterface()
 
     def __init__(self,*args,**kwargs):
 
@@ -1654,39 +1407,8 @@ class GSGProbe(LayoutPart):
 
         return cell
 
-    def export_params(self):
-
-        t=LayoutPart.export_params(self)
-        t["Width"]=self.size.x
-        t["Length"]=self.size.y
-        t["Pitch"]=self.pitch
-
-        return t
-
-    def import_params(self,df):
-
-        LayoutPart.import_params(self,df)
-
-        for cols in df.columns:
-
-            if cols=='Width':
-
-                self.size.x=df[cols].iat[0]
-
-            elif cols=='Length':
-
-                self.size.y=df[cols].iat[0]
-
-            elif cols =='Pitch':
-
-                self.pitch=df[cols].iat[0]
-
-            elif cols =='Layer':
-
-                self.layer=df[cols].iat[0]
-
 class Pad(LayoutPart):
-    ''' Generates GSG pattern.
+    ''' Generates Pad geometry.
 
     Derived from LayoutPart.
 
@@ -1705,6 +1427,11 @@ class Pad(LayoutPart):
     layer : int
         via layer.
     '''
+
+    size=_LayoutParamInterface()
+
+    distance=_LayoutParamInterface()
+
     def __init__(self,*args,**kwargs):
 
         super().__init__(*args,**kwargs)
@@ -1738,29 +1465,6 @@ class Pad(LayoutPart):
         self.cell=r1
 
         return r1
-
-    def export_params(self):
-
-        t=super().export_params()
-
-        t["Size"]=self.size
-        t["Distance"]=self.distance
-
-        return t
-
-    def import_params(self,df):
-
-        super().import_params(df)
-
-        for cols in df.columns:
-
-            if cols=='Size':
-
-                self.size=df[cols].iat[0]
-
-            if cols=='Distance':
-
-                self.distance=df[cols].iat[0]
 
     def resistance(self,res_per_square=0.1):
 

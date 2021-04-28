@@ -40,7 +40,7 @@ class LayoutDefault:
         #Bus
 
         self.Bussize=Point(self.IDTpitch*2*self.IDTn,self.IDTpitch*2)
-        self.distance=Point(0,self.IDT_y+self.IDTy_offset)
+        self.Busdistance=Point(0,self.IDT_y+self.IDTy_offset)
 
         #EtchPit
 
@@ -52,7 +52,7 @@ class LayoutDefault:
         self.Anchorsize=Point(self.IDTpitch*self.IDTn/4,2*self.Bussize.y)
         self.Anchoretch_margin=Point(4,4)
         self.Anchoretch_x=self.EtchPit_x
-        self.Anchoretchx_offset=0
+        self.Anchorx_offset=0
         self.Anchorlayer=self.IDTlayer
         self.Anchoretch_layer=self.EtchPitlayer
         self.Anchoretch_choice=True
@@ -375,7 +375,7 @@ def check_cell(device):
     set_quickplot_options(blocking=True)
     qp(device)
 
-def if_match_import(obj,param,tag,df):
+def if_match_import(obj,param,tag):
     ''' used to load data in subclasses.
 
     Parameters
@@ -398,10 +398,30 @@ def if_match_import(obj,param,tag,df):
     '''
     from re import search
 
-    match=search(tag,param)
+    for name,value in param.items():
 
-    if match and match.start()==0:
+        match=search(tag,name)
 
-        varname=param.replace(tag,"")
-        # print(varname)
-        obj.import_params(df.rename(columns={param:varname}))
+        if match and match.start()==0:
+
+            varname=name.replace(tag,"")
+
+            obj.import_params({varname:value})
+
+def add_prefix_dict(old_dict,tag):
+
+    new_dict={}
+
+    for name in old_dict.keys():
+
+        new_dict[tag+name]=old_dict[name]
+
+    return new_dict
+
+def pop_all_dict(old_dict,elems):
+
+    for el in elems:
+
+        old_dict.pop(el)
+
+    return old_dict
