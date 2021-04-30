@@ -29,38 +29,31 @@ def Scaled(res):
         def __init__(self,*args,**kwargs):
 
             res.__init__(self,*args,**kwargs)
+            self._normalized=False
+
+        def import_params(self,df):
 
             self._normalize()
 
+            res.import_params(self,df)
 
-        def draw(self):
+            self._denormalize()
 
-            ''' Denormalizes parameters and passes to regular draw.
+        def export_params(self):
 
-                Descaling rules in method denormalize().
-            '''
+            self._normalize()
 
-            selfcopy=self._denormalize()
+            df=res.export_params(self)
 
-            cell=res.draw(selfcopy)
+            self._denormalize()
 
-            del selfcopy
-
-            self.cell=cell
-
-            return cell
-
-        def resistance(self,res_per_square=0.1):
-
-            selfcopy=self.denormalize()
-
-            ridt=selfcopy.idt.resistance(res_per_square)
-            rbus=selfcopy.bus.resistance(res_per_square)
-            ranchor=selfcopy.anchor.resistance(res_per_square)*2
-
-            return ridt+rbus+ranchor
+            return df
 
         def _normalize(self):
+
+            if self._normalized==True:
+
+                raise ValueError("Already normalized")
 
             p=self.idt.pitch
 
@@ -84,6 +77,8 @@ def Scaled(res):
 
             self.anchor.etch_margin.y=self.anchor.etch_margin.y/anchor_y
 
+            self._normalized=True
+
         def _denormalize(self):
             ''' Applies descaling rules and returns a copy of the descaled object.
 
@@ -102,35 +97,34 @@ def Scaled(res):
             selfcopy : object
                  a deep copy of the calling object, with descaled parameters.
             '''
-            # if not self._normalized:
-            #
-            #     raise ValueError("Cannot denormalize if cell is already denormalized")
 
-            selfcopy=deepcopy(self)
+            if self._normalized==False:
 
-            p=selfcopy.idt.pitch
+                raise ValueError("Already denormalized")
 
-            selfcopy.idt.y_offset=self.idt.y_offset*p
+            p=self.idt.pitch
 
-            selfcopy.idt.length=self.idt.length*p
+            self.idt.y_offset=self.idt.y_offset*p
 
-            selfcopy.bus.size.y=self.bus.size.y*p
+            self.idt.length=self.idt.length*p
 
-            selfcopy.etchpit.x=self.etchpit.x*selfcopy.idt.active_area.x
+            self.bus.size.y=self.bus.size.y*p
 
-            selfcopy.anchor.size.x=self.anchor.size.x*selfcopy.idt.active_area.x
+            active_area_x=self.idt.active_area.x
 
-            selfcopy.anchor.size.y=self.anchor.size.y*p
+            self.etchpit.x=self.etchpit.x*active_area_x
 
-            selfcopy.anchor.etch_margin.x=self.anchor.etch_margin.x*selfcopy.anchor.size.x
+            self.anchor.size.x=self.anchor.size.x*active_area_x
 
-            selfcopy.anchor.etch_margin.y=self.anchor.etch_margin.y*selfcopy.anchor.size.y
+            self.anchor.size.y=self.anchor.size.y*p
 
-            del self
+            self.anchor.etch_margin.x=self.anchor.etch_margin.x*self.anchor.size.x
 
-            # selfcopy._normalized=False
+            self.anchor.etch_margin.y=self.anchor.etch_margin.y*self.anchor.size.y
 
-            return selfcopy
+            self._normalized=False
+
+            return self
 
     return Scaled
 
@@ -478,8 +472,6 @@ def addProbe(res,probe):
 
             self.probe=probe(self.name+"Probe")
 
-            # self.signal_routing_width=ld.DUTrouting_width
-
             self.gnd_routing_width=ld.DUTrouting_width
 
             self.probe_dut_distance=ld.DUTprobe_dut_distance
@@ -492,7 +484,7 @@ def addProbe(res,probe):
 
             cell=Device(self.name)
 
-            probe_dut_distance=Point(0,self.probe_dut_distance)
+            probe_dut_distance=Point(0,2*self.anchor.etch_margin.y)
 
             cell<<device_cell
 
@@ -764,7 +756,7 @@ def array(res,n):
 
             bc=add_compass(join(cell))
             bc.ports['N'].width=lx_top.width
-            bc.ports['S'].width=lx_bottom.width
+            bc.ports['S'].width=xsize_bottom
             cell.add_port(port=bus_top.ports['N'],name='top')
             cell.add_port(port=bc.ports['S'],name='bottom')
 
@@ -848,8 +840,7 @@ class LFERes(LayoutPart):
         bus_ref.connect(port=bus_cell.ports['conn'],\
         destination=idt_bottom_port)
 
-        self.etchpit.active_area=Point().from_iter(cell.size)+\
-        Point(self.idt.pitch*(1-self.idt.coverage),self.anchor.etch_margin.y*2)
+        self.etchpit.active_area=Point(self.idt.active_area.x,cell.ysize+self.anchor.etch_margin.y*2)
 
         etch_cell=self.etchpit.draw()
 
@@ -875,7 +866,6 @@ class LFERes(LayoutPart):
         anchor_cell=self.anchor.draw()
 
         anchor_bottom=cell<<anchor_cell
-
 
         anchor_bottom.connect(anchor_bottom.ports['conn'],
         destination=idt_ref.ports['bottom'],overlap=-self.bus.size.y)
@@ -991,12 +981,12 @@ class FBERes(LFERes):
 
         cell=LFERes.draw(self)
 
-        plate=pg.rectangle(size=(self.etchpit.active_area.x,self.idt.length-self.idt.y_offset),\
+        plate=pg.rectangle(size=(self.etchpit.active_area.x+4*self.idt.active_area_margin,self.idt.length-self.idt.y_offset),\
         layer=self.platelayer)
 
         plate_ref=cell<<plate
 
-        transl_rel=Point(self.etchpit.x,self.anchor.size.y+self.bus.size.y\
+        transl_rel=Point(self.etchpit.x-2*self.idt.active_area_margin,self.anchor.size.y+self.bus.size.y\
             +self.idt.y_offset)
 
         lr_cell=get_corners(cell)[0]

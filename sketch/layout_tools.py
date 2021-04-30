@@ -56,7 +56,11 @@ class LayoutDefault:
         self.Anchorlayer=self.IDTlayer
         self.Anchoretch_layer=self.EtchPitlayer
         self.Anchoretch_choice=True
+
+        #LFERes
+        self.LFEResactive_area_margin=0.5
         #FBERes
+
         self.FBEResplatelayer=self.layerBottom
         #GSProbe
         self.GSProbepitch = 150

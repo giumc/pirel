@@ -468,6 +468,8 @@ class IDT(LayoutPart) :
 
     n =_LayoutParamInterface()
 
+    active_area_margin=_LayoutParamInterface()
+
     def __init__(self,*args,**kwargs):
 
         super().__init__(*args,**kwargs)
@@ -477,6 +479,7 @@ class IDT(LayoutPart) :
         self.coverage=ld.IDTcoverage
         self.n=ld.IDTn
         self.layer=ld.IDTlayer
+        self.active_area_margin=ld.LFEResactive_area_margin
 
     def draw(self):
         ''' Generates layout cell based on current parameters.
@@ -565,7 +568,7 @@ class IDT(LayoutPart) :
     @property
     def active_area(self):
 
-        return Point(self.pitch*(self.n*2+1),self.length+self.y_offset)
+        return Point(self.pitch*(self.n*2+1)+2*self.active_area_margin,self.length+self.y_offset)
 
     def resistance(self,res_per_square=0.1):
 
@@ -994,8 +997,8 @@ class Routing(LayoutPart):
 
                     raise Exception("Routing error: non-hindered routing needs +90 -> -90 oriented ports")
 
-            # source=self._add_taper(cell,source,len=taper_len)
-            # destination=self._add_taper(cell,destination,len=self.trace_width/4)
+            source=self._add_taper(cell,source,len=taper_len)
+            destination=self._add_taper(cell,destination,len=self.trace_width/4)
 
             source.name='source'
             destination.name='destination'
@@ -1027,20 +1030,20 @@ class Routing(LayoutPart):
 
                 if source.x+self.trace_width>ll.x and source.x-self.trace_width<lr.x: #source tucked inside clearance
 
-                    # if self.side=='auto':
+                    if self.side=='auto':
 
-                        # source=self._add_taper(cell,source,len=taper_len)
-                        # destination=self._add_taper(cell,destination,len=self.trace_width/4)
+                        source=self._add_taper(cell,source,len=taper_len)
+                        destination=self._add_taper(cell,destination,len=self.trace_width/4)
 
-                    # elif self.side=='left':
+                    elif self.side=='left':
 
-                        # source=self._add_ramp_lx(cell,source,len=taper_len)
-                        # destination=self._add_taper(cell,destination,len=self.trace_width/4)
+                        source=self._add_ramp_lx(cell,source,len=taper_len)
+                        destination=self._add_taper(cell,destination,len=self.trace_width/4)
 
-                    # elif self.side=='right':
+                    elif self.side=='right':
 
-                        # source=self._add_ramp_rx(cell,source,len=taper_len)
-                        # destination=self._add_taper(cell,destination,len=self.trace_width/4)
+                        source=self._add_ramp_rx(cell,source,len=taper_len)
+                        destination=self._add_taper(cell,destination,len=self.trace_width/4)
 
                     source.name='source'
                     destination.name='destination'
@@ -1092,11 +1095,9 @@ class Routing(LayoutPart):
 
                         raise Exception("Invalid option for side :{}".format(self.side))
 
-                else:
+                else:   # source is not tucked under the clearance
 
-                    # source is not tucked under the clearance
-
-                    source=self._add_taper(cell,source,len=self.trace_width/4)
+                    source=self._add_taper(cell,source,len=taper_len)
                     destination=self._add_taper(cell,destination,len=self.trace_width/4)
 
                     source.name='source'
@@ -1120,7 +1121,10 @@ class Routing(LayoutPart):
                     path=pp.smooth(points=list_points,radius=0.001,use_eff=True)#source tucked inside clearance
 
             elif source.orientation==0 : #right path
-                    source=self._add_taper(cell,source,len=-taper_len)
+
+                    source=self._add_taper(cell,source,len==-taper_len)
+                    destination=self._add_taper(cell,destination,len=self.trace_width/4)
+
                     source.name='source'
                     destination.name='destination'
 
@@ -1132,7 +1136,7 @@ class Routing(LayoutPart):
 
                     else:
 
-                        p1=Point(ur.x+1.2*self.trace_width,p0.y)
+                        p1=Point(p0.x-0.5*self.trace_width,p0.y)
 
                     p2=Point(p1.x,ur.y+self.trace_width)
                     p3=Point(destination.x,p2.y)
@@ -1143,7 +1147,10 @@ class Routing(LayoutPart):
                     path=pp.smooth(points=list_points_rx)
 
             elif source.orientation==180 : #left path
-                    source=self._add_taper(cell,source,len=-taper_len)
+
+                    source=self._add_taper(cell,source,len==-taper_len)
+                    destination=self._add_taper(cell,destination,len=self.trace_width/4)
+
                     source.name='source'
                     destination.name='destination'
 
@@ -1156,7 +1163,7 @@ class Routing(LayoutPart):
 
                     else:
 
-                        p1=Point(ll.x-1.2*self.trace_width,p0.y)
+                        p1=Point(p0.x+0.5*self.trace_width,p0.y)
 
                     p2=Point(p1.x,ur.y+self.trace_width)
                     p3=Point(destination.x,p2.y)
