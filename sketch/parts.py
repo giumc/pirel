@@ -30,6 +30,9 @@ def Scaled(res):
 
             res.__init__(self,*args,**kwargs)
 
+            self._normalize()
+
+
         def draw(self):
 
             ''' Denormalizes parameters and passes to regular draw.
@@ -37,7 +40,7 @@ def Scaled(res):
                 Descaling rules in method denormalize().
             '''
 
-            selfcopy=self.denormalize()
+            selfcopy=self._denormalize()
 
             cell=res.draw(selfcopy)
 
@@ -49,15 +52,39 @@ def Scaled(res):
 
         def resistance(self,res_per_square=0.1):
 
-            ridt=self.idt.resistance(res_per_square)*self.idt.pitch
-            rbus=self.bus.resistance(res_per_square)/self.idt.pitch/2
-            ranchor=self.anchor.resistance(res_per_square)\
-                *self.idt.pitch/self.idt.active_area.x/\
-                (1-2*self.anchor.etch_margin.x)
+            selfcopy=self.denormalize()
+
+            ridt=selfcopy.idt.resistance(res_per_square)
+            rbus=selfcopy.bus.resistance(res_per_square)
+            ranchor=selfcopy.anchor.resistance(res_per_square)*2
 
             return ridt+rbus+ranchor
 
-        def denormalize(self):
+        def _normalize(self):
+
+            p=self.idt.pitch
+
+            active_area_x=self.idt.active_area.x
+            anchor_x=self.anchor.size.x
+            anchor_y=self.anchor.size.y
+
+            self.idt.y_offset=self.idt.y_offset/p
+
+            self.idt.length=self.idt.length/p
+
+            self.bus.size.y=self.bus.size.y/p
+
+            self.etchpit.x=self.etchpit.x/active_area_x
+
+            self.anchor.size.x=self.anchor.size.x/active_area_x
+
+            self.anchor.size.y=self.anchor.size.y/p
+
+            self.anchor.etch_margin.x=self.anchor.etch_margin.x/anchor_x
+
+            self.anchor.etch_margin.y=self.anchor.etch_margin.y/anchor_y
+
+        def _denormalize(self):
             ''' Applies descaling rules and returns a copy of the descaled object.
 
             Descaling rules:
@@ -75,7 +102,10 @@ def Scaled(res):
             selfcopy : object
                  a deep copy of the calling object, with descaled parameters.
             '''
-            
+            # if not self._normalized:
+            #
+            #     raise ValueError("Cannot denormalize if cell is already denormalized")
+
             selfcopy=deepcopy(self)
 
             p=selfcopy.idt.pitch
@@ -95,6 +125,10 @@ def Scaled(res):
             selfcopy.anchor.etch_margin.x=self.anchor.etch_margin.x*selfcopy.anchor.size.x
 
             selfcopy.anchor.etch_margin.y=self.anchor.etch_margin.y*selfcopy.anchor.size.y
+
+            del self
+
+            # selfcopy._normalized=False
 
             return selfcopy
 
@@ -153,10 +187,15 @@ def addVia(res,side='top',bottom_conn=False):
         def __init__(self,*args,**kwargs):
 
             res.__init__(self,*args,**kwargs)
+
             self.via=Via(name=self.name+'Via')
+
             self.padlayers=[ld.layerTop,ld.layerBottom]
+
             self.over_via=2
+
             self.via_distance=100
+
             self.via_area=Point(100,100)
 
         def draw(self):
@@ -260,7 +299,9 @@ def addVia(res,side='top',bottom_conn=False):
 
         def import_params(self, df):
 
-            LayoutPart.import_params(self,df)
+            import pdb; pdb.set_trace()
+
+            res.import_params(self,df)
 
             if_match_import(self.via,df,"Via")
 
@@ -370,6 +411,7 @@ def addPad(res):
         def __init__(self,*args,**kwargs):
 
             res.__init__(self,*args,**kwargs)
+
             self.pad=Pad(name=self.name+'Pad')
 
         def draw(self):
@@ -540,7 +582,7 @@ def addProbe(res,probe):
 
         def export_params(self):
 
-            t=super().export_params()
+            t=res.export_params(self)
 
             t_probe=self.probe.export_params()
 
@@ -552,7 +594,7 @@ def addProbe(res,probe):
 
         def import_params(self,df):
 
-            super().import_params(df)
+            res.import_params(self,df)
 
             if_match_import(self.probe,df,"Probe")
 
@@ -570,6 +612,8 @@ def addProbe(res,probe):
             rprobe_sig=res_per_square*(self.probe_dut_distance/sig_width)
 
             return rprobe_sig+rdut+rprobe_gnd
+
+            return "potato"
 
     return addProbe
 
@@ -675,7 +719,9 @@ def array(res,n):
         def __init__(self,*args,**kwargs):
 
             res.__init__(self,*args,**kwargs)
+
             self.bus_ext_length=30
+
             self.n_copies=n
 
         def draw(self):
@@ -918,7 +964,7 @@ class LFERes(LayoutPart):
 
     def import_params(self,df):
 
-        # LayoutPart.import_params(self,df)
+        LayoutPart.import_params(self,df)
 
         if_match_import(self.idt,df,"IDT")
         if_match_import(self.bus,df,"Bus")

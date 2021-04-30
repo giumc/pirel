@@ -46,8 +46,6 @@ class SweepParam():
 
         stringout=[]
 
-
-
         unique={name:list(dict.fromkeys(values)) for name,values in zip(param.names,param.values)}
 
         for i in range(l):
@@ -202,9 +200,7 @@ class _SweepParamValidator():
 
             if not all([names in self._valid_names for names in layout_param.names]):
 
-
-
-                raise ValueError("At least one param key in {} is invalid".format(*layout_param.names))
+                raise ValueError("At least one param key in {} is invalid".format(','.join([*layout_param.names])))
 
             else:
 
@@ -261,15 +257,7 @@ class PArray(LayoutPart):
 
         super().__init__(*args,**kwargs)
 
-        try:
-
-            if isinstance(device,LayoutPart):
-
-                self.device=device
-
-        except Exception:
-
-            raise ValueError("PArray needs a LayoutPart argument")
+        self.device=device
 
         self.x_spacing=ld.Arrayx_spacing
 
@@ -314,26 +302,27 @@ class PArray(LayoutPart):
 
             for name in param.names:
 
-                device.import_params(DataFrame(param(i),index=[0]))
+                device.import_params(param(i))
 
             df=device.export_params()
 
             if self.labels_bottom is not None:
 
-                df.index=[self.labels_bottom[i]]
+                df["Name"]=self.device.name+self.labels_bottom[i]
 
             else:
 
-                df.index=[i]
+                df["Name"]=str(i)
 
-            data_tot=data_tot.append(df)
+            import pdb; pdb.set_trace()
+
+            data_tot=data_tot.append((DataFrame.from_dict(df)).set_index(column="Name",in_place=True))
 
         return data_tot
 
     def import_params(self,df):
 
         self.device.import_params(df)
-        # warnings.warn("ParamArray.import_params() passed to device")
 
     def draw(self):
 
@@ -556,15 +545,13 @@ class PMatrix(PArray):
 
         data_tot=DataFrame()
 
-
-
         for j in range(len(y_param)):
 
-            device.import_params(DataFrame(y_param(j),index=[0]))
+            device.import_params(y_param(j))
 
             for i in range(len(x_param)):
 
-                device.import_params(DataFrame(x_param(i),index=[0]))
+                device.import_params(x_param(i))
 
                 df=device.export_params()
 

@@ -113,11 +113,30 @@ class _LayoutParamInterface():
 
         else:
 
-            if isinstance(value,getattr(owner,self.private_name)._value.__class__):
+            oldvalue=getattr(owner,self.private_name)._value
 
-                old_param=getattr(owner,self.private_name)
+            if isinstance(oldvalue,(int,float)) and isinstance(value,(int,float)):
 
-                old_param._value=value
+                    old_param=getattr(owner,self.private_name)
+
+                    old_param._value=value
+
+            elif isinstance(oldvalue,str) and isinstance(value,str):
+
+                    old_param=getattr(owner,self.private_name)
+
+                    old_param._value=value
+
+            elif isinstance(value,oldvalue.__class__):
+
+                    old_param=getattr(owner,self.private_name)
+
+                    old_param._value=value
+
+            else:
+
+                raise   ValueError("""Attempt to unlawful assingment between \n
+                    type {} and type {} in LayoutParam {}""".format(oldvalue,value.__class__,self.public_name))
 
     def __get__(self,owner,objtype=None):
 
@@ -209,7 +228,7 @@ class LayoutPart(ABC) :
 
         df=self.export_params()
 
-        return [str(_) for _ in df.columns ]
+        return [*df.keys() ]
 
     def bbox_mod(self,bbox):
         ''' Default method that returns bbox for the class .
@@ -421,10 +440,6 @@ class LayoutPart(ABC) :
     def __repr__(self):
 
         df=Series(self.export_params())
-
-        # df=df.rename(index={df.index.values[0]:'Values'})
-
-        # df=df.rename_axis("Parameters",axis=1)
 
         return df.to_string()
 

@@ -60,7 +60,7 @@ from sketch import *
 # d.view()
 # exit()
 
-# d=Scaled(TFERes)()
+d=Scaled(TFERes)()
 # param=d.export_params()
 # param["IDTPitch"]=7
 # param["IDTN"]=4
@@ -75,12 +75,24 @@ from sketch import *
 # param["AnchorEtchMarginY"]=0.2
 # d.import_params(param)
 #
-# print(d)
-# d.view()
+print(d)
+d.view()
 #exit()
-
-# d=array(LFERes,3)()
-# d.idt.n=6
+#
+# d=array(Scaled(LFERes),3)()
+# param=d.export_params()
+# param["IDTPitch"]=7
+# param["IDTN"]=4
+# param["IDTYOffset"]=1
+# param["IDTLength"]=10
+# param["IDTCoverage"]=0.5
+# param["BusSizeY"]=0.5
+# param["EtchX"]=0.4
+# param["AnchorSizeY"]=4
+# param["AnchorSizeX"]=0.5
+# param["AnchorEtchMarginX"]=0.2
+# param["AnchorEtchMarginY"]=0.2
+# d.import_params(param)
 # print(d)
 # d.view()
 # exit()
@@ -126,8 +138,8 @@ from sketch import *
 #
 # print(d)
 # d.view()
-# exit()
-# d=addProbe(addVia(array(Scaled(LFERes),3)),addLargeGnd(GSGProbe))()
+# # exit()
+# d=addProbe(addVia(array(Scaled(LFERes),3)),addLargeGnd(GSGProbe))("tutorial")
 # # print(d)
 #
 # param=d.export_params()
@@ -138,7 +150,7 @@ from sketch import *
 # param["IDTCoverage"]=0.5
 # param["BusSizeY"]=0.5
 # param["EtchX"]=0.4
-# param["AnchorSizeY"]=4
+# param["AnchorSizeY"]=0.5
 # param["AnchorSizeX"]=0.5
 # param["AnchorEtchMarginX"]=0.2
 # param["AnchorEtchMarginY"]=0.2
@@ -147,7 +159,9 @@ from sketch import *
 # param['ViaSize']=30
 # param['OverVia']=1.5
 # param['ViaDistance']=100
+# param['ProbeGroundSize']=250
 # d.import_params(param)
-# print(d)
+#
 # d.view()
+#
 # exit()
