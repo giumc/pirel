@@ -214,15 +214,6 @@ class LayoutPart(ABC) :
         lib.add(self.draw())
         gdspy.LayoutViewer(lib)
 
-    def print_params_name(self):
-        ''' Print the available parameters to the class. '''
-
-        df=self.export_params()
-
-        print("List of parameters for instance of {}\n".format(self.__class__.__name__))
-
-        print(*df.columns.values,sep='\n')
-
     def get_params_name(self):
         ''' Get a list of the available parameters in the class. '''
 
@@ -1126,7 +1117,7 @@ class Routing(LayoutPart):
 
                     list_points=[p0(),p1(),p2(),p3()]
 
-                    path=pp.smooth(points=list_points)#source tucked inside clearance
+                    path=pp.smooth(points=list_points,radius=0.001,use_eff=True)#source tucked inside clearance
 
             elif source.orientation==0 : #right path
                     source=self._add_taper(cell,source,len=-taper_len)
@@ -1135,11 +1126,18 @@ class Routing(LayoutPart):
 
                     p0=Point().from_iter(source.midpoint)
 
+                    if ur.x+self.trace_width-p0.x > 10:
 
-                    p1=Point(ur.x+self.trace_width,p0.y)
+                        p1=Point(ur.x+self.trace_width,p0.y)
+
+                    else:
+
+                        p1=Point(ur.x+1.2*self.trace_width,p0.y)
+
                     p2=Point(p1.x,ur.y+self.trace_width)
                     p3=Point(destination.x,p2.y)
                     p4=Point(destination.x,destination.y)
+
                     list_points_rx=[p0(),p1(),p2(),p3(),p4()]
 
                     path=pp.smooth(points=list_points_rx)
@@ -1150,9 +1148,16 @@ class Routing(LayoutPart):
                     destination.name='destination'
 
                     p0=Point().from_iter(source.midpoint)
+                    p0=Point().from_iter(source.midpoint)
 
+                    if ll.x-self.trace_width-p0.x > 10:
 
-                    p1=Point(ll.x-self.trace_width,p0.y)
+                        p1=Point(ll.x-self.trace_width,p0.y)
+
+                    else:
+
+                        p1=Point(ll.x-1.2*self.trace_width,p0.y)
+
                     p2=Point(p1.x,ur.y+self.trace_width)
                     p3=Point(destination.x,p2.y)
                     p4=Point(destination.x,destination.y)

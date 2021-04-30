@@ -299,8 +299,6 @@ def addVia(res,side='top',bottom_conn=False):
 
         def import_params(self, df):
 
-            import pdb; pdb.set_trace()
-
             res.import_params(self,df)
 
             if_match_import(self.via,df,"Via")
