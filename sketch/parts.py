@@ -1006,13 +1006,13 @@ class FBERes(LFERes):
 
         cell=LFERes.draw(self)
 
-        plate=pg.rectangle(size=(self.etchpit.active_area.x+4*self.idt.active_area_margin,self.idt.length-self.idt.y_offset),\
+        plate=pg.rectangle(size=(self.etchpit.active_area.x+8*self.idt.active_area_margin,self.idt.length-self.idt.y_offset/2),\
         layer=self.platelayer)
 
         plate_ref=cell<<plate
 
-        transl_rel=Point(self.etchpit.x-2*self.idt.active_area_margin,self.anchor.size.y+self.bus.size.y\
-            +self.idt.y_offset)
+        transl_rel=Point(self.etchpit.x-4*self.idt.active_area_margin,self.anchor.size.y+self.bus.size.y\
+            +self.idt.y_offset*3/4)
 
         lr_cell=get_corners(cell)[0]
         lr_plate=get_corners(plate_ref)[0]

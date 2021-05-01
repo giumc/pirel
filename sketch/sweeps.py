@@ -41,13 +41,15 @@ class SweepParam():
         sweep_label=[]
 
         # tmp_name=""
-        for name in param.names:
+        for index,name in enumerate(param.names):
 
-            sweep_label.append((\
-            ''.join([c for c in name if c.isupper()]))\
-            .replace("IDT","")\
-            .replace("S","")\
-            .replace("M",""))
+            if index<=1:
+                
+                sweep_label.append((\
+                ''.join([c for c in name if c.isupper()]))\
+                .replace("IDT","")\
+                .replace("S","")\
+                .replace("M",""))
 
         stringout=[]
 
@@ -55,15 +57,11 @@ class SweepParam():
 
         for i in range(l):
 
-            # print(i)
-
             tmp_lab=''
 
             for lab,name in zip(sweep_label,param.names):
 
                 tmp_lab=tmp_lab+lab+str(unique[name].index(param()[name][i]))
-
-                # print(tmp_lab)
 
             stringout.append(tmp_lab)
 

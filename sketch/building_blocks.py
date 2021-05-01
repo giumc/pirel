@@ -168,6 +168,8 @@ class TextParam():
             font=font,\
             layer=text_opts['layer'])
 
+        text_cell._internal_name=cell.name+'Text'
+        
         text_location=text_opts['location']
 
         text_size=Point().from_iter(text_cell.size)
@@ -194,14 +196,10 @@ class TextParam():
 
             text_cell.rotate(angle=90)
 
-        text_ref=cell<<text_cell
+        cell.add(text_cell)
 
-        text_ref.move(origin=(0,0),\
+        text_cell.move(origin=(0,0),\
             destination=o())
-
-        cell.absorb(text_ref)
-
-        del text_cell
 
         return cell
 
