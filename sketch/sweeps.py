@@ -40,9 +40,14 @@ class SweepParam():
 
         sweep_label=[]
 
+        # tmp_name=""
         for name in param.names:
 
-            sweep_label.append(''.join([c for c in name if c.isupper()]))
+            sweep_label.append((\
+            ''.join([c for c in name if c.isupper()]))\
+            .replace("IDT","")\
+            .replace("S","")\
+            .replace("M",""))
 
         stringout=[]
 
@@ -56,9 +61,7 @@ class SweepParam():
 
             for lab,name in zip(sweep_label,param.names):
 
-
-
-                tmp_lab=tmp_lab+" " +lab+str(unique[name].index(param()[name][i]))
+                tmp_lab=tmp_lab+lab+str(unique[name].index(param()[name][i]))
 
                 # print(tmp_lab)
 
@@ -265,6 +268,8 @@ class PArray(LayoutPart):
 
         self.labels_bottom=ld.Arraylabels_bottom
 
+        self.text_params=copy(TextParam())
+
     @property
     def device(self):
 
@@ -326,15 +331,17 @@ class PArray(LayoutPart):
 
     def draw(self):
 
-        device=deepcopy(self.device)
+        device=self.device
 
-        df=device.export_params()
+        df_original=device.export_params()
 
         master_cell=Device(self.name)
 
         cells=list()
 
         param=self.x_param
+
+        df=copy(df_original)
 
         for index in range(len(param)):
 
@@ -350,21 +357,15 @@ class PArray(LayoutPart):
 
             if self.labels_top is not None:
 
-                self.text_params.update({\
-                    'location':'top',\
-                    'label':self.labels_top[index]})
+                self.text_params.set('location','top')
 
-                self.add_text(new_cell,\
-                text_opts=self._text_params)
+                self.text_params.add_text(new_cell,self.labels_top[index])
 
             if self.labels_bottom is not None:
 
-                self.text_params.update({\
-                    'location':'bottom',\
-                    'label':self.labels_bottom[index]})
+                self.text_params.set('location','bottom')
 
-                self.add_text(new_cell,\
-                text_opts=self.text_params)
+                self.text_params.add_text(new_cell,self.labels_bottom[index])
 
             master_cell<<new_cell
 
@@ -376,9 +377,13 @@ class PArray(LayoutPart):
 
         g.align(alignment='ymin')
 
+        device.import_params(df_original)
+
         del device, cells ,g
 
         master_cell=join(master_cell)
+
+        master_cell._internal_name=self.name
 
         self.cell=master_cell
 
@@ -423,13 +428,13 @@ class PMatrix(PArray):
 
     def draw(self):
 
-        original_device=deepcopy(self.device)
-
         device=self.device
 
-        df=device.export_params()
+        df_original=device.export_params()
 
-        master_cell=Device(self.name)
+        master_name=self.name
+
+        master_cell=Device(master_name)
 
         cells=list()
 
@@ -438,6 +443,8 @@ class PMatrix(PArray):
         bottom_label_matrix=self.labels_bottom
 
         y_param=self.y_param
+
+        df=copy(df_original)
 
         for index in range(len(y_param)):
 
@@ -481,6 +488,8 @@ class PMatrix(PArray):
 
                     self.labels_bottom=None
 
+            self.name=master_name+"Arr"+str(index+1)
+
             new_cell=PArray.draw(self)
 
             master_cell<<new_cell
@@ -493,9 +502,9 @@ class PMatrix(PArray):
 
         g.align(alignment='xmin')
 
-        del device, cells ,g
+        device.import_params(df_original)
 
-        self.device=original_device
+        del device, cells ,g
 
         self.cell=master_cell
 
@@ -581,11 +590,15 @@ class PArraySeries(PArray):
 
         cellparts=list()
 
+        device=self.device
+
+        df_original=device.export_params()
+
+        df=copy(df_original)
+
+        p=PArray(device)
+
         for i,par in enumerate(self.x_param):
-
-            device=deepcopy(self.device)
-
-            p=PArray(device)
 
             p.x_spacing=self.x_spacing
 
@@ -596,7 +609,9 @@ class PArraySeries(PArray):
             cellparts.append(p.draw())
 
         g=Group(cellparts)
+
         g.distribute(direction='y',spacing=self.y_spacing)
+
         g.align(alignment='xmin')
 
         cell=Device(self.name)
@@ -604,6 +619,8 @@ class PArraySeries(PArray):
         [cell<<x for x in cellparts]
 
         self.cell=cell
+
+        device.import_params(df_original)
 
         return cell
 
@@ -613,8 +630,6 @@ class PArraySeries(PArray):
         x_param=self.x_param
 
         data_tot=DataFrame()
-
-
 
         for p in x_param:
 

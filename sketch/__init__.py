@@ -7,4 +7,4 @@ sys.path.append(file_dir)
 from layout_tools import *
 from parts import *
 from sweeps import *
-from building_blocks import Point
+from building_blocks import *

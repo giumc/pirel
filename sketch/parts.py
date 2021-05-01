@@ -265,6 +265,8 @@ def addVia(res,side='top',bottom_conn=False):
 
             cell=join(cell)
 
+            cell._internal_name=self.name
+
             if top_port is not None:
 
                 cell.add_port(top_port)
@@ -464,7 +466,7 @@ def addProbe(res,probe):
 
         gnd_routing_width=_LayoutParamInterface()
 
-        probe_dut_distance=_LayoutParamInterface()
+        # probe_dut_distance=_LayoutParamInterface()
 
         def __init__(self,*args,**kwargs):
 
@@ -484,7 +486,7 @@ def addProbe(res,probe):
 
             cell=Device(self.name)
 
-            probe_dut_distance=Point(0,2*self.anchor.etch_margin.y)
+            probe_dut_distance=Point(0,1.25*self.anchor.size.y)
 
             cell<<device_cell
 
@@ -507,12 +509,14 @@ def addProbe(res,probe):
                 probe_port_center=probe_ref.ports['sig']
                 probe_port_rx=probe_ref.ports['gnd_right']
 
+                # import pdb; pdb.set_trace()
+
                 routing_lx=self._route(bbox,probe_port_lx,dut_port_top)
 
                 self._routing_lx_length=routing_lx.area()/self.gnd_routing_width
 
-                routing_c=pg.compass(size=(dut_port_bottom.width,\
-                    self.probe_dut_distance),layer=self.probe.layer)
+                routing_c=pg.compass(size=(self.anchor.metalized.x,\
+                    probe_dut_distance.y),layer=self.probe.layer)
 
                 routing_rx=self._route(bbox,probe_port_rx,dut_port_top)
 
@@ -540,8 +544,6 @@ def addProbe(res,probe):
 
             cell=join(cell)
 
-            self.cell=cell
-
             if hasattr(self,'_stretch_top_margin'):
 
                 if self._stretch_top_margin:
@@ -557,17 +559,30 @@ def addProbe(res,probe):
 
                     cell=join(cell)
 
+            cell._internal_name=self.name
+
+            self.cell=cell
+
             return cell
 
         def _route(self,bbox,p1,p2):
 
             routing=Routing()
+
             routing.layer=self.probe.layer
+
             routing.clearance=bbox
+
             routing.trace_width=self.gnd_routing_width
+
             routing.ports=(p1,p2)
+
+            # import pdb; pdb.set_trace()
+
             cell=routing.draw()
+
             del routing
+
             return cell
 
         def export_params(self):
@@ -657,6 +672,8 @@ def addLargeGnd(probe):
                     cell.absorb(groundref)
 
             cell=join(cell)
+
+            cell._internal_name=self.name
 
             [cell.add_port(_) for _ in oldports]
 
@@ -754,10 +771,16 @@ def array(res,n):
 
             cell=join(cell)
 
+            cell._internal_name=self.name
+
             bc=add_compass(join(cell))
+
             bc.ports['N'].width=lx_top.width
+
             bc.ports['S'].width=xsize_bottom
+
             cell.add_port(port=bus_top.ports['N'],name='top')
+
             cell.add_port(port=bc.ports['S'],name='bottom')
 
             self.cell=cell
@@ -906,6 +929,8 @@ class LFERes(LayoutPart):
         cell.absorb(anchor_bottom)
 
         cell_out=join(cell)
+
+        cell_out._internal_name=self.name
 
         cell_out.add_port(outport_top)
         cell_out.add_port(outport_bottom)
@@ -1067,6 +1092,8 @@ class TFERes(LFERes):
         out_ports=cell.get_ports()
 
         cell=join(cell)
+
+        cell._internal_name=self.name
 
         for p in out_ports:
 

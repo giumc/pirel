@@ -2,7 +2,7 @@ import phidl.geometry as pg
 import phidl.device_layout as dl
 from sketch import *
 
-ld=LayoutDefault()
+ld=LayoutDefault
 
 def resistivity_test_cell():
 
@@ -10,7 +10,9 @@ def resistivity_test_cell():
 
         cell=pg.import_gds(infile)
 
-        return join(cell)
+        cell=join(cell)
+
+        return cell
 
 def verniers(scale=[1, 0.5, 0.1],layers=[1,2],label='TE',text_size=20):
 
@@ -122,31 +124,69 @@ def chip_frame(name="Default",size=(20e3,20e3),layer=ld.layerTop,\
 
     test_cell=resistivity_test_cell()
 
-    test_cell.name='Test Features'
-
     cell=Device(name=name)
 
     cell.absorb(cell<<die_cell)
 
-    LayoutPart.add_text(cell,\
-        {'size':700,'label':name,\
+    TextParam(\
+        {'size':700,\
+        'label':name,\
         'location':'bottom',\
         'distance':Point(-size[0]/30,-200*2-size[0]/30),\
-        'font':'BebasNeue-Regular.otf',\
-    'layer':layer})
+        'layer':layer}).add_text(cell)
 
-    g=Group([align_cell,test_cell])
+    align_via=align_TE_on_via()
+
+    align_via_tot=draw_array(align_via,1,3,row_spacing=150,column_spacing=150)
+
+    g=Group([align_via_tot,align_cell,test_cell])
 
     g.distribute(direction='x',spacing=100)
 
     g.align(alignment='y')
 
-    g.move(origin=(g.xmax,g.ymax),\
-        destination=(cell.xmax-g.xsize/8,\
+    g.move(origin=(g.xmin,g.ymax),\
+        destination=(cell.xmin+g.xsize/8,\
             cell.ymax-g.ysize/2))
 
     test_cell.add(align_cell)
 
+    test_cell.add(align_via_tot)
+
+    test_cell._internal_name="UtilityCell"
+
+    cell._internal_name=name
+
     cell<<test_cell
+
+    return cell
+
+def align_TE_on_via():
+
+    cell=Device("Align TE on VIA")
+
+    circle=pg.circle(radius=50,layer=ld.layerVias)
+
+    cross=pg.cross(width=30,length=250,layer=ld.layerVias)
+
+    g=Group([circle,cross])
+
+    g.align(alignment='x')
+    g.align(alignment='y')
+    circle.add(cross)
+
+    viapattern=pg.union(circle,'A+B',layer=ld.layerVias)
+
+    TEpattern=pg.union(circle,'A+B',layer=ld.layerTop).copy('tmp',scale=1.2)
+
+    cell.add(viapattern)
+    cell.add(TEpattern)
+
+    cell.align(alignment='x')
+    cell.align(alignment='y')
+
+    cell.flatten()
+
+    # import pdb; pdb.set_trace()
 
     return cell

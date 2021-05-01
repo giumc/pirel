@@ -28,7 +28,188 @@ from pandas import Series,DataFrame
 
 from layout_tools import *
 
-ld=LayoutDefault()
+ld=LayoutDefault
+
+class TextParam():
+    ''' Class to store text data and to add it in cells.
+
+    It controls how the text labels generated are formatted.
+    You can add text to a cell using the add_text() method.
+
+    Attributes
+    ----------
+    font : string
+            if overridden, needs to be in sketch/ path
+
+    size : float
+
+    location : 'left','right','top','bottom'
+
+    distance :  sketch.Point
+
+    label :     string
+        can be multiline if '\\n' is added
+
+    layer:   int.
+    '''
+
+    _valid_names={'font','size','location','distance','label','layer'}
+
+    _msg_err="""Invalid key for text_param.
+    Valid options are :{}""".format("\n".join(_valid_names))
+
+    _default=ld.TextParams
+
+    def __init__(self,df={}):
+
+        '''Initialize TextParam.
+
+        If no value is passed, default values are used (from LayoutDefault class).
+
+        Parameters
+        ----------
+            df : dict (optional)
+                key:value of all the attributes.
+        '''
+        if not isinstance(df,dict):
+
+            raise ValueError("text params is initialized by a dict")
+
+        else:
+
+            for key,value in df.items():
+
+                self.set(key,value)
+
+    def set(self,key,value):
+
+        if not key in self._valid_names:
+
+            raise ValueError(self._msg_err)
+
+        else:
+
+            setattr(self,key,value)
+
+    def get(self,key):
+
+        if not key in self._valid_names:
+
+            raise ValueError(self._msg_err)
+
+        if hasattr(self,key):
+
+            return getattr(self,key)
+
+        else:
+
+            return self._default[key]
+
+    def __call__(self,df={}):
+
+        if not isinstance(df,dict):
+
+            raise ValueError("Update textparam with a dict")
+
+        for key,value in df.items():
+
+            self.set(key,value)
+
+        ret_dict={}
+
+        for name in self._valid_names:
+
+            ret_dict[name]=self.get(name)
+
+        return rect_dict
+
+    def add_text(self,cell,label=None):
+        '''Add text to a cell.
+
+        Parameters
+        ---------
+
+        cell : phidl.Device
+
+        text_opts : LayoutPart.text_params
+
+        Returns
+        -------
+
+        cell :phidl.Device.
+        '''
+
+        text_opts={}
+
+        for name in self._valid_names:
+
+            text_opts[name]=self.get(name)
+
+        if label is not None:
+
+            if isinstance(label,str):
+
+                text_opts['label']=label
+
+            else:
+
+                raise ValueError("Passed parameter {} is not a string ".format(label.__class__.__name__))
+
+        package_directory = os.path.dirname(os.path.abspath(__file__))
+
+        font=os.path.join(package_directory,text_opts['font'])
+
+        o=Point(0,0)
+
+        ll,lr,ul,ur=get_corners(cell)
+
+        text_cell=pg.text(size=text_opts['size'],\
+            text=text_opts['label'],\
+            font=font,\
+            layer=text_opts['layer'])
+
+        text_location=text_opts['location']
+
+        text_size=Point().from_iter(text_cell.size)
+
+        text_distance=text_opts['distance']
+
+        if text_location=='top':
+
+            o=ul+text_distance
+
+        elif text_location=='bottom':
+
+            o=ll-Point(0,text_size.y)-text_distance
+
+        elif text_location=='right':
+
+            o=ur+text_distance
+
+            text_cell.rotate(angle=-90)
+
+        elif text_location=='left':
+
+            o=ll-text_distance
+
+            text_cell.rotate(angle=90)
+
+        text_ref=cell<<text_cell
+
+        text_ref.move(origin=(0,0),\
+            destination=o())
+
+        cell.absorb(text_ref)
+
+        del text_cell
+
+        return cell
+
+    def __str__(self):
+
+        dict=self()
+
+        return pd.Series(dict).to_string()
 
 class LayoutParam():
 
@@ -43,10 +224,6 @@ class LayoutParam():
         import re
 
         return re.sub(r'(?:^|_)([a-z])', lambda x: x.group(1).upper(), self._name)
-
-    def denormalize(self,val):
-
-        return self._value*val
 
     @property
     def param(self):
@@ -188,8 +365,6 @@ class LayoutPart(ABC) :
 
         self.cell=Device(name)
 
-        self.text_params=copy(ld.TextParams)
-
     def view(self,blocking=True):
         ''' Visualize cell layout with current parameters.
 
@@ -264,51 +439,6 @@ class LayoutPart(ABC) :
 
         return bbox
 
-    @property
-    def text_params(self):
-        ''' Attribute of LayoutPart.
-
-        It controls how the text labels generated in LayoutPart.add_text() are
-        formatted.
-
-        It is a dict with the following keys:
-            - 'font'        (if overridden, needs to be in sketch/ path)
-            - 'size'        (int)
-            - 'location'    ('left','right','top','bottom')
-            - 'distance'    (sketch.Point)
-            - 'label'       (string, can be multiline if '\\n' is added)
-            - 'layer'       (int).
-        '''
-
-        if hasattr(self,'_text_params'):
-
-            return self._text_params
-
-        else :
-
-            return ld.TextParams
-
-    @text_params.setter
-    def text_params(self,df):
-
-        if not isinstance(df,dict):
-
-            raise ValueError("text params is set by a dict")
-
-        else:
-
-            valid_names={'font','size','location','distance','label','layer'}
-
-            for key in df.keys():
-
-                if not key in valid_names:
-
-                    raise ValueError("Invalid key for text_param.Valid options are :{}".format("\n".join(valid_names)))
-
-                else:
-
-                    self._text_params=df
-
     @abstractmethod
     def draw(self):
         ''' Draws cell based on current parameters.
@@ -360,73 +490,6 @@ class LayoutPart(ABC) :
             d1[cols]=d2[cols].iat[0]
 
         return d1
-
-    @staticmethod
-    def add_text(cell,text_opts=ld.TextParams):
-        ''' Static method to add text to a cell.
-
-        Parameters
-        ---------
-
-        cell : phidl.Device
-
-        text_opts : LayoutPart.text_params
-
-        Returns
-        -------
-
-        cell :phidl.Device.
-        '''
-
-        package_directory = os.path.dirname(os.path.abspath(__file__))
-
-        font=os.path.join(package_directory,text_opts['font'])
-
-        o=Point(0,0)
-
-        ll,lr,ul,ur=get_corners(cell)
-
-        text_cell=pg.text(size=text_opts['size'],\
-            text=text_opts['label'],\
-            font=font,\
-            layer=text_opts['layer'])
-
-        text_location=text_opts['location']
-
-        text_size=Point().from_iter(text_cell.size)
-
-        text_distance=text_opts['distance']
-
-        if text_location=='top':
-
-            o=ul+text_distance
-
-        elif text_location=='bottom':
-
-            o=ll-Point(0,text_size.y)-text_distance
-
-        elif text_location=='right':
-
-            o=ur+text_distance
-
-            text_cell.rotate(angle=-90)
-
-        elif text_location=='left':
-
-            o=ll-text_distance
-
-            text_cell.rotate(angle=90)
-
-        text_ref=cell<<text_cell
-
-        text_ref.move(origin=(0,0),\
-            destination=o())
-
-        cell.absorb(text_ref)
-
-        del text_cell
-
-        return cell
 
     def __repr__(self):
 
@@ -781,11 +844,17 @@ class Anchor(LayoutPart):
         -------
         cell : phidl.Device.
         '''
-        if self.size.x<=self.etch_margin.x*2:
 
-            warnings.warn("Malformed Anchor,device will be fixed")
 
-            self.size.x=self.size.x+self.etch_margin.x*2
+        if self.size.x<=self.etch_margin.x:
+
+            raise ValueError("""Half Anchor X Margin {} is larger than
+                Anchor X Size {}""".format(self.etch_margin.x,self.size.x))
+
+        if self.size.y<=self.etch_margin.y:
+
+            raise ValueError("""Half Anchor Y Margin {} is larger than
+                Anchor Y Size {}""".format(self.etch_margin.y,self.size.y))
 
         o=self.origin
 
@@ -847,6 +916,12 @@ class Anchor(LayoutPart):
     def resistance(self,res_per_square=0.1):
 
         return res_per_square*self.size.y/self.size.x
+
+    @property
+    def metalized(self):
+
+        return Point(self.size.x-2*self.etch_margin.x,\
+            self.size.y-2*self.etch_margin.y)
 
 class Via(LayoutPart):
     ''' Generates via pattern.
@@ -1024,6 +1099,34 @@ class Routing(LayoutPart):
 
                 raise ValueError("Routing case not covered yet")
 
+            elif source.orientation==0 : #right path
+
+                    # source=self._add_taper(cell,source,len==-taper_len)
+                    # destination=self._add_taper(cell,destination,len=self.trace_width/4)
+
+                    source.name='source'
+                    destination.name='destination'
+
+                    p0=Point().from_iter(source.midpoint)
+
+                    # import pdb; pdb.set_trace()
+
+                    if abs(ur.x+self.trace_width*3/4-p0.x) > 5:
+
+                        p1=Point(ur.x+self.trace_width*3/4,p0.y)
+
+                    else:
+
+                        p1=Point(p0.x+3/4*self.trace_width,p0.y)
+
+                    p2=Point(p1.x,ur.y+self.trace_width)
+                    p3=Point(destination.x,p2.y)
+                    p4=Point(destination.x,destination.y)
+
+                    list_points_rx=[p0(),p1(),p2(),p3(),p4()]
+
+                    path=pp.smooth(points=list_points_rx)
+
             if source.orientation==90 :
 
                 ll,lr,ul,ur=get_corners(bbox)
@@ -1120,36 +1223,10 @@ class Routing(LayoutPart):
 
                     path=pp.smooth(points=list_points,radius=0.001,use_eff=True)#source tucked inside clearance
 
-            elif source.orientation==0 : #right path
-
-                    source=self._add_taper(cell,source,len==-taper_len)
-                    destination=self._add_taper(cell,destination,len=self.trace_width/4)
-
-                    source.name='source'
-                    destination.name='destination'
-
-                    p0=Point().from_iter(source.midpoint)
-
-                    if ur.x+self.trace_width-p0.x > 10:
-
-                        p1=Point(ur.x+self.trace_width,p0.y)
-
-                    else:
-
-                        p1=Point(p0.x-0.5*self.trace_width,p0.y)
-
-                    p2=Point(p1.x,ur.y+self.trace_width)
-                    p3=Point(destination.x,p2.y)
-                    p4=Point(destination.x,destination.y)
-
-                    list_points_rx=[p0(),p1(),p2(),p3(),p4()]
-
-                    path=pp.smooth(points=list_points_rx)
-
             elif source.orientation==180 : #left path
 
-                    source=self._add_taper(cell,source,len==-taper_len)
-                    destination=self._add_taper(cell,destination,len=self.trace_width/4)
+                    # source=self._add_taper(cell,source,len==-taper_len)
+                    # destination=self._add_taper(cell,destination,len=self.trace_width/4)
 
                     source.name='source'
                     destination.name='destination'
@@ -1157,13 +1234,13 @@ class Routing(LayoutPart):
                     p0=Point().from_iter(source.midpoint)
                     p0=Point().from_iter(source.midpoint)
 
-                    if ll.x-self.trace_width-p0.x > 10:
+                    if abs(ll.x-self.trace_width*3/4-p0.x) > 5:
 
-                        p1=Point(ll.x-self.trace_width,p0.y)
+                        p1=Point(ll.x-self.trace_width*3/4,p0.y)
 
                     else:
 
-                        p1=Point(p0.x+0.5*self.trace_width,p0.y)
+                        p1=Point(p0.x-3/4*self.trace_width,p0.y)
 
                     p2=Point(p1.x,ur.y+self.trace_width)
                     p3=Point(destination.x,p2.y)
