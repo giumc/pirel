@@ -44,7 +44,7 @@ class SweepParam():
         for index,name in enumerate(param.names):
 
             if index<=1:
-                
+
                 sweep_label.append((\
                 ''.join([c for c in name if c.isupper()]))\
                 .replace("IDT","")\
@@ -297,7 +297,9 @@ class PArray(LayoutPart):
 
         param=self.x_param
 
-        device=deepcopy(self.device)
+        device=self.device
+
+        base_params=device.export_params()
 
         data_tot=DataFrame()
 
@@ -311,15 +313,17 @@ class PArray(LayoutPart):
 
             if self.labels_bottom is not None:
 
-                df["Name"]=self.device.name+self.labels_bottom[i]
+                index=self.labels_bottom[i]
 
             else:
 
-                df["Name"]=str(i)
+                index=str(i)
 
             import pdb; pdb.set_trace()
 
-            data_tot=data_tot.append((DataFrame.from_dict(df)).set_index(column="Name",in_place=True))
+            data_tot=data_tot.append(Series(df,name=index))
+
+            device.import_params(base_params)
 
         return data_tot
 
@@ -521,7 +525,7 @@ class PMatrix(PArray):
 
         import itertools
 
-        top_label=[[top_label+x+y for x in x_label] for y in y_label]
+        top_label=[[top_label+x+"\n"+y for x in x_label] for y in y_label]
 
         if top==True:
 
@@ -548,7 +552,9 @@ class PMatrix(PArray):
 
         y_param=self.y_param
 
-        device=deepcopy(self.device)
+        device=self.device
+
+        df_original=device.export_params()
 
         data_tot=DataFrame()
 
@@ -564,13 +570,15 @@ class PMatrix(PArray):
 
                 if self.labels_bottom is not None:
 
-                    df.index=[self.labels_bottom[j][i]]
+                    index=self.labels_bottom[j][i]
 
                 else:
 
-                    df.index=[i,j]
+                    index=str(i)+str(j)
 
-                data_tot=data_tot.append(df)
+                data_tot=data_tot.append(Series(df,name=index))
+
+        device.import_params(df_original)
 
         return data_tot
 

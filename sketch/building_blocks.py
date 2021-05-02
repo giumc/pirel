@@ -169,7 +169,7 @@ class TextParam():
             layer=text_opts['layer'])
 
         text_cell._internal_name=cell.name+'Text'
-        
+
         text_location=text_opts['location']
 
         text_size=Point().from_iter(text_cell.size)
@@ -178,11 +178,11 @@ class TextParam():
 
         if text_location=='top':
 
-            o=ul+text_distance
+            o=Point((ul.x+ur.x)/2,ul.y)-Point(text_size.x/2,0)+text_distance
 
         elif text_location=='bottom':
 
-            o=ll-Point(0,text_size.y)-text_distance
+            o=Point((ll.x+lr.x)/2,ll.y)-Point(text_size.x/2,text_size.y)-text_distance
 
         elif text_location=='right':
 

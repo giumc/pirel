@@ -132,7 +132,7 @@ def chip_frame(name="Default",size=(20e3,20e3),layer=ld.layerTop,\
         {'size':700,\
         'label':name,\
         'location':'bottom',\
-        'distance':Point(-size[0]/30,-200*2-size[0]/30),\
+        'distance':Point(0,-350),\
         'layer':layer}).add_text(cell)
 
     align_via=align_TE_on_via()
