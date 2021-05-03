@@ -500,7 +500,7 @@ class PArray(LayoutPart):
 
             self.labels_bottom=None
 
-    def plot_param(self,param):
+    def plot_param(self,param,blocking=True):
 
         import matplotlib.pyplot as plt
         from matplotlib import cm
@@ -527,12 +527,12 @@ class PArray(LayoutPart):
 
                 df=self.export_params()
 
-                y.append(df[param])
+                y.append(df[param[0]])
 
             p=ax.scatter([_+1 for _ in range(len(y))],y)
             p.set_clip_on(False)
 
-            ax.set_ylabel(param)
+            ax.set_ylabel(param[0])
 
         elif len(param)>1:
 
@@ -742,11 +742,12 @@ class PMatrix(PArray):
     def plot_param(self,param):
 
         import matplotlib.pyplot as plt
+        import matplotlib as mpl
         from matplotlib import cm
         from matplotlib.ticker import LinearLocator
         import numpy as np
 
-        fig, ax = plt.subplots(subplot_kw={"projection": "3d"})
+        fig, ax = plt.subplots()
 
         sweep_param_x=self.x_param
 
@@ -754,9 +755,9 @@ class PMatrix(PArray):
 
         df_original=self.export_params()
 
-        if isinstance(param,str):
-
-            param=[param]
+        # if isinstance(param,str):
+        #
+        #     param=[param]
 
         x=[*range(len(sweep_param_x))]
 
@@ -782,17 +783,25 @@ class PMatrix(PArray):
         z=np.array(z)
         x,y=np.meshgrid(x,y)
 
-        ax.plot_surface(X, Y, Z, cmap=cm.coolwarm,
-                       linewidth=0, antialiased=False)
+        # surf=ax.plot_surface(x, y, z, cmap=cm.coolwarm,
+        #                linewidth=0, antialiased=False)
+        bounds=np.unique(z)
+        cmap=plt.cm.viridis
+        surf=ax.imshow(z,cmap='viridis')
+        
+        cbar=fig.colorbar(surf, shrink=0.5, aspect=5)
 
-        fig.colorbar(surf, shrink=0.5, aspect=5)
-
+        cbar.set_label(param)
         # ax.grid(linestyle='--',linewidth=0.5, color='grey')
 
         # ax.autoscale(enable=True, tight=True)
 
         # self.x_param.populate_plot_axis(ax,'x')
         # self.y_param.populate_plot_axis(ax,'y')
+
+        ax.set_xlabel('x')
+        ax.set_ylabel('y')
+        # ax.set_zlabel(param)
 
         self.import_params(df_original)
 

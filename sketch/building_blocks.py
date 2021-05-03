@@ -465,20 +465,18 @@ class LayoutPart(ABC) :
 
             out_dict.update(param.param)
 
-        if hasattr(self,'resistance_squares'):
-
-            out_dict.update({"Resistance":getattr(self,'resistance_squares')})
+        # if hasattr(self,'resistance_squares'):
+        #
+        #     out_dict.update({"Resistance":getattr(self,'resistance_squares')})
 
         return out_dict
 
     def import_params(self,df):
         ''' Pass to cell parameters in a DataFrame.
 
-        Abstract Method, to be implemented when subclassing.
-
         Parameters
         ----------
-        df : pandas.DataFrame
+        df : dict
             parameter table, needs to be of length 1.
         '''
 

@@ -47,9 +47,9 @@ def Scaled(res):
 
             self._denormalize()
 
-            df_denorm=res.export_params(self)
-
-            df.update({name:df_denorm[name] for name in df_denorm.keys() if 'Resistance' in name})
+            # df_denorm=res.export_params(self)
+            #
+            # df.update({name:df_denorm[name] for name in df_denorm.keys() if 'Resistance' in name})
 
             return df
 
@@ -129,26 +129,6 @@ def Scaled(res):
             self._normalized=False
 
             return self
-
-        @property
-        def resistance_squares(self):
-
-            if self._normalized==True:
-
-                # import pdb; pdb.set_trace()
-
-                self._denormalize()
-
-                r=super().resistance_squares
-
-                self._normalize()
-
-                return r
-
-            else:
-
-                return super().resistance_squares
-
 
     return Scaled
 
@@ -608,6 +588,7 @@ def addProbe(res,probe):
 
             t.update(t_probe)
 
+            t.update({"Resistance":super().resistance_squares+self.probe_resistance_squares})
             t.update({"ProbeResistance":self.probe_resistance_squares})
 
             return t
