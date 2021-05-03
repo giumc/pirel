@@ -446,15 +446,16 @@ def addPad(res):
 
             if_match_import(self.pad,df,"Pad")
 
-        def resistance(self,res_per_square=0.1):
+        @property
+        def resistance_squares(self):
 
-            r0=super().resistance(res_per_square)
+            r0=super().resistance_squares
 
             for port in res.draw(self).get_ports():
 
                 self.pad.port=port
 
-                r0=r0+self.pad.resistance(res_per_square)
+                r0=r0+self.pad.resistance_squares
 
             return r0
 
@@ -603,22 +604,21 @@ def addProbe(res,probe):
 
             if_match_import(self.probe,df,"Probe")
 
-        def resistance(self,res_per_square=0.1):
+        @property
+        def resistance_squares(self):
 
             self.draw()
 
-            rdut=res.resistance(self,res_per_square=res_per_square)
+            rdut=res.resistance_squares
 
-            rprobe_gnd=res_per_square*(self._routing_lx_length/self.gnd_routing_width+\
+            rprobe_gnd=(self._routing_lx_length/self.gnd_routing_width+\
                 self._routing_rx_length/self.gnd_routing_width)/2
 
             sig_width=res.draw(self).ports['bottom'].width
 
-            rprobe_sig=res_per_square*(self.probe_dut_distance/sig_width)
+            rprobe_sig=self.probe_dut_distance/sig_width
 
             return rprobe_sig+rdut+rprobe_gnd
-
-            return "potato"
 
     return addProbe
 
@@ -787,9 +787,10 @@ def array(res,n):
 
             return cell
 
-        def resistance(self,res_per_square=0.1):
+        @property
+        def resistance_squares(self):
 
-            r=res.resistance(self,res_per_square=res_per_square)
+            r=res.resistance_squares
 
             cell=res.draw(self)
 
@@ -805,9 +806,31 @@ def array(res,n):
 
             l=self.bus_ext_length
 
-            rb=res_per_square*l/w/self.n_copies
+            n_copies=self.n_copies
 
-            return (rb+r)/self.n_copies
+
+            if n_copies==1:
+
+                return r+l/w
+
+            else:
+
+                p_bot=[ x for x in cell.get_ports() if 'bottom' in x.name]
+                x_dist=p_bot[1].x-p_bot[0].x
+
+                if n_copies%2==1 :
+
+                    return parallel_res(r+l/w,(r+2*x_dist/l)/(n_copies-1))
+
+                if n_copies%2==0 :
+
+                    if n_copies==2:
+
+                        return (r+x_dist/l)/2
+
+                    else:
+
+                        return parallel_res((r+x_dist/l)/2,(r+2*x_dist/l)/(n_copies-2))
 
     return array
 
@@ -881,10 +904,10 @@ class LFERes(LayoutPart):
 
         self.anchor.layer=self.layer
 
-        if self.anchor.size.x>self.bus.size.x:
+        if self.anchor.metalized.x>self.bus.size.x:
 
-            self.anchor.size=Point(self.bus.size.x,self.anchor.size.y)
-            warnings.warn("Anchor is too wide, reduced to Bus width size")
+            self.anchor.etch_margin.x=(self.bus.size.x-self.anchor.size.x)/2
+            warnings.warn("Anchor metal is too wide, reduced to match Bus width size")
 
         anchor_cell=self.anchor.draw()
 
@@ -984,13 +1007,14 @@ class LFERes(LayoutPart):
         if_match_import(self.etchpit,df,"Etch")
         if_match_import(self.anchor,df,"Anchor")
 
-    def resistance(self,res_per_square=0.1):
+    @property
+    def resistance_squares(self):
 
         self.draw()
 
-        ridt=self.idt.resistance(res_per_square)
-        rbus=self.bus.resistance(res_per_square)
-        ranchor=self.anchor.resistance(res_per_square)
+        ridt=self.idt.resistance_squares
+        rbus=self.bus.resistance_squares
+        ranchor=self.anchor.resistance_squares
 
         return ridt+rbus+ranchor
 

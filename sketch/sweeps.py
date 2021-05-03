@@ -311,6 +311,8 @@ class PArray(LayoutPart):
 
             df=device.export_params()
 
+            df["Resistance"]=device.resistance_squares
+
             if self.labels_bottom is not None:
 
                 index=self.labels_bottom[i]
@@ -318,8 +320,6 @@ class PArray(LayoutPart):
             else:
 
                 index=str(i)
-
-            import pdb; pdb.set_trace()
 
             data_tot=data_tot.append(Series(df,name=index))
 
@@ -567,6 +567,8 @@ class PMatrix(PArray):
                 device.import_params(x_param(i))
 
                 df=device.export_params()
+
+                df["Resistance"]=device.resistance_squares
 
                 if self.labels_bottom is not None:
 

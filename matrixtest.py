@@ -1,10 +1,4 @@
-from pathlib import Path
-import os
-p=Path(os.path.dirname(__file__))
-import sys
-sys.path.append(str(p.parent.absolute()))
-
-from sketch import *
+from PyResLayout import *
 import numpy as np
 
 device=addProbe(Scaled(array(LFERes,3)),addLargeGnd(GSGProbe))(name="HI")
@@ -25,7 +19,7 @@ device=addProbe(Scaled(array(LFERes,3)),addLargeGnd(GSGProbe))(name="HI")
 #
 # device.import_params(param)
 
-array=PArray(device,"HiArray")
+array=PArray(device,name="HiArray")
 
 # array.device=paramScaled(device)
 array.x_spacing=200
@@ -42,6 +36,9 @@ array.auto_labels()
 
 array.view()
 
+array.table.to_excel('arraytest.xlsx')
+
+exit()
 print(array.device)
 #
 mat=PMatrix(device,"Hi")

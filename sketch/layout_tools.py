@@ -434,3 +434,13 @@ def pop_all_dict(old_dict,elems):
         old_dict.pop(el)
 
     return old_dict
+
+def parallel_res(*args):
+
+    sum_y=0
+
+    for arg in args:
+
+        sum_y=sum_y+1/arg
+
+    return 1/sum_y

@@ -631,9 +631,10 @@ class IDT(LayoutPart) :
 
         return Point(self.pitch*(self.n*2+1)+2*self.active_area_margin,self.length+self.y_offset)
 
-    def resistance(self,res_per_square=0.1):
+    @property
+    def resistance_squares(self):
 
-        return res_per_square*self.length/self.pitch/self.coverage/self.n*2/3
+        return self.length/self.pitch/self.coverage/self.n*2/3
 
     @classmethod
     def calc_n_fingers(self,c0_dens,z0,f,len):
@@ -708,9 +709,10 @@ class Bus(LayoutPart) :
 
         return cell
 
-    def resistance(self,res_per_square=0.1):
+    @property
+    def resistance_squares(self):
 
-        return res_per_square*self.size.x/self.size.y/2
+        return self.size.x/self.size.y/2
 
 class EtchPit(LayoutPart) :
     ''' Generates pair of etching trenches.
@@ -843,14 +845,16 @@ class Anchor(LayoutPart):
         cell : phidl.Device.
         '''
 
-
         if self.size.x<=self.etch_margin.x:
+
+            import pdb; pdb.set_trace()
 
             raise ValueError("""Half Anchor X Margin {} is larger than
                 Anchor X Size {}""".format(self.etch_margin.x,self.size.x))
 
         if self.size.y<=self.etch_margin.y:
 
+            import pdb; pdb.set_trace()
             raise ValueError("""Half Anchor Y Margin {} is larger than
                 Anchor Y Size {}""".format(self.etch_margin.y,self.size.y))
 
@@ -911,9 +915,10 @@ class Anchor(LayoutPart):
 
         return cell
 
-    def resistance(self,res_per_square=0.1):
+    @property
+    def resistance_squares(self):
 
-        return res_per_square*self.size.y/self.size.x
+        return 2*self.size.y/self.size.x
 
     @property
     def metalized(self):
@@ -1354,9 +1359,10 @@ class Routing(LayoutPart):
 
         return cell_frame
 
-    def resistance(self,res_per_square=0.1):
+    @property
+    def resistance_squares(self):
 
-        return res_per_square*self.draw().area/self.trace_width
+        return self.draw().area/self.trace_width
 
 class GSProbe(LayoutPart):
     ''' Generates GS pattern.
@@ -1568,6 +1574,7 @@ class Pad(LayoutPart):
 
         return r1
 
-    def resistance(self,res_per_square=0.1):
+    @property
+    def resistance_squares(self):
 
-        return res_per_square*(1+self.distance/self.port.width)
+        return 1+self.distance/self.port.width
