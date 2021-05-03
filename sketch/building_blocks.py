@@ -461,6 +461,10 @@ class LayoutPart(ABC) :
 
             out_dict.update(param.param)
 
+        if hasattr(self,'resistance_squares'):
+
+            out_dict.update({"Resistance":getattr(self,'resistance_squares')})
+
         return out_dict
 
     def import_params(self,df):
@@ -844,7 +848,7 @@ class Anchor(LayoutPart):
         -------
         cell : phidl.Device.
         '''
-
+        
         if self.size.x<=self.etch_margin.x:
 
             import pdb; pdb.set_trace()
@@ -918,7 +922,7 @@ class Anchor(LayoutPart):
     @property
     def resistance_squares(self):
 
-        return 2*self.size.y/self.size.x
+        return 2*self.metalized.y/self.metalized.x
 
     @property
     def metalized(self):

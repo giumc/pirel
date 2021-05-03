@@ -47,6 +47,10 @@ def Scaled(res):
 
             self._denormalize()
 
+            df_denorm=res.export_params(self)
+
+            df.update({name:df_denorm[name] for name in df_denorm.keys() if 'Resistance' in name})
+
             return df
 
         def _normalize(self):
@@ -467,8 +471,6 @@ def addProbe(res,probe):
 
         gnd_routing_width=_LayoutParamInterface()
 
-        # probe_dut_distance=_LayoutParamInterface()
-
         def __init__(self,*args,**kwargs):
 
             res.__init__(self,*args,**kwargs)
@@ -476,8 +478,6 @@ def addProbe(res,probe):
             self.probe=probe(self.name+"Probe")
 
             self.gnd_routing_width=ld.DUTrouting_width
-
-            self.probe_dut_distance=ld.DUTprobe_dut_distance
 
         def draw(self):
 
@@ -487,7 +487,7 @@ def addProbe(res,probe):
 
             cell=Device(self.name)
 
-            probe_dut_distance=Point(0,1.25*self.anchor.size.y)
+            probe_dut_distance=self.probe_dut_distance
 
             cell<<device_cell
 
@@ -509,8 +509,6 @@ def addProbe(res,probe):
                 probe_port_lx=probe_ref.ports['gnd_left']
                 probe_port_center=probe_ref.ports['sig']
                 probe_port_rx=probe_ref.ports['gnd_right']
-
-                # import pdb; pdb.set_trace()
 
                 routing_lx=self._route(bbox,probe_port_lx,dut_port_top)
 
@@ -596,6 +594,8 @@ def addProbe(res,probe):
 
             t.update(t_probe)
 
+            t.update({"ProbeResistance":self.probe_resistance_squares})
+
             return t
 
         def import_params(self,df):
@@ -607,18 +607,20 @@ def addProbe(res,probe):
         @property
         def resistance_squares(self):
 
+            return super().resistance_squares+self.probe_resistance_squares
+
+        @property
+        def probe_resistance_squares(self):
+
             self.draw()
 
-            rdut=res.resistance_squares
+            return (self._routing_lx_length/self.gnd_routing_width+\
+                self._routing_rx_length/self.gnd_routing_width)/2+\
+                self.probe_dut_distance.y/self.anchor.metalized.x
 
-            rprobe_gnd=(self._routing_lx_length/self.gnd_routing_width+\
-                self._routing_rx_length/self.gnd_routing_width)/2
-
-            sig_width=res.draw(self).ports['bottom'].width
-
-            rprobe_sig=self.probe_dut_distance/sig_width
-
-            return rprobe_sig+rdut+rprobe_gnd
+        @property
+        def probe_dut_distance(self):
+            return Point(0,1.25*self.anchor.size.y)
 
     return addProbe
 
@@ -790,7 +792,7 @@ def array(res,n):
         @property
         def resistance_squares(self):
 
-            r=res.resistance_squares
+            r=super().resistance_squares
 
             cell=res.draw(self)
 
@@ -808,21 +810,20 @@ def array(res,n):
 
             n_copies=self.n_copies
 
-
             if n_copies==1:
 
                 return r+l/w
 
             else:
 
-                p_bot=[ x for x in cell.get_ports() if 'bottom' in x.name]
-                x_dist=p_bot[1].x-p_bot[0].x
+                x_dist=self.idt.active_area.x+self.etchpit.x*2
 
                 if n_copies%2==1 :
 
                     return parallel_res(r+l/w,(r+2*x_dist/l)/(n_copies-1))
 
                 if n_copies%2==0 :
+
 
                     if n_copies==2:
 
@@ -996,6 +997,7 @@ class LFERes(LayoutPart):
         t.update(t_bus)
         t.update(t_etch)
         t.update(t_anchor)
+
         return t
 
     def import_params(self,df):

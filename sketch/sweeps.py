@@ -149,11 +149,7 @@ class SweepParam():
 
         tot_values=[_ for _ in flatten(tot_values)]
 
-
-
         dict_new={x : [] for x in init_names+new_names}
-
-
 
         for index in range(new_length):
 
@@ -164,6 +160,94 @@ class SweepParam():
             # print(dict_new)
 
         return SweepParam(dict_new)
+
+    def populate_plot_axis(self,plot,ax='x'):
+
+        import matplotlib.pyplot as plt
+
+        fig=plt.gcf()
+
+        extra_ax=[]
+
+        if ax=='x':
+
+            ticks=plot.get_xticks()
+
+            for i in range(len(self.names)):
+
+                if i==0:
+
+                    axn=plot
+
+                else:
+
+                    dy_fig=0.05
+
+                    plot_position=plot.get_position()
+
+                    plot.set_position([plot_position.x0,\
+                        plot_position.y0+2*dy_fig,\
+                        plot_position.width,\
+                        plot_position.height-dy_fig])
+
+                    prev_ax_position=axn.get_position()
+
+                    extra_ax.append(fig.add_axes(\
+                        (prev_ax_position.x0,\
+                        prev_ax_position.y0-2*dy_fig,\
+                        prev_ax_position.width,\
+                        0),'autoscalex_on',True))
+
+                    axn=extra_ax[i-1]
+
+                    axn.yaxis.set_visible(False) # hide the yaxis
+
+                axn.set_xticks(ticks)
+                axn.set_xticklabels(self.values[i])
+                axn.set_xlabel(self.names[i])
+                axn.set_xlim(ticks[0],ticks[-1])
+
+        elif ax=='y':
+
+            ticks=plot.get_yticks()
+
+            for i in range(len(self.names)):
+
+                if i==0:
+
+                    axn=plot
+
+                else:
+
+                    dx_fig=0.05
+
+                    plot_position=plot.get_position()
+
+                    plot.set_position([plot_position.x0+2*dx_fig,\
+                        plot_position.y0,\
+                        plot_position.width+dx_fig,\
+                        plot_position.height])
+
+                    prev_ax_position=axn.get_position()
+
+                    extra_ax.append(fig.add_axes(\
+                        (prev_ax_position.x0+2*dx_fig,\
+                        prev_ax_position.y0,\
+                        0,\
+                        prev_ax_position.height),'autoscalex_on',True))
+
+                    axn=extra_ax[i-1]
+
+                    axn.xaxis.set_visible(False) # hide the yaxis
+
+                axn.set_yticks(ticks)
+                axn.set_yticklabels(self.values[i])
+                axn.set_ylabel(self.names[i])
+                axn.set_ylim(ticks[0],ticks[-1])
+
+        else:
+
+            raise ValueError("Axis can be 'x' or 'y'")
 
 class _SweepParamValidator():
 
@@ -416,6 +500,77 @@ class PArray(LayoutPart):
 
             self.labels_bottom=None
 
+    def plot_param(self,param):
+
+        import matplotlib.pyplot as plt
+        from matplotlib import cm
+        from matplotlib.ticker import LinearLocator
+        import numpy as np
+
+        fig, ax = plt.subplots()
+
+        sweep_param=self.x_param
+
+        df_original=self.export_params()
+
+        if isinstance(param,str):
+
+            param=[param]
+
+        if len(param)==1:
+
+            y = []
+
+            for i in range(len(sweep_param)):
+
+                self.import_params(sweep_param(i))
+
+                df=self.export_params()
+
+                y.append(df[param])
+
+            p=ax.scatter([_+1 for _ in range(len(y))],y)
+            p.set_clip_on(False)
+
+            ax.set_ylabel(param)
+
+        elif len(param)>1:
+
+            y=[]
+            p=[]
+
+            for j in range(len(param)):
+
+                y.append([])
+
+                for i in range(len(sweep_param)):
+
+                    self.import_params(sweep_param(i))
+
+                    df=self.export_params()
+
+                    y[j].append(df[param[j]])
+
+                p.append(ax.scatter([_+1 for _ in range(len(y[j]))],y[j],label=param[j]))
+
+                p[j].set_clip_on(False)
+
+            ax.set_ylabel(", ".join(param))
+
+            ax.legend()
+
+        ax.grid(linestyle='--',linewidth=0.5, color='grey')
+
+        ax.autoscale(enable=True, tight=True)
+
+        self.x_param.populate_plot_axis(ax)
+
+        self.import_params(df_original)
+
+        plt.show()
+
+        return fig
+
 class PMatrix(PArray):
 
     y_param=_SweepParamValidator(ld.Matrixy_param)
@@ -583,6 +738,67 @@ class PMatrix(PArray):
         device.import_params(df_original)
 
         return data_tot
+
+    def plot_param(self,param):
+
+        import matplotlib.pyplot as plt
+        from matplotlib import cm
+        from matplotlib.ticker import LinearLocator
+        import numpy as np
+
+        fig, ax = plt.subplots(subplot_kw={"projection": "3d"})
+
+        sweep_param_x=self.x_param
+
+        sweep_param_y=self.y_param
+
+        df_original=self.export_params()
+
+        if isinstance(param,str):
+
+            param=[param]
+
+        x=[*range(len(sweep_param_x))]
+
+        y=[*range(len(sweep_param_y))]
+
+        z=[]
+
+        for j in y:
+
+            z.append([])
+
+            for i in x:
+
+                self.import_params(sweep_param_x(i))
+                self.import_params(sweep_param_y(i))
+
+                df=self.export_params()
+
+                z[j].append(df[param])
+
+        x=np.array(x)
+        y=np.array(y)
+        z=np.array(z)
+        x,y=np.meshgrid(x,y)
+
+        ax.plot_surface(X, Y, Z, cmap=cm.coolwarm,
+                       linewidth=0, antialiased=False)
+
+        fig.colorbar(surf, shrink=0.5, aspect=5)
+
+        # ax.grid(linestyle='--',linewidth=0.5, color='grey')
+
+        # ax.autoscale(enable=True, tight=True)
+
+        # self.x_param.populate_plot_axis(ax,'x')
+        # self.y_param.populate_plot_axis(ax,'y')
+
+        self.import_params(df_original)
+
+        plt.show()
+
+        return fig
 
 class PArraySeries(PArray):
 
