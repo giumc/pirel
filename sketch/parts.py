@@ -130,6 +130,26 @@ def Scaled(res):
 
             return self
 
+        @property
+        def resistance_squares(self):
+
+            if self._normalized==True:
+
+                # import pdb; pdb.set_trace()
+
+                self._denormalize()
+
+                r=super().resistance_squares
+
+                self._normalize()
+
+                return r
+
+            else:
+
+                return super().resistance_squares
+
+
     return Scaled
 
 def addVia(res,side='top',bottom_conn=False):
@@ -512,16 +532,16 @@ def addProbe(res,probe):
 
                 routing_lx=self._route(bbox,probe_port_lx,dut_port_top)
 
-                self._routing_lx_length=routing_lx.area()/self.gnd_routing_width
+                r_lx_cell=routing_lx.draw()
 
                 routing_c=pg.compass(size=(self.anchor.metalized.x,\
                     probe_dut_distance.y),layer=self.probe.layer)
 
                 routing_rx=self._route(bbox,probe_port_rx,dut_port_top)
 
-                self._routing_rx_length=routing_rx.area()/self.gnd_routing_width
+                r_rx_cell=routing_rx.draw()
 
-                routing_tot=pg.boolean(routing_lx,routing_rx,'or',layer=self.probe.layer)
+                routing_tot=pg.boolean(r_lx_cell,r_rx_cell,'or',layer=self.probe.layer)
 
                 cell<<routing_tot
 
@@ -576,13 +596,7 @@ def addProbe(res,probe):
 
             routing.ports=(p1,p2)
 
-            # import pdb; pdb.set_trace()
-
-            cell=routing.draw()
-
-            del routing
-
-            return cell
+            return routing
 
         def export_params(self):
 
@@ -612,15 +626,39 @@ def addProbe(res,probe):
         @property
         def probe_resistance_squares(self):
 
-            self.draw()
+            device_cell=res.draw(self)
 
-            return (self._routing_lx_length/self.gnd_routing_width+\
-                self._routing_rx_length/self.gnd_routing_width)/2+\
+            dut_port_bottom=device_cell.ports['bottom']
+
+            dut_port_top=device_cell.ports['top']
+
+            bbox=device_cell.bbox
+
+            bbox=super().bbox_mod(bbox)
+
+            probe_cell=self.probe.draw()
+
+            if isinstance(self.probe,GSGProbe):
+
+                probe_port_lx=probe_cell.ports['gnd_left']
+                probe_port_center=probe_cell.ports['sig']
+                probe_port_rx=probe_cell.ports['gnd_right']
+
+            routing_lx=self._route(bbox,probe_port_lx,dut_port_top)
+
+            routing_lx_len=routing_lx.path.length()
+
+            routing_rx=self._route(bbox,probe_port_rx,dut_port_top)
+
+            routing_rx_len=routing_rx.path.length()
+
+            return (routing_lx_len/self.gnd_routing_width+\
+                routing_rx_len/self.gnd_routing_width)/2+\
                 self.probe_dut_distance.y/self.anchor.metalized.x
 
         @property
         def probe_dut_distance(self):
-            return Point(0,1.25*self.anchor.size.y)
+            return Point(0,0.5*self.idt.active_area.x)
 
     return addProbe
 

@@ -1,4 +1,4 @@
-from sketch import *
+from PyResLayout import *
 
 # d=IDT()
 # print(d)
@@ -60,7 +60,7 @@ from sketch import *
 # d.view()
 # exit()
 
-d=Scaled(TFERes)()
+# d=Scaled(TFERes)()
 # param=d.export_params()
 # param["IDTPitch"]=7
 # param["IDTN"]=4
@@ -75,8 +75,8 @@ d=Scaled(TFERes)()
 # param["AnchorEtchMarginY"]=0.2
 # d.import_params(param)
 #
-print(d)
-d.view()
+# print(d)
+# d.view()
 #exit()
 #
 # d=array(Scaled(LFERes),3)()
@@ -164,4 +164,9 @@ d.view()
 #
 # d.view()
 #
+# exit()
+
+d=alignment_marks_4layers()
+#
+check_cell(d)
 # exit()

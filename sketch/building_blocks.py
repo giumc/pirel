@@ -131,50 +131,35 @@ class TextParam():
 
         cell : phidl.Device
 
-        text_opts : LayoutPart.text_params
-
         Returns
         -------
 
         cell :phidl.Device.
         '''
 
-        text_opts={}
-
-        for name in self._valid_names:
-
-            text_opts[name]=self.get(name)
-
         if label is not None:
 
             if isinstance(label,str):
 
-                text_opts['label']=label
+                self.set('label',label)
 
             else:
 
                 raise ValueError("Passed parameter {} is not a string ".format(label.__class__.__name__))
 
-        package_directory = os.path.dirname(os.path.abspath(__file__))
-
-        font=os.path.join(package_directory,text_opts['font'])
+        text_cell=self.draw()
 
         o=Point(0,0)
 
         ll,lr,ul,ur=get_corners(cell)
 
-        text_cell=pg.text(size=text_opts['size'],\
-            text=text_opts['label'],\
-            font=font,\
-            layer=text_opts['layer'])
-
         text_cell._internal_name=cell.name+'Text'
 
-        text_location=text_opts['location']
+        text_location=self.get('location')
 
         text_size=Point().from_iter(text_cell.size)
 
-        text_distance=text_opts['distance']
+        text_distance=self.get('distance')
 
         if text_location=='top':
 
@@ -208,6 +193,25 @@ class TextParam():
         dict=self()
 
         return pd.Series(dict).to_string()
+
+    def draw(self):
+
+        text_opts={}
+
+        for name in self._valid_names:
+
+            text_opts[name]=self.get(name)
+
+        package_directory = os.path.dirname(os.path.abspath(__file__))
+
+        font=os.path.join(package_directory,text_opts['font'])
+
+        text_cell=pg.text(size=text_opts['size'],\
+            text=text_opts['label'],\
+            font=font,\
+            layer=text_opts['layer'])
+
+        return text_cell
 
 class LayoutParam():
 
@@ -848,7 +852,7 @@ class Anchor(LayoutPart):
         -------
         cell : phidl.Device.
         '''
-        
+
         if self.size.x<=self.etch_margin.x:
 
             import pdb; pdb.set_trace()
@@ -992,11 +996,20 @@ class Routing(LayoutPart):
 
     Derived from LayoutPart.
 
-    Arguments
+    Parameters
     ---------
-    side : str (default 'auto')
+    side : str (optional)
         decides where to go if there is an obstacle in the routing,
         only 'auto','left','right'
+
+    trace_width : float (optional)
+
+    clearance : 2 len iterable of 2 len iterables
+
+    ports : iterable of phidl.Port
+
+    layer : float
+
 
     Attributes
     ----------
@@ -1017,7 +1030,9 @@ class Routing(LayoutPart):
 
     trace_width=_LayoutParamInterface()
 
-    def __init__(self,side='auto',*args,**kwargs):
+    def __init__(self,side='auto',trace_width=ld.Routingtrace_width,\
+        clearance=ld.Routingclearance,ports=ld.Routingports[0],\
+        layer=ld.Routinglayer,*args,**kwargs):
 
         super().__init__(*args,**kwargs)
         self.layer=ld.Routinglayer
@@ -1055,207 +1070,7 @@ class Routing(LayoutPart):
 
         cell=Device(self.name)
 
-        bbox=pg.bbox(self.clearance)
-
-        ll,_,_,ur=get_corners(bbox)
-
-        source=self.ports[0]
-
-        destination=self.ports[1]
-
-        if source.y>destination.y:
-
-            source=self.ports[1]
-            destination=self.ports[0]
-
-        y_overtravel=ll.y-source.midpoint[1]-self.trace_width
-
-        taper_len=abs(min([y_overtravel,self.trace_width/4]))
-
-        if destination.y<=ll.y : # destination is below clearance
-
-            if not(destination.orientation==source.orientation+180 or \
-                destination.orientation==source.orientation-180):
-
-                    raise Exception("Routing error: non-hindered routing needs +90 -> -90 oriented ports")
-
-            source=self._add_taper(cell,source,len=taper_len)
-            destination=self._add_taper(cell,destination,len=self.trace_width/4)
-
-            source.name='source'
-            destination.name='destination'
-
-            distance=Point().from_iter(destination.midpoint)-\
-                Point().from_iter(source.midpoint)
-
-            p0=Point().from_iter(source.midpoint)
-
-            p1=p0+Point(0,distance.y/3)
-
-            p2=p1+Point(distance.x,distance.y/3)
-
-            p3=p2+Point(0,distance.y/3)
-
-            list_points=np.array([p0(),p1(),p2(),p3()])
-
-            path=pp.smooth(points=list_points)
-
-        else: #destination is above clearance
-
-            if not destination.orientation==90 :
-
-                raise ValueError("Routing case not covered yet")
-
-            elif source.orientation==0 : #right path
-
-                    # source=self._add_taper(cell,source,len==-taper_len)
-                    # destination=self._add_taper(cell,destination,len=self.trace_width/4)
-
-                    source.name='source'
-                    destination.name='destination'
-
-                    p0=Point().from_iter(source.midpoint)
-
-                    # import pdb; pdb.set_trace()
-
-                    if abs(ur.x+self.trace_width*3/4-p0.x) > 5:
-
-                        p1=Point(ur.x+self.trace_width*3/4,p0.y)
-
-                    else:
-
-                        p1=Point(p0.x+3/4*self.trace_width,p0.y)
-
-                    p2=Point(p1.x,ur.y+self.trace_width)
-                    p3=Point(destination.x,p2.y)
-                    p4=Point(destination.x,destination.y)
-
-                    list_points_rx=[p0(),p1(),p2(),p3(),p4()]
-
-                    path=pp.smooth(points=list_points_rx)
-
-            if source.orientation==90 :
-
-                ll,lr,ul,ur=get_corners(bbox)
-
-                if source.x+self.trace_width>ll.x and source.x-self.trace_width<lr.x: #source tucked inside clearance
-
-                    if self.side=='auto':
-
-                        source=self._add_taper(cell,source,len=taper_len)
-                        destination=self._add_taper(cell,destination,len=self.trace_width/4)
-
-                    elif self.side=='left':
-
-                        source=self._add_ramp_lx(cell,source,len=taper_len)
-                        destination=self._add_taper(cell,destination,len=self.trace_width/4)
-
-                    elif self.side=='right':
-
-                        source=self._add_ramp_rx(cell,source,len=taper_len)
-                        destination=self._add_taper(cell,destination,len=self.trace_width/4)
-
-                    source.name='source'
-                    destination.name='destination'
-
-                    p0=Point().from_iter(source.midpoint)
-
-                    center_box=Point().from_iter(bbox.center)
-
-                    #left path
-                    p1=p0+Point(0,y_overtravel)
-                    p2=Point(ll.x-self.trace_width,p1.y)
-                    p3=Point(p2.x,self.trace_width+destination.y)
-                    p4=Point(destination.x,p3.y)
-                    p5=Point(destination.x,destination.y)
-
-                    list_points_lx=[p0(),p1(),p2(),p3(),p4(),p5()]
-
-                    path_lx=pp.smooth(points=list_points_lx)
-                    #right path
-                    p1=p0+Point(0,y_overtravel)
-                    p2=Point(lr.x+self.trace_width,p1.y)
-                    p3=Point(p2.x,self.trace_width+destination.y)
-                    p4=Point(destination.x,p3.y)
-                    p5=Point(destination.x,destination.y)
-
-                    list_points_rx=[p0(),p1(),p2(),p3(),p4(),p5()]
-
-                    path_rx=pp.smooth(points=list_points_rx)
-
-                    if self.side=='auto':
-
-                        if path_lx.length()<path_rx.length():
-
-                            path=path_lx
-
-                        else:
-
-                            path=path_rx
-
-                    elif self.side=='left':
-
-                        path=path_lx
-
-                    elif self.side=='right':
-
-                        path=path_rx
-
-                    else:
-
-                        raise Exception("Invalid option for side :{}".format(self.side))
-
-                else:   # source is not tucked under the clearance
-
-                    source=self._add_taper(cell,source,len=taper_len)
-                    destination=self._add_taper(cell,destination,len=self.trace_width/4)
-
-                    source.name='source'
-                    destination.name='destination'
-
-                    p0=Point().from_iter(source.midpoint)
-
-                    ll,lr,ul,ur=get_corners(bbox)
-
-                    y_overtravel=ll.y-p0.y
-
-                    center_box=Point().from_iter(bbox.center)
-
-                    #left path
-                    p1=Point(p0.x,destination.y+self.trace_width)
-                    p2=Point(destination.x,p1.y)
-                    p3=Point(destination.x,destination.y)
-
-                    list_points=[p0(),p1(),p2(),p3()]
-
-                    path=pp.smooth(points=list_points,radius=0.001,use_eff=True)#source tucked inside clearance
-
-            elif source.orientation==180 : #left path
-
-                    # source=self._add_taper(cell,source,len==-taper_len)
-                    # destination=self._add_taper(cell,destination,len=self.trace_width/4)
-
-                    source.name='source'
-                    destination.name='destination'
-
-                    p0=Point().from_iter(source.midpoint)
-                    p0=Point().from_iter(source.midpoint)
-
-                    if abs(ll.x-self.trace_width*3/4-p0.x) > 5:
-
-                        p1=Point(ll.x-self.trace_width*3/4,p0.y)
-
-                    else:
-
-                        p1=Point(p0.x-3/4*self.trace_width,p0.y)
-
-                    p2=Point(p1.x,ur.y+self.trace_width)
-                    p3=Point(destination.x,p2.y)
-                    p4=Point(destination.x,destination.y)
-
-                    list_points_lx=[p0(),p1(),p2(),p3(),p4()]
-
-                    path=pp.smooth(points=list_points_lx)
+        path=self.path
 
         x=CrossSection()
 
@@ -1266,10 +1081,6 @@ class Routing(LayoutPart):
         cell.absorb(cell<<path_cell)
 
         cell=join(cell)
-
-        del path_cell
-
-        del bbox
 
         self.cell=cell
 
@@ -1355,6 +1166,212 @@ class Routing(LayoutPart):
 
             return port
 
+    @property
+    def path(self):
+
+        bbox=pg.bbox(self.clearance)
+
+        ll,lr,ul,ur=get_corners(bbox)
+
+        source=self.ports[0]
+
+        destination=self.ports[1]
+
+        if source.y>destination.y:
+
+            source=self.ports[1]
+            destination=self.ports[0]
+
+        y_overtravel=ll.y-source.midpoint[1]-self.trace_width
+
+        taper_len=abs(min([y_overtravel,self.trace_width/4]))
+
+        if destination.y<=ll.y : # destination is below clearance
+
+            if not(destination.orientation==source.orientation+180 or \
+                destination.orientation==source.orientation-180):
+
+                    raise Exception("Routing error: non-hindered routing needs +90 -> -90 oriented ports")
+
+            # source=self._add_taper(cell,source,len=taper_len)
+            # destination=self._add_taper(cell,destination,len=self.trace_width/4)
+
+            # source.name='source'
+            # destination.name='destination'
+
+            distance=Point().from_iter(destination.midpoint)-\
+                Point().from_iter(source.midpoint)
+
+            p0=Point().from_iter(source.midpoint)
+
+            p1=p0+Point(0,distance.y/3)
+
+            p2=p1+Point(distance.x,distance.y/3)
+
+            p3=p2+Point(0,distance.y/3)
+
+            list_points=np.array([p0(),p1(),p2(),p3()])
+
+            path=pp.smooth(points=list_points)
+
+        else: #destination is above clearance
+
+            if not destination.orientation==90 :
+
+                raise ValueError("Routing case not covered yet")
+
+            elif source.orientation==0 : #right path
+
+                    # source=self._add_taper(cell,source,len==-taper_len)
+                    # destination=self._add_taper(cell,destination,len=self.trace_width/4)
+
+                    source.name='source'
+                    destination.name='destination'
+
+                    p0=Point().from_iter(source.midpoint)
+
+                    # import pdb; pdb.set_trace()
+
+                    if abs(ur.x+self.trace_width*3/4-p0.x) > 5:
+
+                        p1=Point(ur.x+self.trace_width*3/4,p0.y)
+
+                    else:
+
+                        p1=Point(p0.x+3/4*self.trace_width,p0.y)
+
+                    p2=Point(p1.x,ur.y+self.trace_width)
+                    p3=Point(destination.x,p2.y)
+                    p4=Point(destination.x,destination.y)
+
+                    list_points_rx=[p0(),p1(),p2(),p3(),p4()]
+
+                    path=pp.smooth(points=list_points_rx)
+
+            if source.orientation==90 :
+
+                if source.x+self.trace_width>ll.x and source.x-self.trace_width<lr.x: #source tucked inside clearance
+
+                    # if self.side=='auto':
+
+                        # source=self._add_taper(cell,source,len=taper_len)
+                        # destination=self._add_taper(cell,destination,len=self.trace_width/4)
+
+                    # elif self.side=='left':
+
+                        # source=self._add_ramp_lx(cell,source,len=taper_len)
+                        # destination=self._add_taper(cell,destination,len=self.trace_width/4)
+
+                    # elif self.side=='right':
+
+                        # source=self._add_ramp_rx(cell,source,len=taper_len)
+                        # destination=self._add_taper(cell,destination,len=self.trace_width/4)
+
+                    # source.name='source'
+                    # destination.name='destination'
+
+                    p0=Point().from_iter(source.midpoint)
+
+                    center_box=Point().from_iter(bbox.center)
+
+                    #left path
+                    p1=p0+Point(0,y_overtravel)
+                    p2=Point(ll.x-self.trace_width,p1.y)
+                    p3=Point(p2.x,self.trace_width+destination.y)
+                    p4=Point(destination.x,p3.y)
+                    p5=Point(destination.x,destination.y)
+
+                    list_points_lx=[p0(),p1(),p2(),p3(),p4(),p5()]
+
+                    path_lx=pp.smooth(points=list_points_lx)
+
+                    #right path
+
+                    p1=p0+Point(0,y_overtravel)
+                    p2=Point(lr.x+self.trace_width,p1.y)
+                    p3=Point(p2.x,self.trace_width+destination.y)
+                    p4=Point(destination.x,p3.y)
+                    p5=Point(destination.x,destination.y)
+
+                    list_points_rx=[p0(),p1(),p2(),p3(),p4(),p5()]
+
+                    path_rx=pp.smooth(points=list_points_rx)
+
+                    if self.side=='auto':
+
+                        if path_lx.length()<path_rx.length():
+
+                            path=path_lx
+
+                        else:
+
+                            path=path_rx
+
+                    elif self.side=='left':
+
+                        path=path_lx
+
+                    elif self.side=='right':
+
+                        path=path_rx
+
+                    else:
+
+                        raise Exception("Invalid option for side :{}".format(self.side))
+
+                else:   # source is not tucked under the clearance
+
+                    # source=self._add_taper(cell,source,len=taper_len)
+                    # destination=self._add_taper(cell,destination,len=self.trace_width/4)
+
+                    # source.name='source'
+                    # destination.name='destination'
+
+                    p0=Point().from_iter(source.midpoint)
+
+                    ll,lr,ul,ur=get_corners(bbox)
+
+                    y_overtravel=ll.y-p0.y
+
+                    center_box=Point().from_iter(bbox.center)
+
+                    #left path
+                    p1=Point(p0.x,destination.y+self.trace_width)
+                    p2=Point(destination.x,p1.y)
+                    p3=Point(destination.x,destination.y)
+
+                    list_points=[p0(),p1(),p2(),p3()]
+
+                    path=pp.smooth(points=list_points,radius=0.001,use_eff=True)#source tucked inside clearance
+
+            elif source.orientation==180 : #left path
+
+                # source=self._add_taper(cell,source,len==-taper_len)
+                # destination=self._add_taper(cell,destination,len=self.trace_width/4)
+
+                # source.name='source'
+                # destination.name='destination'
+
+                p0=Point().from_iter(source.midpoint)
+
+                if abs(ll.x-self.trace_width*3/4-p0.x) > 5:
+
+                    p1=Point(ll.x-self.trace_width*3/4,p0.y)
+
+                else:
+
+                    p1=Point(p0.x-3/4*self.trace_width,p0.y)
+
+                p2=Point(p1.x,ur.y+self.trace_width)
+                p3=Point(destination.x,p2.y)
+                p4=Point(destination.x,destination.y)
+
+                list_points_lx=[p0(),p1(),p2(),p3(),p4()]
+
+                path=pp.smooth(points=list_points_lx)
+
+        return path
+
     def draw_with_frame(self):
 
         cell_frame=self.draw_frame()
@@ -1366,7 +1383,7 @@ class Routing(LayoutPart):
     @property
     def resistance_squares(self):
 
-        return self.draw().area/self.trace_width
+        return self.path.length()/self.trace_width
 
 class GSProbe(LayoutPart):
     ''' Generates GS pattern.

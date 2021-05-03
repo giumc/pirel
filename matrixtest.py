@@ -13,7 +13,7 @@ param["IDTCoverage"]=0.5
 param["BusSizeY"]=0.5
 param["EtchX"]=0.4
 param["AnchorSizeY"]=4
-param["AnchorSizeX"]=0.5
+param["AnchorSizeX"]=0.1
 param["AnchorEtchMarginX"]=0.2
 param["AnchorEtchMarginY"]=0.2
 
@@ -24,7 +24,7 @@ array=PArray(device,name="HiArray")
 array.x_spacing=200
 
 param1=SweepParam({"IDTCoverage":[0.3,0.5,0.7]})
-param2=SweepParam({"BusSizeY":[5,10,15]})
+param2=SweepParam({"BusSizeY":[2,4,8]})
 
 array.x_param=param1.combine(param2)
 
@@ -32,6 +32,8 @@ array.x_param=param1.combine(param2)
 #     "IDTcitch":[_ for _ in np.arange(5,25,5)] }
 
 array.auto_labels()
+
+exit()
 
 array.view()
 
