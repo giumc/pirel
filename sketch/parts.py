@@ -47,10 +47,6 @@ def Scaled(res):
 
             self._denormalize()
 
-            # df_denorm=res.export_params(self)
-            #
-            # df.update({name:df_denorm[name] for name in df_denorm.keys() if 'Resistance' in name})
-
             return df
 
         def _normalize(self):
@@ -588,8 +584,8 @@ def addProbe(res,probe):
 
             t.update(t_probe)
 
-            t.update({"Resistance":super().resistance_squares+self.probe_resistance_squares})
-            t.update({"ProbeResistance":self.probe_resistance_squares})
+            # t.update({"Resistance":super().resistance_squares+self.probe_resistance_squares})
+            # t.update({"ProbeResistance":self.probe_resistance_squares})
 
             return t
 
@@ -598,6 +594,14 @@ def addProbe(res,probe):
             res.import_params(self,df)
 
             if_match_import(self.probe,df,"Probe")
+
+        def export_all(self):
+
+            df=super().export_all()
+            df["DUTResistance"]=super().resistance_squares
+            df["ProbeResistance"]=self.probe_resistance_squares
+
+            return df
 
         @property
         def resistance_squares(self):
@@ -852,6 +856,14 @@ def array(res,n):
 
                         return parallel_res((r+x_dist/l)/2,(r+2*x_dist/l)/(n_copies-2))
 
+        def export_all(self):
+
+            df=super().export_all()
+
+            df["SingleDeviceResistance"]=super().resistance_squares
+
+            return df
+
     return array
 
 class LFERes(LayoutPart):
@@ -1039,6 +1051,15 @@ class LFERes(LayoutPart):
 
         return ridt+rbus+ranchor
 
+    def export_all(self):
+
+        df=super().export_all()
+
+        df["IDTResistance"]=self.idt.resistance_squares
+        df["AnchorResistance"]=self.anchor.resistance_squares
+        df["BusResistance"]=self.idt.resistance_squares
+
+        return df
 class FBERes(LFERes):
 
     def __init__(self,*args,**kwargs):
@@ -1188,28 +1209,6 @@ class WBArray(LayoutPart):
         device_with_pads.import_params(dev.export_params())
 
         self._padded_device=device_with_pads
-
-    def export_params(self):
-
-        t=self.device.export_params()
-        t["NCopies"]=self.n
-        t["GndWidth"]=self.gnd_width
-
-        return t
-
-    def import_params(self,df):
-
-        self.device.import_params(df)
-
-        for cols in df.columns:
-
-            if cols=='NCopies':
-
-                self.n=df[cols].iat[0]
-
-            if cols=='GndWidth':
-
-                self.gnd_width=df[cols].iat[0]
 
     def draw(self):
 

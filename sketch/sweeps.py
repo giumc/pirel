@@ -205,7 +205,7 @@ class SweepParam():
                 axn.set_xticks(ticks)
                 axn.set_xticklabels(self.values[i])
                 axn.set_xlabel(self.names[i])
-                axn.set_xlim(ticks[0],ticks[-1])
+                # axn.set_xlim(ticks[0],ticks[-1])
 
         elif ax=='y':
 
@@ -231,7 +231,7 @@ class SweepParam():
                     prev_ax_position=axn.get_position()
 
                     extra_ax.append(fig.add_axes(\
-                        (prev_ax_position.x0+2*dx_fig,\
+                        (prev_ax_position.x0-2*dx_fig,\
                         prev_ax_position.y0,\
                         0,\
                         prev_ax_position.height),'autoscalex_on',True))
@@ -243,7 +243,7 @@ class SweepParam():
                 axn.set_yticks(ticks)
                 axn.set_yticklabels(self.values[i])
                 axn.set_ylabel(self.names[i])
-                axn.set_ylim(ticks[0],ticks[-1])
+                # axn.set_ylim(ticks[0],ticks[-1])
 
         else:
 
@@ -376,6 +376,10 @@ class PArray(LayoutPart):
 
         return self.device.export_params()
 
+    def export_all(self):
+
+        return self.device.export_all()
+
     @property
     def table(self):
 
@@ -393,9 +397,7 @@ class PArray(LayoutPart):
 
                 device.import_params(param(i))
 
-            df=device.export_params()
-
-            df["Resistance"]=device.resistance_squares
+            df=device.export_all()
 
             if self.labels_bottom is not None:
 
@@ -525,11 +527,12 @@ class PArray(LayoutPart):
 
                 self.import_params(sweep_param(i))
 
-                df=self.export_params()
+                df=self.export_all()
 
                 y.append(df[param[0]])
 
             p=ax.scatter([_+1 for _ in range(len(y))],y)
+
             p.set_clip_on(False)
 
             ax.set_ylabel(param[0])
@@ -547,7 +550,7 @@ class PArray(LayoutPart):
 
                     self.import_params(sweep_param(i))
 
-                    df=self.export_params()
+                    df=self.export_all()
 
                     y[j].append(df[param[j]])
 
@@ -721,9 +724,7 @@ class PMatrix(PArray):
 
                 device.import_params(x_param(i))
 
-                df=device.export_params()
-
-                df["Resistance"]=device.resistance_squares
+                df=device.export_all()
 
                 if self.labels_bottom is not None:
 
@@ -755,10 +756,6 @@ class PMatrix(PArray):
 
         df_original=self.export_params()
 
-        # if isinstance(param,str):
-        #
-        #     param=[param]
-
         x=[*range(len(sweep_param_x))]
 
         y=[*range(len(sweep_param_y))]
@@ -772,9 +769,9 @@ class PMatrix(PArray):
             for i in x:
 
                 self.import_params(sweep_param_x(i))
-                self.import_params(sweep_param_y(i))
+                self.import_params(sweep_param_y(j))
 
-                df=self.export_params()
+                df=self.export_all()
 
                 z[j].append(df[param])
 
@@ -783,28 +780,33 @@ class PMatrix(PArray):
         z=np.array(z)
         x,y=np.meshgrid(x,y)
 
-        # surf=ax.plot_surface(x, y, z, cmap=cm.coolwarm,
-        #                linewidth=0, antialiased=False)
-        bounds=np.unique(z)
         cmap=plt.cm.viridis
-        surf=ax.imshow(z,cmap='viridis')
-        
-        cbar=fig.colorbar(surf, shrink=0.5, aspect=5)
 
-        cbar.set_label(param)
-        # ax.grid(linestyle='--',linewidth=0.5, color='grey')
+        import seaborn as sns
 
-        # ax.autoscale(enable=True, tight=True)
+        surf=sns.heatmap(z,cmap='viridis',cbar_kws={'label': param},linewidth=0.5)
 
-        # self.x_param.populate_plot_axis(ax,'x')
-        # self.y_param.populate_plot_axis(ax,'y')
+        # ax.set_xticks([_+1 for _ in range(len(sweep_param_x))])
+        # ax.set_yticks([_+1 for _ in range(len(sweep_param_y),-1,-1)])
 
-        ax.set_xlabel('x')
-        ax.set_ylabel('y')
+        # cbar=fig.colorbar(surf, shrink=0.5, aspect=5)
+
+        # cbar.set_label(param)
+
+        # ax.set_xlabel('x')
+        # ax.set_ylabel('y')
+
+        self.x_param.populate_plot_axis(ax,'x')
+        self.y_param.populate_plot_axis(ax,'y')
+
         # ax.set_zlabel(param)
 
         self.import_params(df_original)
 
+        mng = plt.get_current_fig_manager()
+
+        mng.frame.Maximize(True)
+        
         plt.show()
 
         return fig

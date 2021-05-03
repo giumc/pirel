@@ -40,17 +40,17 @@ param["GndRoutingWidth"]=150
 device.import_params(param)
 
 # print(device)
-device.view_gds()
 
 array=PArray(device,name="HiArray")
-
 
 array.x_spacing=200
 
 param1=SweepParam({"IDTCoverage":[0.3,0.5,0.7]})
+
 param2=SweepParam({"BusSizeY":[2,4,8]})
 
 array.x_param=param1.combine(param2)
+
 # print(array)
 # array.x_param={"IDTCoverage": [ _ for _ in np.arange(0.2,1,0.2)],\
 #     "IDTcitch":[_ for _ in np.arange(5,25,5)] }
@@ -59,7 +59,7 @@ array.x_param=param1.combine(param2)
 
 # exit()
 
-# array.view_gds()
+# array.view()
 
 # array.plot_param("AnchorSizeX")
 
@@ -69,21 +69,22 @@ array.x_param=param1.combine(param2)
 
 # print(array.device)
 
-exit()
+# exit()
 
 #
 mat=PMatrix(device,"Hi")
+mat.x_param=param1.combine(param2)
 mat.y_param=SweepParam({"AnchorSizeX":[0.1, 0.3,0.6]})
+
 mat.x_spacing=200
 mat.y_spacing=400
-# mat.labels_top=None
-# mat.labels_bottom=None
 
-# mat.device=device
 mat.auto_labels(col_index=3,row_index=3)
-# print(mat.labels_top)
-# print(mat.labels_bottom)
-mat.view_gds()
-# import pdb; pdb.set_trace()
 
-# mat.plot_param('AnchorSizeX')
+# mat.view()
+
+fig=mat.plot_param('Resistance')
+
+plt.figure(fig)
+
+plt.savefig("test.svg")

@@ -264,6 +264,12 @@ class LayoutParam():
 
                 self._value=value
 
+    # def addResistance_toParams(fun):
+    #
+    #     def wrapper():
+    #
+    #         df=fun()
+
 class _LayoutParamInterface():
 
     def __init__(self,def_value=1):
@@ -396,7 +402,7 @@ class LayoutPart(ABC) :
 
         df=self.export_params()
 
-        return [*df.keys() ]
+        return [*df.keys()]
 
     def bbox_mod(self,bbox):
         ''' Default method that returns bbox for the class .
@@ -486,6 +492,16 @@ class LayoutPart(ABC) :
 
                 param.param={name:value}
 
+    def export_all(self):
+
+        df=self.export_params()
+
+        if hasattr(self,'resistance_squares'):
+
+            df["Resistance"]=self.resistance_squares
+            
+        return df
+
     @staticmethod
     def _add_columns(d1,d2):
 
@@ -497,7 +513,7 @@ class LayoutPart(ABC) :
 
     def __repr__(self):
 
-        df=Series(self.export_params())
+        df=Series(self.export_all())
 
         return df.to_string()
 
