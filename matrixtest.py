@@ -87,4 +87,4 @@ fig=mat.plot_param('Resistance')
 
 plt.figure(fig)
 
-plt.savefig("test.svg")
+plt.savefig("test.svg",bbox_inches='tight')

@@ -1060,6 +1060,7 @@ class LFERes(LayoutPart):
         df["BusResistance"]=self.idt.resistance_squares
 
         return df
+
 class FBERes(LFERes):
 
     def __init__(self,*args,**kwargs):

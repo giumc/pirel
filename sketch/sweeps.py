@@ -203,7 +203,8 @@ class SweepParam():
                     axn.yaxis.set_visible(False) # hide the yaxis
 
                 axn.set_xticks(ticks)
-                axn.set_xticklabels(self.values[i])
+                axn.set_xticklabels(["{:.2f}".format(x).rstrip('0').lstrip('0') for x in self.values[i]])
+                axn.tick_params(axis='x',labelsize='small')
                 axn.set_xlabel(self.names[i])
                 # axn.set_xlim(ticks[0],ticks[-1])
 
@@ -241,7 +242,7 @@ class SweepParam():
                     axn.xaxis.set_visible(False) # hide the yaxis
 
                 axn.set_yticks(ticks)
-                axn.set_yticklabels(self.values[i])
+                axn.set_yticklabels(["{:.2f}".format(x).rstrip('0').lstrip('0') for x in self.values[i]])
                 axn.set_ylabel(self.names[i])
                 # axn.set_ylim(ticks[0],ticks[-1])
 
@@ -672,6 +673,8 @@ class PMatrix(PArray):
 
         self.labels_bottom=bottom_label_matrix
 
+        self.name=master_name
+
         return master_cell
 
     def auto_labels(self,top=True,bottom=True,top_label='',bottom_label='',\
@@ -803,11 +806,11 @@ class PMatrix(PArray):
 
         self.import_params(df_original)
 
-        mng = plt.get_current_fig_manager()
+        # plt.switch_backend('Qt4Agg')
+        # figManager = plt.get_current_fig_manager()
+        # figManager.window.showMaximized()
 
-        mng.frame.Maximize(True)
-        
-        plt.show()
+        # plt.show()
 
         return fig
 
@@ -877,3 +880,37 @@ class PArraySeries(PArray):
             data_tot.append(parr.table)
 
         return data_tot
+
+def build_matrix(base_device,x_param,y_param,name="Matrix",start_index=(0,0),text_param=ld.TextParams):
+
+    m=PMatrix(base_device,name=name)
+
+    m.y_param=y_param
+
+    m.x_param=x_param
+
+    m.x_spacing=-base_device.gnd_routing_width
+
+    m.y_spacing=100
+
+    m.auto_labels(row_index=start_index[0],col_index=start_index[1])
+
+    m.text_params=text_param
+
+    m.name=name
+
+    return m
+
+def export_matrix_data(pmatrix,path='./'):
+
+    t_mat1=pmatrix.table
+
+    t_mat1.to_excel(os.path.join(path,pmatrix.name+".xlsx"))
+
+    fig=pmatrix.plot_param("Resistance")
+
+    plt.figure(fig)
+
+    plt.savefig(os.path.join(path,pmatrix.name+".svg"))
+
+    plt.close(fig)

@@ -499,7 +499,7 @@ class LayoutPart(ABC) :
         if hasattr(self,'resistance_squares'):
 
             df["Resistance"]=self.resistance_squares
-            
+
         return df
 
     @staticmethod
