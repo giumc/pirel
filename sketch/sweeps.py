@@ -285,7 +285,8 @@ class SweepParam():
 
                 axn.set_yticks(ticks)
 
-                axn.set_yticklabels(["{:.2f}".format(x).rstrip('0').rstrip('.') for x in self.values[i]])
+                axn.set_yticklabels(["{:.2f}".format(x).rstrip('0').rstrip('.') \
+                    for x in reversed(self.values[i])])
 
                 ylab=axn.set_ylabel(self.names[i])
 
@@ -668,9 +669,9 @@ class PMatrix(PArray):
 
             device.import_params(df)
 
-            print("drawing array {} of {}".format(index+1,len(y_param)),end="\r")
+            print("drawing array {} of {}".format(index+1,len(y_param)))
 
-            sys.stdout.flush()
+            # sys.stdout.flush()
 
             if top_label_matrix is not None:
 
@@ -707,7 +708,8 @@ class PMatrix(PArray):
             self.name=master_name+"Arr"+str(index+1)
 
             new_cell=PArray.draw(self)
-            sys.stdout.flush()
+            # sys.stdout.flush()
+            print("\033[K",end='')
             master_cell<<new_cell
 
             cells.append(new_cell)
@@ -761,7 +763,6 @@ class PMatrix(PArray):
 
             self.labels_bottom=None
 
-    # @profile
     @property
     def table(self):
 
@@ -796,8 +797,8 @@ class PMatrix(PArray):
                     index=str(i)+str(j)
 
                 print("Generating table, item {0} of {1}".format(print_index,str(len(x_param)*len(y_param))),end="\r")
-
-                sys.stdout.flush()
+                print("\033[K",end='')
+                # sys.stdout.flush()
 
                 print_index+=1
 
@@ -837,7 +838,8 @@ class PMatrix(PArray):
                 df=self.export_all()
 
                 print("Getting {} value , item {} of {} ".format(param,print_index,len(x)*len(y)),end="\r")
-                sys.stdout.flush()
+                # sys.stdout.flush()
+                print("\033[K",end='')
                 z[j].append(df[param])
                 print_index+=1
 
@@ -855,8 +857,8 @@ class PMatrix(PArray):
         # surf.figure.axes[-1].set_ylabel(param, size=10)
 
         # lab.set_fontsize(10)
-        # ax.set_xticks([_+1 for _ in range(len(sweep_param_x))])
-        # ax.set_yticks([_+1 for _ in range(len(sweep_param_y),-1,-1)])
+        ax.set_xticks([_+0.5 for _ in range(len(sweep_param_x))])
+        ax.set_yticks([_-0.5 for _ in range(len(sweep_param_y),0,-1)])
 
         # cbar=fig.colorbar(surf, shrink=0.5, aspect=5)
 
