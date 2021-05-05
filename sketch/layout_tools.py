@@ -444,3 +444,41 @@ def parallel_res(*args):
         sum_y=sum_y+1/arg
 
     return 1/sum_y
+
+def _add_lookup_table(fun):
+
+    def wrapper(self):
+
+        totparamlist=self.export_params()
+
+        paramlist={}
+
+        dict_name="_"+fun.__name__+"_lookup"
+
+        for name in totparamlist.keys():
+
+            if not "Name" in name:
+
+                paramlist[name]=totparamlist[name]
+
+        paramlist=tuple(paramlist.items())
+
+        if not hasattr(self,dict_name):
+
+            setattr(self,dict_name,{})
+
+        dict_lookup=getattr(self,dict_name)
+
+        if paramlist in dict_lookup.keys():
+
+            return dict_lookup[paramlist]
+
+        else:
+
+            xout=fun(self)
+
+            dict_lookup[paramlist]=xout
+
+            return xout
+
+    return wrapper

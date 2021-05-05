@@ -52,6 +52,7 @@ param2=SweepParam({"BusSizeY":[2,4,8]})
 array.x_param=param1.combine(param2)
 
 # print(array)
+
 # array.x_param={"IDTCoverage": [ _ for _ in np.arange(0.2,1,0.2)],\
 #     "IDTcitch":[_ for _ in np.arange(5,25,5)] }
 
@@ -81,10 +82,8 @@ mat.y_spacing=400
 
 mat.auto_labels(col_index=3,row_index=3)
 
-# mat.view()
+mat.view()
 
 fig=mat.plot_param('Resistance')
 
-plt.figure(fig)
-
-plt.savefig("test.svg",bbox_inches='tight')
+export_matrix_data(mat,os.path.dirname(__file__))

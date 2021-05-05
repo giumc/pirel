@@ -172,7 +172,7 @@ class SweepParam():
         if ax=='x':
 
             ticks=plot.get_xticks()
-
+            lim=plot.get_xlim()
             for i in range(len(self.names)):
 
                 if i==0:
@@ -186,7 +186,7 @@ class SweepParam():
                     plot_position=plot.get_position()
 
                     plot.set_position([plot_position.x0,\
-                        plot_position.y0+2*dy_fig,\
+                        plot_position.y0+dy_fig,\
                         plot_position.width,\
                         plot_position.height-dy_fig])
 
@@ -203,14 +203,20 @@ class SweepParam():
                     axn.yaxis.set_visible(False) # hide the yaxis
 
                 axn.set_xticks(ticks)
+
                 axn.set_xticklabels(["{:.2f}".format(x).rstrip('0').lstrip('0') for x in self.values[i]])
+
                 axn.tick_params(axis='x',labelsize='small')
+
                 axn.set_xlabel(self.names[i])
-                # axn.set_xlim(ticks[0],ticks[-1])
+
+                axn.set_xlim(lim)
 
         elif ax=='y':
 
             ticks=plot.get_yticks()
+
+            lim=plot.get_ylim()
 
             for i in range(len(self.names)):
 
@@ -224,9 +230,9 @@ class SweepParam():
 
                     plot_position=plot.get_position()
 
-                    plot.set_position([plot_position.x0+2*dx_fig,\
+                    plot.set_position([plot_position.x0+dx_fig,\
                         plot_position.y0,\
-                        plot_position.width+dx_fig,\
+                        plot_position.width-dx_fig,\
                         plot_position.height])
 
                     prev_ax_position=axn.get_position()
@@ -242,9 +248,12 @@ class SweepParam():
                     axn.xaxis.set_visible(False) # hide the yaxis
 
                 axn.set_yticks(ticks)
+
                 axn.set_yticklabels(["{:.2f}".format(x).rstrip('0').lstrip('0') for x in self.values[i]])
+
                 axn.set_ylabel(self.names[i])
-                # axn.set_ylim(ticks[0],ticks[-1])
+
+                axn.set_ylim(lim)
 
         else:
 
@@ -326,8 +335,6 @@ class _SweepArrayValidator(_SweepParamValidator):
 
         sweep_row=list()
 
-
-
         for par in layout_params:
 
             _SweepParamValidator.__set__(self,owner,par)
@@ -394,6 +401,8 @@ class PArray(LayoutPart):
 
         for i in range(len(param)):
 
+            print_index=1
+
             for name in param.names:
 
                 device.import_params(param(i))
@@ -407,6 +416,8 @@ class PArray(LayoutPart):
             else:
 
                 index=str(i)
+
+            print("Generating table, item {} of {}\r".format(print_index,len(param)))
 
             data_tot=data_tot.append(Series(df,name=index))
 
@@ -440,7 +451,7 @@ class PArray(LayoutPart):
 
             device.import_params(df)
 
-            print("drawing device {} of {}".format(index+1,len(param)))
+            print("drawing device {} of {}".format(index+1,len(param)),end="\r")
 
             new_cell=device.draw()
 
@@ -615,7 +626,7 @@ class PMatrix(PArray):
 
             device.import_params(df)
 
-            print("drawing array {} of {}".format(index+1,len(y_param)))
+            print("drawing array {} of {}\r".format(index+1,len(y_param)))
 
             if top_label_matrix is not None:
 
@@ -719,6 +730,8 @@ class PMatrix(PArray):
 
         data_tot=DataFrame()
 
+        print_index=1
+
         for j in range(len(y_param)):
 
             device.import_params(y_param(j))
@@ -736,6 +749,10 @@ class PMatrix(PArray):
                 else:
 
                     index=str(i)+str(j)
+
+                print("Generating table, item {} of {} \r".format(print_index,len(x_param)*len(y_param)))
+
+                print_index+=1
 
                 data_tot=data_tot.append(Series(df,name=index))
 
@@ -765,6 +782,7 @@ class PMatrix(PArray):
 
         z=[]
 
+        print_index=1
         for j in y:
 
             z.append([])
@@ -776,7 +794,10 @@ class PMatrix(PArray):
 
                 df=self.export_all()
 
+                print("Getting {} value , item {} of ".format(param,print_index,len(x)*len(y)),end="\r")
+
                 z[j].append(df[param])
+                print_index+=1
 
         x=np.array(x)
         y=np.array(y)
@@ -911,6 +932,6 @@ def export_matrix_data(pmatrix,path='./'):
 
     plt.figure(fig)
 
-    plt.savefig(os.path.join(path,pmatrix.name+".svg"))
+    plt.savefig(os.path.join(path,pmatrix.name+".svg"),bbox_inches='tight')
 
     plt.close(fig)

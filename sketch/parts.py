@@ -4,6 +4,8 @@ from layout_tools import *
 
 from building_blocks import _LayoutParamInterface
 
+from layout_tools import _add_lookup_table
+
 ld=LayoutDefault()
 
 import pandas as pd
@@ -604,11 +606,13 @@ def addProbe(res,probe):
             return df
 
         @property
+        @_add_lookup_table
         def resistance_squares(self):
 
             return super().resistance_squares+self.probe_resistance_squares
 
         @property
+        @_add_lookup_table
         def probe_resistance_squares(self):
 
             device_cell=res.draw(self)
@@ -637,9 +641,11 @@ def addProbe(res,probe):
 
             routing_rx_len=routing_rx.path.length()
 
-            return (routing_lx_len/self.gnd_routing_width+\
+            r_probe=(routing_lx_len/self.gnd_routing_width+\
                 routing_rx_len/self.gnd_routing_width)/2+\
                 self.probe_dut_distance.y/self.anchor.metalized.x
+
+            return r_probe
 
         @property
         def probe_dut_distance(self):
@@ -792,6 +798,7 @@ def array(res,n):
                 destination=(cell.center[0],cell.ymax))
 
             cell.add(bus_bottom)
+            
             cell.add(bus_top)
 
             cell=join(cell)
@@ -813,6 +820,7 @@ def array(res,n):
             return cell
 
         @property
+        @_add_lookup_table
         def resistance_squares(self):
 
             r=super().resistance_squares
@@ -846,7 +854,6 @@ def array(res,n):
                     return parallel_res(r+l/w,(r+2*x_dist/l)/(n_copies-1))
 
                 if n_copies%2==0 :
-
 
                     if n_copies==2:
 
