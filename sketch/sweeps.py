@@ -10,7 +10,7 @@ from matplotlib.ticker import LinearLocator
 
 import numpy as np
 
-plt.style.use('./pltstl.mplstyle')
+plt.style.use(os.path.dirname(__file__)+os.path.sep+'pltstl.mplstyle')
 
 import sys
 
@@ -177,8 +177,6 @@ class SweepParam():
 
     def populate_plot_axis(self,plot,ax='x'):
 
-        import matplotlib.pyplot as plt
-
         fig=plt.gcf()
 
         extra_ax=[]
@@ -194,11 +192,15 @@ class SweepParam():
 
                     axn=plot
 
+                    axn.spines['bottom'].set_position(('outward',10))
+
+                    axn.spines['bottom'].set_visible(True)
+
                 else:
 
-                    dy_fig=0.05
+                    dy_fig=0.075
 
-                    plot_position=plot.get_position()
+                    # plot_position=plot.get_position()
 
                     # plot.set_position([plot_position.x0,\
                     #     plot_position.y0+dy_fig,\
@@ -223,13 +225,18 @@ class SweepParam():
 
                     axn.yaxis.set_visible(False) # hide the yaxis
 
+                for side in axn.spines.keys():  # 'top', 'bottom', 'left', 'right'
+
+                    axn.spines[side].set_linewidth(1)
+
                 axn.set_xticks(ticks)
 
-                axn.set_xticklabels(["{:.2f}".format(float(str(x))).rstrip('0') for x in self.values[i]])
+                axn.set_xticklabels(["{:.2f}".format(float(str(x))).rstrip('0').rstrip('.') for x in self.values[i]])
 
-                axn.tick_params(axis='x',labelsize='small')
+                axn.tick_params(axis='x',labelsize=10)
 
-                axn.set_xlabel(self.names[i])
+                xlab=axn.set_xlabel(self.names[i])
+                xlab.set_fontsize(10)
 
                 axn.set_xlim(lim)
 
@@ -245,9 +252,13 @@ class SweepParam():
 
                     axn=plot
 
+                    axn.spines['left'].set_position(('outward',10))
+
+                    axn.spines['left'].set_visible(True)
+
                 else:
 
-                    dx_fig=0.05
+                    dx_fig=0.075
 
                     plot_position=plot.get_position()
 
@@ -268,11 +279,19 @@ class SweepParam():
 
                     axn.xaxis.set_visible(False) # hide the yaxis
 
+                for side in axn.spines.keys():  # 'top', 'bottom', 'left', 'right'
+
+                    axn.spines[side].set_linewidth(1)
+
                 axn.set_yticks(ticks)
 
-                axn.set_yticklabels(["{:.2f}".format(x).rstrip('0').lstrip('0') for x in self.values[i]])
+                axn.set_yticklabels(["{:.2f}".format(x).rstrip('0').rstrip('.') for x in self.values[i]])
 
-                axn.set_ylabel(self.names[i])
+                ylab=axn.set_ylabel(self.names[i])
+
+                ylab.set_fontsize(10)
+
+                axn.tick_params(axis='y',labelsize=10)
 
                 axn.set_ylim(lim)
 
@@ -742,6 +761,7 @@ class PMatrix(PArray):
 
             self.labels_bottom=None
 
+    # @profile
     @property
     def table(self):
 
@@ -776,6 +796,7 @@ class PMatrix(PArray):
                     index=str(i)+str(j)
 
                 print("Generating table, item {0} of {1}".format(print_index,str(len(x_param)*len(y_param))),end="\r")
+
                 sys.stdout.flush()
 
                 print_index+=1
@@ -831,6 +852,9 @@ class PMatrix(PArray):
 
         surf=sns.heatmap(z,cmap='viridis',cbar_kws={'label': param},linewidth=0.5)
 
+        # surf.figure.axes[-1].set_ylabel(param, size=10)
+
+        # lab.set_fontsize(10)
         # ax.set_xticks([_+1 for _ in range(len(sweep_param_x))])
         # ax.set_yticks([_+1 for _ in range(len(sweep_param_y),-1,-1)])
 

@@ -477,6 +477,7 @@ def addProbe(res,probe):
 
             self.gnd_routing_width=ld.DUTrouting_width
 
+        # @_add_lookup_table
         def draw(self):
 
             device_cell=res.draw(self)
@@ -762,6 +763,7 @@ def array(res,n):
 
             self.n_copies=n
 
+        @_add_lookup_table
         def draw(self):
 
             unit_cell=res.draw(self)
@@ -891,6 +893,7 @@ class LFERes(LayoutPart):
 
         self._stretch_top_margin=False
 
+    @_add_lookup_table
     def draw(self):
 
         o=self.origin

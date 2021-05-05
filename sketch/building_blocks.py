@@ -28,6 +28,7 @@ from pandas import Series,DataFrame
 
 from layout_tools import *
 
+from layout_tools import _add_lookup_table
 ld=LayoutDefault
 
 class TextParam():
@@ -857,6 +858,7 @@ class Anchor(LayoutPart):
         self.layer=ld.Anchorlayer
         self.etch_layer=ld.Anchoretch_layer
 
+    @_add_lookup_table
     def draw(self):
         ''' Generates layout cell based on current parameters.
 
@@ -1080,6 +1082,7 @@ class Routing(LayoutPart):
 
         return rect
 
+    @_add_lookup_table
     def draw(self):
 
         cell=Device(self.name)
@@ -1099,6 +1102,22 @@ class Routing(LayoutPart):
         self.cell=cell
 
         return cell
+
+    def export_params(self):
+
+        df=super().export_params()
+
+        df["Ports"]=self.ports
+
+        return df
+
+    def import_params(self,df):
+
+        super().import_params()
+
+        if "Ports" in df.keys():
+
+            self.ports=df["Ports"]
 
     def _add_taper(self,cell,port,len=10):
 
@@ -1181,6 +1200,7 @@ class Routing(LayoutPart):
             return port
 
     @property
+    @_add_lookup_table
     def path(self):
 
         bbox=pg.bbox(self.clearance)
@@ -1395,6 +1415,7 @@ class Routing(LayoutPart):
         return cell_frame
 
     @property
+    @_add_lookup_table
     def resistance_squares(self):
 
         return self.path.length()/self.trace_width

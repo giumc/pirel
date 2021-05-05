@@ -84,6 +84,11 @@ mat.auto_labels(col_index=3,row_index=3)
 
 mat.view()
 
-fig=mat.plot_param('Resistance')
-
-export_matrix_data(mat,os.path.dirname(__file__))
+# fig=mat.plot_param('Resistance')
+import cProfile
+import pstats
+profile = cProfile.Profile()
+profile.runcall(export_matrix_data,mat,path=os.path.dirname(__file__),param='Resistance')
+ps = pstats.Stats(profile)
+ps.sort_stats('cumtime')
+ps.print_stats(20)
