@@ -1,5 +1,19 @@
 from building_blocks import *
 
+import matplotlib.pyplot as plt
+
+import matplotlib as mpl
+
+from matplotlib import cm
+
+from matplotlib.ticker import LinearLocator
+
+import numpy as np
+
+plt.style.use('./pltstl.mplstyle')
+
+import sys
+
 class SweepParam():
 
     def __init__(self,params):
@@ -173,6 +187,7 @@ class SweepParam():
 
             ticks=plot.get_xticks()
             lim=plot.get_xlim()
+
             for i in range(len(self.names)):
 
                 if i==0:
@@ -185,12 +200,18 @@ class SweepParam():
 
                     plot_position=plot.get_position()
 
-                    plot.set_position([plot_position.x0,\
-                        plot_position.y0+dy_fig,\
-                        plot_position.width,\
-                        plot_position.height-dy_fig])
+                    # plot.set_position([plot_position.x0,\
+                    #     plot_position.y0+dy_fig,\
+                    #     plot_position.width,\
+                    #     plot_position.height-dy_fig])
 
                     prev_ax_position=axn.get_position()
+
+                    # extra_ax.append(fig.add_axes(\
+                    #     (prev_ax_position.x0,\
+                    #     prev_ax_position.y0-2*dy_fig,\
+                    #     prev_ax_position.width,\
+                    #     0),'autoscalex_on',True))
 
                     extra_ax.append(fig.add_axes(\
                         (prev_ax_position.x0,\
@@ -204,7 +225,7 @@ class SweepParam():
 
                 axn.set_xticks(ticks)
 
-                axn.set_xticklabels(["{:.2f}".format(x).rstrip('0').lstrip('0') for x in self.values[i]])
+                axn.set_xticklabels(["{:.2f}".format(float(str(x))).rstrip('0') for x in self.values[i]])
 
                 axn.tick_params(axis='x',labelsize='small')
 
@@ -230,10 +251,10 @@ class SweepParam():
 
                     plot_position=plot.get_position()
 
-                    plot.set_position([plot_position.x0+dx_fig,\
-                        plot_position.y0,\
-                        plot_position.width-dx_fig,\
-                        plot_position.height])
+                    # plot.set_position([plot_position.x0+dx_fig,\
+                    #     plot_position.y0,\
+                    #     plot_position.width-dx_fig,\
+                    #     plot_position.height])
 
                     prev_ax_position=axn.get_position()
 
@@ -417,7 +438,7 @@ class PArray(LayoutPart):
 
                 index=str(i)
 
-            print("Generating table, item {} of {}\r".format(print_index,len(param)))
+            print("Generating table, item {} of {}\r".format(print_index,len(param)),end="")
 
             data_tot=data_tot.append(Series(df,name=index))
 
@@ -616,6 +637,8 @@ class PMatrix(PArray):
 
         y_param=self.y_param
 
+        x_param=self.x_param
+
         df=copy(df_original)
 
         for index in range(len(y_param)):
@@ -626,7 +649,9 @@ class PMatrix(PArray):
 
             device.import_params(df)
 
-            print("drawing array {} of {}\r".format(index+1,len(y_param)))
+            print("drawing array {} of {}".format(index+1,len(y_param)),end="\r")
+
+            sys.stdout.flush()
 
             if top_label_matrix is not None:
 
@@ -663,7 +688,7 @@ class PMatrix(PArray):
             self.name=master_name+"Arr"+str(index+1)
 
             new_cell=PArray.draw(self)
-
+            sys.stdout.flush()
             master_cell<<new_cell
 
             cells.append(new_cell)
@@ -750,7 +775,8 @@ class PMatrix(PArray):
 
                     index=str(i)+str(j)
 
-                print("Generating table, item {} of {} \r".format(print_index,len(x_param)*len(y_param)))
+                print("Generating table, item {0} of {1}".format(print_index,str(len(x_param)*len(y_param))),end="\r")
+                sys.stdout.flush()
 
                 print_index+=1
 
@@ -761,12 +787,6 @@ class PMatrix(PArray):
         return data_tot
 
     def plot_param(self,param):
-
-        import matplotlib.pyplot as plt
-        import matplotlib as mpl
-        from matplotlib import cm
-        from matplotlib.ticker import LinearLocator
-        import numpy as np
 
         fig, ax = plt.subplots()
 
@@ -783,6 +803,7 @@ class PMatrix(PArray):
         z=[]
 
         print_index=1
+
         for j in y:
 
             z.append([])
@@ -794,8 +815,8 @@ class PMatrix(PArray):
 
                 df=self.export_all()
 
-                print("Getting {} value , item {} of ".format(param,print_index,len(x)*len(y)),end="\r")
-
+                print("Getting {} value , item {} of {} ".format(param,print_index,len(x)*len(y)),end="\r")
+                sys.stdout.flush()
                 z[j].append(df[param])
                 print_index+=1
 
@@ -922,16 +943,24 @@ def build_matrix(base_device,x_param,y_param,name="Matrix",start_index=(0,0),tex
 
     return m
 
-def export_matrix_data(pmatrix,path='./'):
+def export_matrix_data(pmatrix,param=None,path='./'):
 
     t_mat1=pmatrix.table
 
     t_mat1.to_excel(os.path.join(path,pmatrix.name+".xlsx"))
 
-    fig=pmatrix.plot_param("Resistance")
+    if param is not None:
 
-    plt.figure(fig)
+        if isinstance(param,str):
 
-    plt.savefig(os.path.join(path,pmatrix.name+".svg"),bbox_inches='tight')
+            param=[param]
 
-    plt.close(fig)
+        for p in param:
+
+            fig=pmatrix.plot_param(p)
+
+            plt.figure(fig)
+
+            plt.savefig(os.path.join(path,pmatrix.name+p+".svg"),bbox_inches='tight')
+
+            plt.close(fig)

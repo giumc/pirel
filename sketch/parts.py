@@ -798,7 +798,7 @@ def array(res,n):
                 destination=(cell.center[0],cell.ymax))
 
             cell.add(bus_bottom)
-            
+
             cell.add(bus_top)
 
             cell=join(cell)
@@ -1048,6 +1048,7 @@ class LFERes(LayoutPart):
         if_match_import(self.anchor,df,"Anchor")
 
     @property
+    @_add_lookup_table
     def resistance_squares(self):
 
         self.draw()
