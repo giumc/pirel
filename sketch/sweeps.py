@@ -171,8 +171,6 @@ class SweepParam():
 
                 dict_new[name].append(tot_values.pop(0))
 
-            # print(dict_new)
-
         return SweepParam(dict_new)
 
     def populate_plot_axis(self,plot,ax='x'):
@@ -184,6 +182,7 @@ class SweepParam():
         if ax=='x':
 
             ticks=plot.get_xticks()
+
             lim=plot.get_xlim()
 
             for i in range(len(self.names)):
@@ -200,20 +199,7 @@ class SweepParam():
 
                     dy_fig=0.075
 
-                    # plot_position=plot.get_position()
-
-                    # plot.set_position([plot_position.x0,\
-                    #     plot_position.y0+dy_fig,\
-                    #     plot_position.width,\
-                    #     plot_position.height-dy_fig])
-
                     prev_ax_position=axn.get_position()
-
-                    # extra_ax.append(fig.add_axes(\
-                    #     (prev_ax_position.x0,\
-                    #     prev_ax_position.y0-2*dy_fig,\
-                    #     prev_ax_position.width,\
-                    #     0),'autoscalex_on',True))
 
                     extra_ax.append(fig.add_axes(\
                         (prev_ax_position.x0,\
@@ -223,19 +209,22 @@ class SweepParam():
 
                     axn=extra_ax[i-1]
 
-                    axn.yaxis.set_visible(False) # hide the yaxis
+                    axn.yaxis.set_visible(False)
 
-                for side in axn.spines.keys():  # 'top', 'bottom', 'left', 'right'
+                for side in axn.spines.keys():
 
                     axn.spines[side].set_linewidth(1)
 
                 axn.set_xticks(ticks)
 
-                axn.set_xticklabels(["{:.2f}".format(float(str(x))).rstrip('0').rstrip('.') for x in self.values[i]])
+                ticks=[float(str(x)) for x in self.values[i]]
+
+                axn.set_xticklabels(["{:.2f}".format(x).rstrip('0').rstrip('.') for x in ticks])
 
                 axn.tick_params(axis='x',labelsize=10)
 
                 xlab=axn.set_xlabel(self.names[i])
+
                 xlab.set_fontsize(10)
 
                 axn.set_xlim(lim)
@@ -496,6 +485,8 @@ class PArray(LayoutPart):
 
             new_cell=device.draw()
 
+            new_cell._internal_name=self.name+'_'+str(index)
+
             if self.labels_top is not None:
 
                 self.text_params.set('location','top')
@@ -522,7 +513,7 @@ class PArray(LayoutPart):
 
         del device, cells ,g
 
-        master_cell=join(master_cell)
+        # master_cell=join(master_cell)
 
         master_cell._internal_name=self.name
 
@@ -852,10 +843,9 @@ class PMatrix(PArray):
 
         import seaborn as sns
 
-        surf=sns.heatmap(z,cmap='viridis',cbar_kws={'label': param},linewidth=0.5)
+        surf=sns.heatmap(z,cmap='viridis',linewidth=0.5)
 
-        # surf.figure.axes[-1].set_ylabel(param, size=10)
-
+        plt.gcf().suptitle(param, fontsize=12)
         # lab.set_fontsize(10)
         ax.set_xticks([_+0.5 for _ in range(len(sweep_param_x))])
         ax.set_yticks([_-0.5 for _ in range(len(sweep_param_y),0,-1)])
@@ -971,9 +961,15 @@ def build_matrix(base_device,x_param,y_param,name="Matrix",start_index=(0,0),tex
 
 def export_matrix_data(pmatrix,param=None,path='./'):
 
+    import pathlib
+
+    if isinstance(path,str):
+
+        path=pathlib.Path(path)
+
     t_mat1=pmatrix.table
 
-    t_mat1.to_excel(os.path.join(path,pmatrix.name+".xlsx"))
+    t_mat1.to_excel( path / " ".join([pmatrix.name,".xlsx"]))
 
     if param is not None:
 

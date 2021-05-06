@@ -650,7 +650,7 @@ def addProbe(res,probe):
 
         @property
         def probe_dut_distance(self):
-            return Point(0,0.5*self.idt.active_area.x)
+            return Point(0,0.75*self.idt.active_area.x)
 
     return addProbe
 
