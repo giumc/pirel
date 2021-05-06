@@ -477,7 +477,6 @@ def addProbe(res,probe):
 
             self.gnd_routing_width=ld.DUTrouting_width
 
-        # @_add_lookup_table
         def draw(self):
 
             device_cell=res.draw(self)
@@ -650,7 +649,7 @@ def addProbe(res,probe):
 
         @property
         def probe_dut_distance(self):
-            return Point(0,0.75*self.idt.active_area.x)
+            return Point(0,0.7*self.idt.active_area.x-self.anchor.metalized.y)
 
     return addProbe
 
@@ -891,6 +890,8 @@ class LFERes(LayoutPart):
 
         self.anchor=Anchor(name=self.name+'Anchor')
 
+        # self._set_relations()
+
         self._stretch_top_margin=False
 
     @_add_lookup_table
@@ -1043,12 +1044,41 @@ class LFERes(LayoutPart):
 
     def import_params(self,df):
 
-        LayoutPart.import_params(self,df)
+        super().import_params(df)
 
         if_match_import(self.idt,df,"IDT")
         if_match_import(self.bus,df,"Bus")
         if_match_import(self.etchpit,df,"Etch")
         if_match_import(self.anchor,df,"Anchor")
+
+        # self._set_relations()
+
+    def _set_relations(self):
+
+        self.idt.layer=self.layer
+
+        self.bus.size=Point(\
+            self.idt.active_area.x-\
+            2*self.idt.active_area_margin-\
+            self.idt.pitch*(1-self.idt.coverage),\
+            self.bus.size.y)
+
+        self.bus.distance=Point(\
+            0,self.idt.active_area.y+self.bus.size.y)
+
+        self.bus.layer=self.layer
+
+        self.etchpit.active_area=Point(self.idt.active_area.x,\
+            self.idt.active_area.y+2*self.bus.size.y+self.anchor.etch_margin.y*2)
+
+        self.anchor.etch_x=self.etchpit.x*2+self.etchpit.active_area.x
+
+        self.anchor.layer=self.layer
+
+        if self.anchor.metalized.x>self.bus.size.x:
+
+            self.anchor.etch_margin.x=(self.bus.size.x-self.anchor.size.x)/2
+            warnings.warn("Anchor metal is too wide, reduced to match Bus width size")
 
     @property
     @_add_lookup_table
@@ -1085,9 +1115,14 @@ class LFERes(LayoutPart):
 
 class FBERes(LFERes):
 
+    plate_position=_LayoutParamInterface(\
+        'in, short','out, short','in, long','in_short')
+
     def __init__(self,*args,**kwargs):
 
         super().__init__(*args,**kwargs)
+
+        self.plate_position='out, short'
 
         self.platelayer=ld.FBEResplatelayer
 
@@ -1095,24 +1130,106 @@ class FBERes(LFERes):
 
         cell=LFERes.draw(self)
 
-        plate=pg.rectangle(size=(self.etchpit.active_area.x+8*self.idt.active_area_margin,self.idt.length-self.idt.y_offset/2),\
-        layer=self.platelayer)
+        if self.plate_position=='out, short':
 
-        plate_ref=cell<<plate
+            plate=pg.rectangle(size=(self.etchpit.active_area.x+8*self.idt.active_area_margin,self.idt.length-self.idt.y_offset/2),\
+            layer=self.platelayer)
 
-        transl_rel=Point(self.etchpit.x-4*self.idt.active_area_margin,self.anchor.size.y+self.bus.size.y\
-            +self.idt.y_offset*3/4)
+            plate_ref=cell<<plate
 
-        lr_cell=get_corners(cell)[0]
-        lr_plate=get_corners(plate_ref)[0]
+            transl_rel=Point(self.etchpit.x-4*self.idt.active_area_margin,self.anchor.size.y+2*self.anchor.etch_margin.y+self.bus.size.y\
+                +self.idt.y_offset*3/4)
 
-        plate_ref.move(origin=lr_plate(),\
-        destination=(lr_plate+lr_cell+transl_rel)())
+            lr_cell=get_corners(cell)[0]
+            lr_plate=get_corners(plate_ref)[0]
 
-        cell.absorb(plate_ref)
+            plate_ref.move(origin=lr_plate(),\
+            destination=(lr_plate+lr_cell+transl_rel)())
 
-        del plate
+            cell.absorb(plate_ref)
 
+            del plate
+
+        elif self.plate_position=='in, short':
+
+            plate=pg.rectangle(\
+                size=(\
+                    self.etchpit.active_area.x-\
+                        2*self.idt.active_area_margin,\
+                        self.idt.length-self.idt.y_offset/2),\
+                layer=self.platelayer)
+
+            plate_ref=cell<<plate
+
+            transl_rel=Point(self.etchpit.x+\
+                    self.idt.active_area_margin,\
+                self.anchor.size.y+\
+                2*self.anchor.etch_margin.y+\
+                self.bus.size.y+\
+                self.idt.y_offset*3/4)
+
+            lr_cell=get_corners(cell)[0]
+            lr_plate=get_corners(plate_ref)[0]
+
+            plate_ref.move(origin=lr_plate(),\
+            destination=(lr_plate+lr_cell+transl_rel)())
+
+            cell.absorb(plate_ref)
+
+            del plate
+
+        elif self.plate_position=='out, long':
+
+            plate=pg.rectangle(\
+                size=(self.etchpit.active_area.x+\
+                        8*self.idt.active_area_margin,\
+                    self.idt.length+\
+                        2*self.bus.size.y+\
+                        self.idt.y_offset),\
+                layer=self.platelayer)
+
+            plate_ref=cell<<plate
+
+            transl_rel=Point(self.etchpit.x-\
+                4*self.idt.active_area_margin,\
+                    self.anchor.size.y+2*self.anchor.etch_margin.y)
+
+            lr_cell=get_corners(cell)[0]
+            lr_plate=get_corners(plate_ref)[0]
+
+            plate_ref.move(origin=lr_plate(),\
+            destination=(lr_plate+lr_cell+transl_rel)())
+
+            cell.absorb(plate_ref)
+
+            del plate
+
+        elif self.plate_position=='in, long':
+
+            plate=pg.rectangle(\
+                size=(\
+                    self.etchpit.active_area.x-\
+                        2*self.idt.active_area_margin,\
+                        self.idt.length+\
+                            2*self.bus.size.y+\
+                            self.idt.y_offset),
+                layer=self.platelayer)
+
+            plate_ref=cell<<plate
+
+            transl_rel=Point(self.etchpit.x+\
+                    self.idt.active_area_margin,\
+                        self.anchor.size.y+2*self.anchor.etch_margin.y)
+
+            lr_cell=get_corners(cell)[0]
+            lr_plate=get_corners(plate_ref)[0]
+
+            plate_ref.move(origin=lr_plate(),\
+            destination=(lr_plate+lr_cell+transl_rel)())
+
+            cell.absorb(plate_ref)
+
+            del plate
         self.cell=cell
 
         return cell

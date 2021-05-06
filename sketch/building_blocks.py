@@ -273,17 +273,29 @@ class LayoutParam():
 
 class _LayoutParamInterface():
 
-    def __init__(self,def_value=1):
+    def __init__(self,*args):
 
-        self._def_value=def_value
+        if args:
+
+            self.constraints=args
+
+        else :
+
+            self.constraints=None
 
     def __set_name__(self,owner,name):
 
         self.public_name=name
         self.private_name="_"+name
-        # self.__set__(owner,self._def_value)
 
     def __set__(self,owner,value):
+
+        if self.constraints is not None:
+
+            if not value in self.constraints:
+
+                raise ValueError(f"""{value} is not legal for{old_param}\n
+                            legal values are {self.constraints}""")
 
         if not hasattr(owner,self.private_name):
 
@@ -321,8 +333,8 @@ class _LayoutParamInterface():
 
             else:
 
-                raise   ValueError("""Attempt to unlawful assingment between \n
-                    type {} and type {} in LayoutParam {}""".format(oldvalue,value.__class__,self.public_name))
+                raise   ValueError(f"""Attempt to unlawful assingment between \n
+                    type {oldvalue.__class__} and type {value.__class__} in LayoutParam {self.public_name}""")
 
     def __get__(self,owner,objtype=None):
 
@@ -356,7 +368,7 @@ class LayoutPart(ABC) :
 
     '''
 
-    name=_LayoutParamInterface('default')
+    name=_LayoutParamInterface()
 
     def __init__(self,name='default',*args,**kwargs):
         ''' Constructor for LayoutPart.
@@ -652,7 +664,11 @@ class IDT(LayoutPart) :
     @property
     def active_area(self):
 
-        return Point(self.pitch*(self.n*2+1)+2*self.active_area_margin,self.length+self.y_offset)
+        x=self.pitch*(self.n*2+1)+2*self.active_area_margin
+
+        y=self.length+self.y_offset
+
+        return Point(x,y)
 
     @property
     def resistance_squares(self):
@@ -678,7 +694,7 @@ class IDT(LayoutPart) :
             raise ValueError("{} needs to be integer")
 
         return 1/2/pi/f/c0_dens/z0/n
-        
+
 class Bus(LayoutPart) :
     ''' Generates pair of bus structure.
 
@@ -853,7 +869,7 @@ class Anchor(LayoutPart):
 
     size=_LayoutParamInterface()
     etch_margin=_LayoutParamInterface()
-    etch_choice=_LayoutParamInterface()
+    etch_choice=_LayoutParamInterface(True,False)
     etch_x=_LayoutParamInterface()
     x_offset=_LayoutParamInterface()
 
@@ -897,12 +913,12 @@ class Anchor(LayoutPart):
         o=self.origin
 
         anchor=pg.rectangle(\
-            size=(self.size-Point(2*self.etch_margin.x,0))(),\
+            size=(self.size-Point(2*self.etch_margin.x,-2*self.etch_margin.y))(),\
             layer=self.layer)
 
         etch_size=Point(\
         (self.etch_x-self.size.x)/2,\
-        self.size.y-2*self.etch_margin.y)
+        self.size.y)
 
         offset=Point(self.x_offset,0)
 
@@ -917,20 +933,20 @@ class Anchor(LayoutPart):
             layer=self.etch_layer)
 
         etch_sx_ref=(cell<<etch_sx).move(origin=(0,0),\
-        destination=(o+Point(0,self.etch_margin.y))())
+        destination=(o-Point(0,self.etch_margin.y))())
 
-        anchor_transl=o+Point(etch_sx.size[0]+self.etch_margin.x,0)
+        anchor_transl=o+Point(etch_sx.size[0]+self.etch_margin.x,-2*self.etch_margin.y)
 
         anchor_ref=(cell<<anchor).move(origin=(0,0),\
         destination=anchor_transl())
 
-        etchdx_transl=anchor_transl+Point(anchor.size[0]+self.etch_margin.x,self.etch_margin.y)
+        etchdx_transl=anchor_transl+Point(anchor.size[0]+self.etch_margin.x,+self.etch_margin.y)
 
         etch_dx_ref=(cell<<etch_dx).move(origin=(0,0),\
         destination=etchdx_transl())
 
         cell.add_port(name='conn',\
-        midpoint=(anchor_transl+Point(self.size.x/2-self.etch_margin.x,self.size.y))(),\
+        midpoint=(anchor_transl+Point(self.size.x/2-self.etch_margin.x,self.size.y+2*self.etch_margin.y))(),\
         width=self.size.x-2*self.etch_margin.x,\
         orientation=90)
 
@@ -960,7 +976,7 @@ class Anchor(LayoutPart):
     def metalized(self):
 
         return Point(self.size.x-2*self.etch_margin.x,\
-            self.size.y-2*self.etch_margin.y)
+            self.size.y+2*self.etch_margin.y)
 
 class Via(LayoutPart):
     ''' Generates via pattern.
@@ -980,7 +996,7 @@ class Via(LayoutPart):
     '''
     size=_LayoutParamInterface()
 
-    type=_LayoutParamInterface()
+    type=_LayoutParamInterface('square','circle')
 
     def __init__(self,*args,**kwargs):
 
@@ -1005,6 +1021,7 @@ class Via(LayoutPart):
         else:
 
             raise ValueError("Via Type can be \'square\' or \'circle\'")
+
         cell.move(origin=(0,0),\
             destination=self.origin())
 

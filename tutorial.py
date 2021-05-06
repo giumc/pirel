@@ -14,37 +14,39 @@ from PyResLayout import *
 # print(d)
 # d.view()
 # exit()
-
+#
 # d=Anchor()
 # print(d)
+# t=d.export_params()
+# t["EtchMarginY"]=5
+# t["EtchMarginX"]=5
+# t["SizeX"]=40
+# t["SizeY"]=40
 # d.view()
 # exit()
-#
+
 # d=Via()
 # print(d)
 # d.view()
 # exit()
 
-d=LFERes()
-# print(d)
-# d.view()
+# exit()
+
+d=FBERes()
 t=d.export_params()
-t["IDTLength"]=80
+t["IDTLength"]=200
+t["IDTNFingers"]=10
 t["AnchorEtchMarginY"]=5
 t["AnchorEtchMarginX"]=5
 t["AnchorSizeX"]=40
 t["AnchorSizeY"]=40
+t["EtchX"]=160
+t["PlatePosition"]='in, long'
 d.import_params(t)
-# print(d)
-d.view_gds()
-#
+print(d)
+d.view()
+
 exit()
-
-# d=FBERes()
-# print(d)
-# d.view()
-# exit()
-
 # d=TFERes()
 # print(d)
 # d.view()
