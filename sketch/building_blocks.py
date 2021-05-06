@@ -667,6 +667,18 @@ class IDT(LayoutPart) :
 
         return int(ceil(1/2/pi/f/c0_dens/z0/len))
 
+    @classmethod
+    def calc_length(self,c0_dens,z0,f,n):
+
+        from numpy import ceil
+        from math import pi
+
+        if not round(n)==0:
+
+            raise ValueError("{} needs to be integer")
+
+        return 1/2/pi/f/c0_dens/z0/n
+        
 class Bus(LayoutPart) :
     ''' Generates pair of bus structure.
 

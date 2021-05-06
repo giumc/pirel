@@ -1072,6 +1072,17 @@ class LFERes(LayoutPart):
 
         return df
 
+    @property
+    @_add_lookup_table
+    def area_aspect_ratio(self):
+
+        cell=LFERes.draw(self)
+
+        width=cell.xsize-2*self.etchpit.x
+        height=cell.ysize-self.anchor.etch_margin.y-2*self.anchor.size.y
+
+        return height/width
+
 class FBERes(LFERes):
 
     def __init__(self,*args,**kwargs):

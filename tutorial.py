@@ -25,17 +25,20 @@ from PyResLayout import *
 # d.view()
 # exit()
 
-# d=LFERes()
-# # print(d)
-# d.view()
-# t=d.export_params()
-# t["IDTLength"]=80
-# d.import_params(t)
-#
+d=LFERes()
 # print(d)
 # d.view()
+t=d.export_params()
+t["IDTLength"]=80
+t["AnchorEtchMarginY"]=5
+t["AnchorEtchMarginX"]=5
+t["AnchorSizeX"]=40
+t["AnchorSizeY"]=40
+d.import_params(t)
+# print(d)
+d.view_gds()
 #
-# exit()
+exit()
 
 # d=FBERes()
 # print(d)
