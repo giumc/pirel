@@ -649,7 +649,7 @@ def addProbe(res,probe):
 
         @property
         def probe_dut_distance(self):
-            return Point(0,0.7*self.idt.active_area.x-self.anchor.metalized.y)
+            return Point(0,self.idt.active_area.x/2)
 
     return addProbe
 
@@ -718,7 +718,7 @@ def addLargeGnd(probe):
 
                         cell.remove(cell.ports[name])
 
-                        left_port.midpoint=(left_port.midpoint[0]-self.ground_size/2,\
+                        left_port.midpoint=(left_port.midpoint[0]+self.ground_size/2,\
                             left_port.midpoint[1]-self.ground_size/2)
 
                         left_port.orientation=180
@@ -729,7 +729,7 @@ def addLargeGnd(probe):
 
                         cell.remove(cell.ports[name])
 
-                        right_port.midpoint=(right_port.midpoint[0]+self.ground_size/2,\
+                        right_port.midpoint=(right_port.midpoint[0]-self.ground_size/2,\
                             right_port.midpoint[1]-self.ground_size/2)
 
                         right_port.orientation=0

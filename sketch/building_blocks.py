@@ -678,7 +678,7 @@ class IDT(LayoutPart) :
     @classmethod
     def calc_n_fingers(self,c0_dens,z0,f,len):
 
-        from numpy import ceil
+        from numpy import ceil,floor
         from math import pi
 
         return int(ceil(1/2/pi/f/c0_dens/z0/len))
@@ -1232,6 +1232,8 @@ class Routing(LayoutPart):
     @_add_lookup_table
     def path(self):
 
+        radius=20
+
         bbox=pg.bbox(self.clearance)
 
         ll,lr,ul,ur=get_corners(bbox)
@@ -1275,7 +1277,7 @@ class Routing(LayoutPart):
 
             list_points=np.array([p0(),p1(),p2(),p3()])
 
-            path=pp.smooth(points=list_points)
+            path=pp.smooth(points=list_points,radius=radius/2)
 
         else: #destination is above clearance
 
@@ -1293,15 +1295,11 @@ class Routing(LayoutPart):
 
                     p0=Point().from_iter(source.midpoint)
 
-                    # import pdb; pdb.set_trace()
+                    p1=Point(ur.x+self.trace_width,p0.y)
 
-                    if abs(ur.x+self.trace_width*3/4-p0.x) > 5:
+                    if abs((p1-p0).x)<=radius:
 
-                        p1=Point(ur.x+self.trace_width*3/4,p0.y)
-
-                    else:
-
-                        p1=Point(p0.x+3/4*self.trace_width,p0.y)
+                        p1.x=p1.x+2*radius*np.sign((p1-p0).x)
 
                     p2=Point(p1.x,ur.y+self.trace_width)
                     p3=Point(destination.x,p2.y)
@@ -1309,7 +1307,13 @@ class Routing(LayoutPart):
 
                     list_points_rx=[p0(),p1(),p2(),p3(),p4()]
 
-                    path=pp.smooth(points=list_points_rx)
+                    try:
+
+                        path=pp.smooth(points=list_points_rx,radius=radius/2)
+
+                    except :
+                        print("error in +0 source, rx path")
+                        import pdb; pdb.set_trace()
 
             if source.orientation==90 :
 
@@ -1346,8 +1350,12 @@ class Routing(LayoutPart):
 
                     list_points_lx=[p0(),p1(),p2(),p3(),p4(),p5()]
 
-                    path_lx=pp.smooth(points=list_points_lx)
+                    try:
+                        path_lx=pp.smooth(points=list_points_lx,radius=radius/2)
 
+                    except:
+                        printf("error in +90 source, lx path")
+                        import pdb; pdb.set_trace()
                     #right path
 
                     p1=p0+Point(0,y_overtravel)
@@ -1358,7 +1366,14 @@ class Routing(LayoutPart):
 
                     list_points_rx=[p0(),p1(),p2(),p3(),p4(),p5()]
 
-                    path_rx=pp.smooth(points=list_points_rx)
+                    try:
+
+                        path_rx=pp.smooth(points=list_points_rx,radius=radius/2)
+
+                    except:
+
+                        printf("error in +90 source, rx path")
+                        import pdb; pdb.set_trace()
 
                     if self.side=='auto':
 
@@ -1405,7 +1420,13 @@ class Routing(LayoutPart):
 
                     list_points=[p0(),p1(),p2(),p3()]
 
-                    path=pp.smooth(points=list_points,radius=0.001,use_eff=True)#source tucked inside clearance
+                    try:
+
+                        path=pp.smooth(points=list_points,radius=radius/2)#source tucked inside clearance
+
+                    except:
+
+                        import pdb; pdb.set_trace()
 
             elif source.orientation==180 : #left path
 
@@ -1416,22 +1437,23 @@ class Routing(LayoutPart):
                 # destination.name='destination'
 
                 p0=Point().from_iter(source.midpoint)
+                p1=Point(ll.x-self.trace_width,p0.y)
 
-                if abs(ll.x-self.trace_width*3/4-p0.x) > 5:
+                if abs((p1-p0).x) <= radius:
 
-                    p1=Point(ll.x-self.trace_width*3/4,p0.y)
-
-                else:
-
-                    p1=Point(p0.x-3/4*self.trace_width,p0.y)
+                    p1.x=p1.x+2*radius*np.sign((p1-p0).x)
 
                 p2=Point(p1.x,ur.y+self.trace_width)
                 p3=Point(destination.x,p2.y)
                 p4=Point(destination.x,destination.y)
 
-                list_points_lx=[p0(),p1(),p2(),p3(),p4()]
 
-                path=pp.smooth(points=list_points_lx)
+                list_points_lx=[p0(),p1(),p2(),p3(),p4()]
+                try:
+                    path=pp.smooth(points=list_points_lx,radius=radius/2)
+                except:
+                    print("error in +0 source, lx path")
+                    import pdb; pdb.set_trace()
 
         return path
 

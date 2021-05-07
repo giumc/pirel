@@ -41,7 +41,7 @@ class SweepParam():
 
     def __str__(self):
 
-        return str(self._dict)
+        return str({name:[float(f"{x:.2f}") for x in value] for name,value in self._dict.items()})
 
     __repr__=__str__
 
@@ -54,16 +54,13 @@ class SweepParam():
 
         sweep_label=[]
 
-        # tmp_name=""
         for index,name in enumerate(param.names):
 
-            if index<=1:
-
-                sweep_label.append((\
-                ''.join([c for c in name if c.isupper()]))\
-                .replace("IDT","")\
-                .replace("S","")\
-                .replace("M",""))
+            sweep_label.append((\
+            ''.join([c for c in name if c.isupper()]))\
+            .replace("IDT","")\
+            .replace("S","")\
+            .replace("M",""))
 
         stringout=[]
 
@@ -73,7 +70,7 @@ class SweepParam():
 
             tmp_lab=''
 
-            for lab,name in zip(sweep_label,param.names):
+            for lab,name in zip(sweep_label,self.names):
 
                 tmp_lab=tmp_lab+lab+str(unique[name].index(param()[name][i]))
 
@@ -130,7 +127,6 @@ class SweepParam():
         if any([name in new_names for name in init_names]):
 
             raise ValueError("Unexpected behaviour:at least one sweep parameter is repeated")
-
 
         if len(init_values)>1:
 

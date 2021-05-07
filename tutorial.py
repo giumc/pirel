@@ -18,7 +18,7 @@ from PyResLayout import *
 # d=Anchor()
 # print(d)
 # t=d.export_params()
-# t["EtchMarginY"]=5
+# t["EtchMarginY"]=55
 # t["EtchMarginX"]=5
 # t["SizeX"]=40
 # t["SizeY"]=40
@@ -32,21 +32,35 @@ from PyResLayout import *
 
 # exit()
 
-d=FBERes()
-t=d.export_params()
-t["IDTLength"]=200
-t["IDTNFingers"]=10
-t["AnchorEtchMarginY"]=5
-t["AnchorEtchMarginX"]=5
-t["AnchorSizeX"]=40
-t["AnchorSizeY"]=40
-t["EtchX"]=160
-t["PlatePosition"]='in, long'
-d.import_params(t)
-print(d)
-d.view()
+import phidl
+import phidl.geometry as pg
+from PyResLayout import LayoutDefault as ld
 
-exit()
+d=generate_gds_from_image( r"C:\Users\giuse\Desktop\NewCode\WARP_Layout\NEU logo.png",\
+    layer=ld.layerTop,threshold=0.3,pixelsize=1,size=2048,invert=True)
+
+d=phidl.geometry.import_gds(str(d.absolute()))
+check_cell(d)
+
+d=generate_gds_from_image( r"C:\Users\giuse\Desktop\NewCode\WARP_Layout\DARPAlogo.png",\
+    layer=ld.layerTop,threshold=0.3,pixelsize=1,size=4096)
+d=phidl.geometry.import_gds(str(d.absolute()))
+check_cell(d)
+# d=FBERes()
+# t=d.export_params()
+# t["IDTLength"]=200
+# t["IDTNFingers"]=10
+# t["AnchorEtchMarginY"]=5
+# t["AnchorEtchMarginX"]=5
+# t["AnchorSizeX"]=40
+# t["AnchorSizeY"]=40
+# t["EtchX"]=160
+# t["PlatePosition"]='in, long'
+# d.import_params(t)
+# print(d)
+# d.view()
+#
+# exit()
 # d=TFERes()
 # print(d)
 # d.view()
@@ -171,7 +185,7 @@ exit()
 #
 # exit()
 
-d=alignment_marks_4layers()
-#
-check_cell(d)
+# d=alignment_marks_4layers()
+# #
+# check_cell(d)
 # exit()

@@ -1,5 +1,6 @@
 import phidl.geometry as pg
 import phidl.device_layout as dl
+import pathlib
 from sketch import *
 
 ld=LayoutDefault
@@ -206,27 +207,11 @@ def mask_names(names=("Bottom Electrode","Top Electrode","Via Layer","Etch Layer
 
         return cell_name
 
-def chip_frame(name="Default",size=(20e3,20e3),layer=ld.layerTop,\
-    align_scale=[0.25,0.5,1]):
-
-    die_cell=pg.basic_die(size=size,\
-        die_name="",layer=layer,draw_bbox=False,
-        street_length=size[0]/5,street_width=size[0]/60)
+def add_utility_cells(cell,align_scale=[0.25,0.5,1],position=['top','left']):
 
     align_cell=alignment_marks_4layers(scale=align_scale)
 
     test_cell=resistivity_test_cell()
-
-    cell=Device(name=name)
-
-    cell.absorb(cell<<die_cell)
-
-    TextParam(\
-        {'size':700,\
-        'label':name,\
-        'location':'bottom',\
-        'distance':Point(0,-350),\
-        'layer':layer}).add_text(cell)
 
     align_via=align_TE_on_via()
 
@@ -239,12 +224,14 @@ def chip_frame(name="Default",size=(20e3,20e3),layer=ld.layerTop,\
     g.align(alignment='y')
 
     g.move(origin=(g.xmin,g.ymax),\
-        destination=(cell.xmin+g.xsize/8,\
-            cell.ymax-g.ysize/2))
+        destination=(cell.center[0]-g.xsize/2,\
+            cell.ymax+g.ysize/2))
 
     test_cell.add(align_cell)
 
     test_cell.add(align_via_tot)
+
+    t2=DeviceReference(test_cell)
 
     maskname_cell=mask_names()
 
@@ -255,9 +242,85 @@ def chip_frame(name="Default",size=(20e3,20e3),layer=ld.layerTop,\
 
     test_cell._internal_name="UtilityCell"
 
-    cell._internal_name=name
+    if isinstance(position,str):
 
-    cell<<test_cell
+        position=[position]
+
+    if 'left' in position:
+
+        cell<<test_cell
+
+    if 'top' in position:
+
+        t2=DeviceReference(test_cell)
+
+        t2.rotate(angle=90,center=(t2.xmin,t2.ymin))
+
+        t2.move(origin=(t2.xmin+t2.xsize/2,t2.ymin),\
+            destination=(cell.xmin,cell.ymin+cell.ysize/2-t2.ysize/2))
+
+        cell.add(t2)
+
+def chip_frame(name="Default",size=(20e3,20e3),layer=ld.layerTop):
+
+    street_length=size[0]/5
+    street_width=300
+    die_cell=pg.basic_die(size=size,\
+        die_name="",layer=layer,draw_bbox=False,
+        street_length=street_length,street_width=street_width)
+
+    cell=Device(name=name)
+
+    cell.absorb(cell<<die_cell)
+
+    text_cell=TextParam(\
+        {'size':800,\
+        'label':name,\
+        'location':'top',\
+        'distance':Point(0,0),\
+        'layer':layer}).draw()
+
+    text_cell.move(origin=(text_cell.xmax,text_cell.ymax),\
+        destination=(cell.xmax-street_width*1.2,cell.ymax-street_width*1.2))
+
+    cell.add(text_cell)
+
+    neu_cell=import_gds(r"C:\Users\giuse\Desktop\NewCode\WARP_Layout\NEU logo.gds")
+    darpa_cell=import_gds(r"C:\Users\giuse\Desktop\NewCode\WARP_Layout\DARPAlogo.gds")
+
+    g=Group([neu_cell,darpa_cell])
+    g.distribute(direction='x',spacing=150)
+    g.align(alignment='y')
+
+    neu_cell.add(darpa_cell)
+    logo_cell=neu_cell.flatten()
+    logo_cell._internal_name="logos"
+    # logo1=cell<<logo_cell
+    #
+    # logo1.move(origin=(logo1.xmin,logo1.ymax),\
+    #     destination=(cell.xmin+2*street_width,cell.ymax-2*street_width))
+
+    # logo2=cell<<logo_cell
+    #
+    # logo2.move(origin=(logo2.xmax,logo1.ymax),\
+    #     destination=(cell.xmax-2*street_width,cell.ymax-2*street_width))
+
+    logo3=cell<<logo_cell
+
+    logo3.move(origin=(logo3.xmin,logo3.ymin),\
+        destination=(cell.xmin+1.1*street_width,cell.ymin+1.1*street_width))
+
+    logo4=cell<<logo_cell
+
+    logo4.move(origin=(logo4.xmax,logo4.ymin),\
+        destination=(cell.xmax-1.1*street_width,cell.ymin+1.1*street_width))
+
+    restest=resistivity_test_cell()
+
+    restest.move(origin=(restest.xmin,restest.ymax),\
+        destination=(cell.xmin+1.1*street_width,cell.ymax-1.1*street_width))
+
+    cell.add(restest)
 
     return cell
 
@@ -288,5 +351,65 @@ def align_TE_on_via():
     cell.flatten()
 
     # import pdb; pdb.set_trace()
+
+    return cell
+
+def dice(cell,width=100,name="Default",layer=ld.layerTop):
+
+    street_length=min(cell.xsize,cell.ysize)/2.5
+
+    die_cell=pg.basic_die(size=(cell.xsize+500,cell.ysize+500),\
+            die_name="",layer=layer,draw_bbox=False,
+            street_length=street_length,street_width=width)
+
+    die_cell._internal_name=name+"Die"
+
+    g=Group([die_cell,cell])
+
+    g.align(alignment='y')
+    g.align(alignment='x')
+
+    cell<<die_cell
+
+    TextParam(\
+        {'size':700,\
+        'label':name,\
+        'location':'bottom',\
+        'distance':Point(0,0),\
+        'layer':layer}).add_text(cell)
+
+def generate_gds_from_image(path,**kwargs):
+
+    import nazca as nd
+
+    if isinstance(path,pathlib.Path):
+
+        path=str(path.absolute())
+
+    else:
+
+        path=pathlib.Path(path)
+
+    cell=nd.image(path,**kwargs).put()
+
+    path=path.parent/(path.stem+".gds")
+
+    nd.export_gds(filename=str(path.absolute()))
+
+    return path
+
+def import_gds(path,cellname=None,**kwargs):
+
+    if isinstance(path,str):
+
+        path=pathlib.Path(path)
+
+    cell=pg.import_gds(str(path.absolute()))
+
+    cell.flatten()
+
+    if cellname is not None:
+
+        cell._internal_name=cellname
 
     return cell
