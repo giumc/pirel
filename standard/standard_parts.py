@@ -261,7 +261,7 @@ def add_utility_cells(cell,align_scale=[0.25,0.5,1],position=['top','left']):
 
         cell.add(t2)
 
-def chip_frame(name="Default",size=(20e3,20e3),layer=ld.layerTop):
+def chip_frame(name="Default",size=(20e3,20e3),layer=ld.layerTop,logos=None):
 
     street_length=size[0]/5
     street_width=300
@@ -285,25 +285,43 @@ def chip_frame(name="Default",size=(20e3,20e3),layer=ld.layerTop):
 
     cell.add(text_cell)
 
-    neu_cell=import_gds(r"C:\Users\giuse\Desktop\NewCode\WARP_Layout\NEU logo.gds")
-    darpa_cell=import_gds(r"C:\Users\giuse\Desktop\NewCode\WARP_Layout\DARPAlogo.gds")
+    if logos is not None:
 
-    g=Group([neu_cell,darpa_cell])
+        if isinstance(logos,str):
+
+            logos=pathlib.Path(logos)
+
+        elif isinstance(logos,list) or isinstance(logos,tuple):
+
+            cells_logo=[]
+
+            for p in logos:
+
+                if isinstance(p,str):
+
+                    # import pdb ; pdb.set_trace()
+
+                    cells_logo.append(import_gds(p))
+
+                elif isinstance(p,pathlib.Path):
+
+                    cells_logo.append(import_gds(str(p.absolute())))
+
+
+    g=Group(cells_logo)
     g.distribute(direction='x',spacing=150)
     g.align(alignment='y')
 
-    neu_cell.add(darpa_cell)
-    logo_cell=neu_cell.flatten()
-    logo_cell._internal_name="logos"
-    # logo1=cell<<logo_cell
-    #
-    # logo1.move(origin=(logo1.xmin,logo1.ymax),\
-    #     destination=(cell.xmin+2*street_width,cell.ymax-2*street_width))
 
-    # logo2=cell<<logo_cell
-    #
-    # logo2.move(origin=(logo2.xmax,logo1.ymax),\
-    #     destination=(cell.xmax-2*street_width,cell.ymax-2*street_width))
+    logo_cell=Device()
+
+    logo_cell._internal_name="logos"
+
+    for c in cells_logo:
+
+        logo_cell.add(c)
+
+    logo_cell.flatten()
 
     logo3=cell<<logo_cell
 
@@ -349,8 +367,6 @@ def align_TE_on_via():
     cell.align(alignment='y')
 
     cell.flatten()
-
-    # import pdb; pdb.set_trace()
 
     return cell
 
@@ -398,7 +414,7 @@ def generate_gds_from_image(path,**kwargs):
 
     return path
 
-def import_gds(path,cellname=None,**kwargs):
+def import_gds(path,cellname=None,flatten=True,**kwargs):
 
     if isinstance(path,str):
 
@@ -406,7 +422,8 @@ def import_gds(path,cellname=None,**kwargs):
 
     cell=pg.import_gds(str(path.absolute()))
 
-    cell.flatten()
+    if flatten==True:
+        cell.flatten()
 
     if cellname is not None:
 
