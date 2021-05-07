@@ -193,7 +193,7 @@ class SweepParam():
 
                 else:
 
-                    dy_fig=0.075
+                    dy_fig=0.08
 
                     prev_ax_position=axn.get_position()
 
@@ -213,17 +213,21 @@ class SweepParam():
 
                 axn.set_xticks(ticks)
 
-                ticks=[float(str(x)) for x in self.values[i]]
+                ticksnames=[float(str(x)) for x in self.values[i]]
 
-                axn.set_xticklabels(["{:.2f}".format(x).rstrip('0').rstrip('.') for x in ticks])
-
-                axn.tick_params(axis='x',labelsize=10)
+                axn.set_xticklabels(\
+                    ["{:.2f}".format(x).rstrip('0').rstrip('.') for x in ticksnames],\
+                    rotation = 45)
 
                 xlab=axn.set_xlabel(self.names[i])
 
                 xlab.set_fontsize(10)
 
+                axn.tick_params(axis='x',labelsize=10)
+
                 axn.set_xlim(lim)
+
+
 
         elif ax=='y':
 
@@ -243,14 +247,9 @@ class SweepParam():
 
                 else:
 
-                    dx_fig=0.075
+                    dx_fig=0.08
 
                     plot_position=plot.get_position()
-
-                    # plot.set_position([plot_position.x0+dx_fig,\
-                    #     plot_position.y0,\
-                    #     plot_position.width-dx_fig,\
-                    #     plot_position.height])
 
                     prev_ax_position=axn.get_position()
 
@@ -270,8 +269,11 @@ class SweepParam():
 
                 axn.set_yticks(ticks)
 
-                axn.set_yticklabels(["{:.2f}".format(x).rstrip('0').rstrip('.') \
-                    for x in reversed(self.values[i])])
+                ticksnames=[float(str(x)) for x in self.values[i]]
+
+                axn.set_yticklabels(\
+                    ["{:.2f}".format(x).rstrip('0').rstrip('.') for x in ticksnames],\
+                    rotation = 45)
 
                 ylab=axn.set_ylabel(self.names[i])
 
@@ -842,29 +844,14 @@ class PMatrix(PArray):
         surf=sns.heatmap(z,cmap='viridis',linewidth=0.5)
 
         plt.gcf().suptitle(param, fontsize=12)
-        # lab.set_fontsize(10)
+
         ax.set_xticks([_+0.5 for _ in range(len(sweep_param_x))])
         ax.set_yticks([_-0.5 for _ in range(len(sweep_param_y),0,-1)])
-
-        # cbar=fig.colorbar(surf, shrink=0.5, aspect=5)
-
-        # cbar.set_label(param)
-
-        # ax.set_xlabel('x')
-        # ax.set_ylabel('y')
 
         self.x_param.populate_plot_axis(ax,'x')
         self.y_param.populate_plot_axis(ax,'y')
 
-        # ax.set_zlabel(param)
-
         self.import_params(df_original)
-
-        # plt.switch_backend('Qt4Agg')
-        # figManager = plt.get_current_fig_manager()
-        # figManager.window.showMaximized()
-
-        # plt.show()
 
         return fig
 

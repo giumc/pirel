@@ -1,11 +1,20 @@
 import phidl.geometry as pg
 import phidl.device_layout as dl
 import pathlib
-from sketch import *
+from devices import *
 
 ld=LayoutDefault
 
 def resistivity_test_cell():
+
+    """Create cell with standard Resisistivity Test
+
+    Returns
+    ------
+
+        cell : phidl.Device
+
+    """
 
     with open(str(os.path.dirname(__file__))+'\\ResistivityTest.gds', 'rb') as infile:
 
@@ -16,6 +25,34 @@ def resistivity_test_cell():
         return cell
 
 def verniers(scale=[1, 0.5, 0.1],layers=[1,2],label='TE',text_size=20,reversed=False):
+
+    """ Create a cell with vernier aligners.
+
+    Parameters
+    ----------
+        scale : iterable of float (default [1,0.5,0.25])
+            each float in list is the offset of a vernier.
+            for each of them a vernier will be created in the X-Y axis
+
+        layers : 2-len iterable of int (default [1,2])
+            define the two layers for the verniers.
+
+        label : str (default "TE")
+
+            add a label to the set of verniers.
+
+        text_size : float (default)
+
+            label size
+
+        reversed : boolean
+
+            if true, creates a negative alignment mark for the second layer
+
+    Returns
+    -------
+        cell : phidl.Device.
+    """
 
     cell=dl.Device(name="verniers")
 
@@ -74,9 +111,11 @@ def verniers(scale=[1, 0.5, 0.1],layers=[1,2],label='TE',text_size=20,reversed=F
 
             frame_ext.move(origin=frame_ext.center,destination=replica.center)
 
-            new_cal=cal<<pg.boolean(replica,frame_ext,'xor',layer=layer2)
+            new_cal=pg.boolean(replica,frame_ext,'xor',layer=layer2)
 
-            new_cal.move(destination=(0,dim*25))
+            new_cal.rotate(angle=180,center=(cal.xmin+cal.xsize/2,cal.ymin))
+
+            cal<<new_cal
 
             cal.flatten()
 
@@ -106,7 +145,7 @@ def verniers(scale=[1, 0.5, 0.1],layers=[1,2],label='TE',text_size=20,reversed=F
 
     label=pg.text(text=label,size=text_size,layer=layers[0])
 
-    label.move(destination=(cell.xmax-label.xsize,cell.ymax-3*label.ysize))
+    label.move(destination=(cell.xmax-label.xsize/2,cell.ymax-2*label.ysize))
 
     overlabel=pg.bbox(label.bbox,layer=layers[1])
 
@@ -370,11 +409,11 @@ def align_TE_on_via():
 
     return cell
 
-def dice(cell,width=100,name="Default",layer=ld.layerTop):
+def dice(cell,width=100,name="Default",layer=ld.layerTop,spacing=300):
 
     street_length=min(cell.xsize,cell.ysize)/2.5
 
-    die_cell=pg.basic_die(size=(cell.xsize+500,cell.ysize+500),\
+    die_cell=pg.basic_die(size=(cell.xsize+2*(width+spacing) , cell.ysize+2*(width+spacing)),\
             die_name="",layer=layer,draw_bbox=False,
             street_length=street_length,street_width=width)
 
@@ -383,6 +422,7 @@ def dice(cell,width=100,name="Default",layer=ld.layerTop):
     g=Group([die_cell,cell])
 
     g.align(alignment='y')
+
     g.align(alignment='x')
 
     cell<<die_cell
@@ -391,7 +431,7 @@ def dice(cell,width=100,name="Default",layer=ld.layerTop):
         {'size':700,\
         'label':name,\
         'location':'bottom',\
-        'distance':Point(0,0),\
+        'distance':Point(0,-width-spacing/2),\
         'layer':layer}).add_text(cell)
 
 def generate_gds_from_image(path,**kwargs):

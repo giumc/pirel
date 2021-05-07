@@ -6,11 +6,11 @@ from building_blocks import _LayoutParamInterface
 
 from layout_tools import _add_lookup_table
 
-ld=LayoutDefault()
-
 import pandas as pd
 
 import warnings
+
+ld=LayoutDefault
 
 def Scaled(res):
 
@@ -874,6 +874,21 @@ def array(res,n):
 
     return array
 
+def calibration(res,type):
+
+    available_types=('short','open')
+
+    if not type in available_types:
+
+        raise ValueError("calibration type unavailable. Available types are\n:{}".format("\n".join(available_types)))
+
+    class calibration(res):
+
+        def __init__(self,*a,**k):
+
+            super().__init__(*a,**k)
+
+            
 class LFERes(LayoutPart):
 
     def __init__(self,*args,**kwargs):
