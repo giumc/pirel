@@ -158,7 +158,12 @@ from PyResLayout import *
 # print(d)
 # d.view()
 # # exit()
-d=calibration(addProbe(addVia(array(Scaled(LFERes),3)),addLargeGnd(GSGProbe)),'short')("tutorial")
+probe=addLargeGnd(GSGProbe)
+device=Scaled(FBERes)
+
+dut=addProbe(device,probe)
+
+d=calibration(dut,'short')("tutorial")
 # print(d)
 
 param=d.export_params()
@@ -184,8 +189,30 @@ d.import_params(param)
 
 d.view()
 
-exit()
+p=dut("tut")
 
+param=d.export_params()
+param["IDTPitch"]=7
+param["IDTN"]=8
+param["IDTYOffset"]=1
+param["IDTLength"]=10
+param["IDTCoverage"]=0.5
+param["BusSizeY"]=0.5
+param["EtchX"]=0.4
+param["AnchorSizeY"]=0.5
+param["AnchorSizeX"]=0.5
+param["AnchorEtchMarginX"]=0.2
+param["AnchorEtchMarginY"]=0.2
+param['ViaAreaX']=300
+param['ViaAreaY']=300
+param['ViaSize']=30
+param['OverVia']=1.5
+param['ViaDistance']=100
+param['ProbeGroundSize']=250
+
+p.import_params(param)
+
+p.view()
 # d=alignment_marks_4layers()
 # #
 # check_cell(d)

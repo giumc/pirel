@@ -894,7 +894,6 @@ def calibration(res,type):
                         top_port=dev.ports['top']
                         bottom_port=dev.ports['bottom']
 
-                        import pdb; pdb.set_trace()
                         short=pg.taper(length=top_port.y-bottom_port.y,\
                         width1=top_port.width,\
                         width2=bottom_port.width,layer=self.probe.layer)
