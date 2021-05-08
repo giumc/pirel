@@ -31,22 +31,22 @@ from PyResLayout import *
 # exit()
 
 # exit()
-
-import phidl
-import phidl.geometry as pg
-from PyResLayout import LayoutDefault as ld
-
-d=generate_gds_from_image( r"C:\Users\giuse\Desktop\NewCode\WARP_Layout\NEU logo.png",\
-    layer=ld.layerTop,threshold=0.3,pixelsize=1,size=2048,invert=True)
-
-d=phidl.geometry.import_gds(str(d.absolute()))
-check_cell(d)
-
-d=generate_gds_from_image( r"C:\Users\giuse\Desktop\NewCode\WARP_Layout\DARPAlogo.png",\
-    layer=ld.layerTop,threshold=0.3,pixelsize=1,size=4096)
-d=phidl.geometry.import_gds(str(d.absolute()))
-check_cell(d)
-# d=FBERes()
+#
+# import phidl
+# import phidl.geometry as pg
+# from PyResLayout import LayoutDefault as ld
+#
+# d=generate_gds_from_image( r"C:\Users\giuse\Desktop\NewCode\WARP_Layout\NEU logo.png",\
+#     layer=ld.layerTop,threshold=0.3,pixelsize=1,size=2048,invert=True)
+#
+# d=phidl.geometry.import_gds(str(d.absolute()))
+# check_cell(d)
+#
+# d=generate_gds_from_image( r"C:\Users\giuse\Desktop\NewCode\WARP_Layout\DARPAlogo.png",\
+#     layer=ld.layerTop,threshold=0.3,pixelsize=1,size=4096)
+# d=phidl.geometry.import_gds(str(d.absolute()))
+# check_cell(d)
+# # d=FBERes()
 # t=d.export_params()
 # t["IDTLength"]=200
 # t["IDTNFingers"]=10
@@ -158,32 +158,33 @@ check_cell(d)
 # print(d)
 # d.view()
 # # exit()
-# d=addProbe(addVia(array(Scaled(LFERes),3)),addLargeGnd(GSGProbe))("tutorial")
-# # print(d)
-#
-# param=d.export_params()
-# param["IDTPitch"]=7
-# param["IDTN"]=4
-# param["IDTYOffset"]=1
-# param["IDTLength"]=10
-# param["IDTCoverage"]=0.5
-# param["BusSizeY"]=0.5
-# param["EtchX"]=0.4
-# param["AnchorSizeY"]=0.5
-# param["AnchorSizeX"]=0.5
-# param["AnchorEtchMarginX"]=0.2
-# param["AnchorEtchMarginY"]=0.2
-# param['ViaAreaX']=300
-# param['ViaAreaY']=300
-# param['ViaSize']=30
-# param['OverVia']=1.5
-# param['ViaDistance']=100
-# param['ProbeGroundSize']=250
-# d.import_params(param)
-#
-# d.view()
-#
-# exit()
+d=calibration(addProbe(addVia(array(Scaled(LFERes),3)),addLargeGnd(GSGProbe)),'short')("tutorial")
+# print(d)
+
+param=d.export_params()
+param["IDTPitch"]=7
+param["IDTN"]=2
+param["IDTYOffset"]=1
+param["IDTLength"]=10
+param["IDTCoverage"]=0.5
+param["BusSizeY"]=0.5
+param["EtchX"]=0.4
+param["AnchorSizeY"]=0.5
+param["AnchorSizeX"]=0.5
+param["AnchorEtchMarginX"]=0.2
+param["AnchorEtchMarginY"]=0.2
+param['ViaAreaX']=300
+param['ViaAreaY']=300
+param['ViaSize']=30
+param['OverVia']=1.5
+param['ViaDistance']=100
+param['ProbeGroundSize']=250
+
+d.import_params(param)
+
+d.view()
+
+exit()
 
 # d=alignment_marks_4layers()
 # #

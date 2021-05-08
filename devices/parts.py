@@ -208,16 +208,12 @@ def addVia(res,side='top',bottom_conn=False):
                 columns=nvias_x,rows=nvias_y,\
                 spacing=(unit_cell.xsize,unit_cell.ysize))
 
-            viacell=join(viacell)
+            viacell=Device(name=self.name+"Via").add(join(viacell)).flatten()
 
             viacell.add_port(Port(name='top',\
                 midpoint=(viacell.x,viacell.ymax),\
                 width=viacell.xsize,\
                 orientation=90))
-
-            cell=Device(self.name)
-
-            cell<<rescell
 
             try:
 
@@ -249,7 +245,7 @@ def addVia(res,side='top',bottom_conn=False):
 
                     pad=pg.compass(size=(top_port.width,self.via_distance),layer=self.padlayers[0])
 
-                    top_port=self._attach_instance(cell, pad, pad.ports['S'], viacell, top_port)
+                    top_port=self._attach_instance(rescell, pad, pad.ports['S'], viacell, top_port)
 
                 if sides=='bottom':
 
@@ -263,23 +259,11 @@ def addVia(res,side='top',bottom_conn=False):
 
                     pad=pg.compass(size=(bottom_port.width,self.via_distance),layer=self.padlayers[0])
 
-                    bottom_port=self._attach_instance(cell, pad, pad.ports['N'], viacell, bottom_port)
+                    bottom_port=self._attach_instance(rescell, pad, pad.ports['N'], viacell, bottom_port)
 
-            cell=join(cell)
+            self.cell=rescell
 
-            cell._internal_name=self.name
-
-            if top_port is not None:
-
-                cell.add_port(top_port)
-
-            if bottom_port is not None:
-
-                cell.add_port(bottom_port)
-
-            self.cell=cell
-
-            return cell
+            return rescell
 
         def export_params(self):
 
@@ -367,9 +351,9 @@ def addVia(res,side='top',bottom_conn=False):
 
             cell.absorb(padref)
 
-            viaref=cell<<viacell
+            viaref=cell.add_ref(viacell,alias=self.name+'Via'+port.name)
 
-            viaref.connect(viacell.get_ports()[0],\
+            viaref.connect(viacell.ports["top"],\
             destination=port,\
             overlap=-self.via_distance)
 
@@ -483,15 +467,17 @@ def addProbe(res,probe):
 
             probe_cell=self.probe.draw()
 
-            cell=Device(self.name)
+            cell=Device(name=self.name)
 
             probe_dut_distance=self.probe_dut_distance
 
-            cell<<device_cell
+            cell.add_ref(device_cell, alias=self.name+"Device")
 
             bbox=cell.bbox
 
-            probe_ref=cell<<probe_cell
+            from phidl.device_layout import DeviceReference
+
+            probe_ref=DeviceReference(probe_cell)
 
             probe_ref.connect(probe_cell.ports['sig'],\
             destination=device_cell.ports['bottom'],overlap=-probe_dut_distance.y)
@@ -521,9 +507,7 @@ def addProbe(res,probe):
 
                 routing_tot=pg.boolean(r_lx_cell,r_rx_cell,'or',layer=self.probe.layer)
 
-                cell<<routing_tot
-
-                center_routing=cell<<routing_c
+                center_routing=routing_tot<<routing_c
 
                 center_routing.connect(center_routing.ports['S'],destination=dut_port_bottom)
 
@@ -534,12 +518,6 @@ def addProbe(res,probe):
             else:
 
                 raise ValueError("DUT without GSG/GSprobe to be implemented ")
-
-            del probe_cell,device_cell,routing_lx,routing_rx,routing_c,routing_tot
-
-            cell.flatten()
-
-            cell=join(cell)
 
             if hasattr(self,'_stretch_top_margin'):
 
@@ -552,11 +530,13 @@ def addProbe(res,probe):
                     patch_top.move(origin=(patch_top.x,0),\
                         destination=dut_port_top.midpoint)
 
-                    cell.add(patch_top)
+                    routing_tot.add(patch_top)
 
-                    cell=join(cell)
+            routing_tot.add(probe_ref)
 
-            cell._internal_name=self.name
+            routing_tot=Device(name=self.name+"Probe").add(join(routing_tot)).flatten()
+
+            cell.add_ref(routing_tot,alias=self.name+'Probe')
 
             self.cell=cell
 
@@ -887,8 +867,55 @@ def calibration(res,type):
         def __init__(self,*a,**k):
 
             super().__init__(*a,**k)
+            self.type=type
 
-            
+        def draw(self):
+
+            cell=res.draw(self)
+
+            if type=='open':
+
+                for name in cell.aliases.keys():
+
+                    if not 'Probe' in name:
+
+                        cell.remove(cell.aliases[name])
+
+            self.cell=Device(name=self.name+"CalOpen").add(cell)
+
+            if type=='short':
+
+                for name in cell.aliases.keys():
+
+                    if "Device" in name:
+
+                        dev=cell.aliases[name]
+
+                        top_port=dev.ports['top']
+                        bottom_port=dev.ports['bottom']
+
+                        import pdb; pdb.set_trace()
+                        short=pg.taper(length=top_port.y-bottom_port.y,\
+                        width1=top_port.width,\
+                        width2=bottom_port.width,layer=self.probe.layer)
+
+                        s_ref=cell<<short
+
+                        s_ref.connect(short.ports[1],\
+                            destination=top_port)
+
+                        s_ref.rotate(center=top_port.center,\
+                        angle=180)
+                        cell.absorb(s_ref)
+
+                        cell.remove(dev)
+
+            self.cell=cell
+
+            return cell
+
+    return calibration
+
 class LFERes(LayoutPart):
 
     def __init__(self,*args,**kwargs):
