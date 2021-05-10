@@ -16,12 +16,16 @@ from PyResLayout import *
 # exit()
 #
 # d=Anchor()
-# print(d)
+# # print(d)
 # t=d.export_params()
-# t["EtchMarginY"]=55
-# t["EtchMarginX"]=5
+# t["EtchMarginY"]=15
+# t["EtchMarginX"]=1
 # t["SizeX"]=40
 # t["SizeY"]=40
+
+# d.import_params(t)
+#
+# print(d)
 # d.view()
 # exit()
 
@@ -46,7 +50,7 @@ from PyResLayout import *
 #     layer=ld.layerTop,threshold=0.3,pixelsize=1,size=4096)
 # d=phidl.geometry.import_gds(str(d.absolute()))
 # check_cell(d)
-# # d=FBERes()
+# d=FBERes()
 # t=d.export_params()
 # t["IDTLength"]=200
 # t["IDTNFingers"]=10
@@ -59,7 +63,7 @@ from PyResLayout import *
 # d.import_params(t)
 # print(d)
 # d.view()
-#
+
 # exit()
 # d=TFERes()
 # print(d)
@@ -132,38 +136,42 @@ from PyResLayout import *
 # d.view()
 # exit()
 #
-# d=addProbe(Scaled(array(LFERes,3)),addLargeGnd(GSGProbe))()
+# device=addVia(Scaled(array(LFERes,3)))
+# probe=addLargeGnd(GSGProbe)
+# d=addProbe(device,probe)("tutorial")
 #
 # param=d.export_params()
-#
+# print(d)
 # param["IDTPitch"]=7
 # param["IDTN"]=8
 # param["IDTYOffset"]=1
-# param["IDTLength"]=100
+# param["IDTLength"]=200/7
 # param["IDTCoverage"]=0.5
 # param["BusSizeY"]=4
-# param["EtchX"]=100
+# param["EtchX"]=0.4
 # param["AnchorSizeY"]=3
 # param["AnchorSizeX"]=0.2
 # param["AnchorEtchMarginX"]=0.2
 # param["AnchorEtchMarginY"]=0.2
-# param['ViaAreaX']=300
-# param['ViaAreaY']=300
-# param['ViaSize']=30
-# param['OverVia']=1.5
-# param['ViaDistance']=100
+# # param['ViaAreaX']=300
+# # param['ViaAreaY']=300
+# # param['ViaSize']=30
+# # param['OverVia']=1.5
+# # param['ViaDistance']=100
 #
 # d.import_params(param)
 #
 # print(d)
 # d.view()
-# # exit()
+# exit()
+#
 probe=addLargeGnd(GSGProbe)
-device=Scaled(FBERes)
+
+device=array(calibration(Scaled(FBERes),'short'),3)
 
 dut=addProbe(device,probe)
 
-d=calibration(dut,'short')("tutorial")
+d=dut("tutorial")
 # print(d)
 
 param=d.export_params()
@@ -187,11 +195,15 @@ param['ProbeGroundSize']=250
 
 d.import_params(param)
 
+print(d)
+
 d.view()
 
-p=dut("tut")
+exit()
 
-param=d.export_params()
+p=device("tut")
+
+param=p.export_params()
 param["IDTPitch"]=7
 param["IDTN"]=8
 param["IDTYOffset"]=1
@@ -213,7 +225,9 @@ param['ProbeGroundSize']=250
 p.import_params(param)
 
 p.view()
+
+print(p)
 # d=alignment_marks_4layers()
-# #
+#
 # check_cell(d)
 # exit()

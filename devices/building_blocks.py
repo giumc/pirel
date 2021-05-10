@@ -29,7 +29,8 @@ from pandas import Series,DataFrame
 from layout_tools import *
 
 from layout_tools import _add_lookup_table
-ld=LayoutDefault
+
+# from layout_tools import LayoutDefault as LayoutDefault
 
 class TextParam():
     ''' Class to store text data and to add it in cells.
@@ -46,7 +47,7 @@ class TextParam():
 
     location : 'left','right','top','bottom'
 
-    distance :  sketch.Point
+    distance :  PyResLayout.Point
 
     label :     string
         can be multiline if '\\n' is added
@@ -59,7 +60,7 @@ class TextParam():
     _msg_err="""Invalid key for text_param.
     Valid options are :{}""".format("\n".join(_valid_names))
 
-    _default=ld.TextParams
+    _default=LayoutDefault.TextParams
 
     def __init__(self,df={}):
 
@@ -148,13 +149,11 @@ class TextParam():
 
                 raise ValueError("Passed parameter {} is not a string ".format(label.__class__.__name__))
 
-        text_cell=self.draw()
+        text_cell=Device(name=self.get('label')+"Text").add(self.draw()).flatten()
 
         o=Point(0,0)
 
         ll,lr,ul,ur=get_corners(cell)
-
-        text_cell._internal_name=cell.name+'Text'
 
         text_location=self.get('location')
 
@@ -265,12 +264,6 @@ class LayoutParam():
 
                 self._value=value
 
-    # def addResistance_toParams(fun):
-    #
-    #     def wrapper():
-    #
-    #         df=fun()
-
 class _LayoutParamInterface():
 
     def __init__(self,*args):
@@ -357,7 +350,7 @@ class LayoutPart(ABC) :
         name : str
 
             instance name
-        origin : sketch.Point
+        origin : PyResLayout.Point
             layout cell origin
 
         cell :  phidl.Device
@@ -382,9 +375,8 @@ class LayoutPart(ABC) :
 
         self.name=name
 
-        self.origin=copy(ld.origin)
+        self.origin=copy(LayoutDefault.origin)
 
-        self.cell=Device(name)
 
     def view(self,blocking=True):
         ''' Visualize cell layout with current parameters.
@@ -484,6 +476,7 @@ class LayoutPart(ABC) :
 
             out_dict.update(param.param)
 
+        out_dict.update({"Type":self.__class__.__name__})
         # if hasattr(self,'resistance_squares'):
         #
         #     out_dict.update({"Resistance":getattr(self,'resistance_squares')})
@@ -569,13 +562,13 @@ class IDT(LayoutPart) :
     def __init__(self,*args,**kwargs):
 
         super().__init__(*args,**kwargs)
-        self.length=ld.IDT_y
-        self.pitch=ld.IDTpitch
-        self.y_offset=ld.IDTy_offset
-        self.coverage=ld.IDTcoverage
-        self.n=ld.IDTn
-        self.layer=ld.IDTlayer
-        self.active_area_margin=ld.LFEResactive_area_margin
+        self.length=LayoutDefault.IDT_y
+        self.pitch=LayoutDefault.IDTpitch
+        self.y_offset=LayoutDefault.IDTy_offset
+        self.coverage=LayoutDefault.IDTcoverage
+        self.n=LayoutDefault.IDTn
+        self.layer=LayoutDefault.IDTlayer
+        self.active_area_margin=LayoutDefault.LFEResactive_area_margin
 
     def draw(self):
         ''' Generates layout cell based on current parameters.
@@ -643,7 +636,7 @@ class IDT(LayoutPart) :
 
         del unitcell,rect
 
-        self.cell=cell
+
 
         return cell
 
@@ -652,7 +645,7 @@ class IDT(LayoutPart) :
 
         Returns
         -------
-        size : sketch.Point
+        size : PyResLayout.Point
             finger size as coordinates lenght(length) and width(x).
         '''
         dy=self.length
@@ -702,9 +695,9 @@ class Bus(LayoutPart) :
 
     Attributes
     ----------
-    size : sketch.Point
+    size : PyResLayout.Point
         bus size coordinates of length(y) and width(x)
-    distance : sketch.Point
+    distance : PyResLayout.Point
         distance between buses coordinates
     layer : int
         bus layer.
@@ -717,11 +710,11 @@ class Bus(LayoutPart) :
 
         super().__init__(*args,**kwargs)
 
-        self.layer = ld.layerTop
+        self.layer = LayoutDefault.layerTop
 
-        self.size=copy(ld.Bussize)
+        self.size=copy(LayoutDefault.Bussize)
 
-        self.distance=copy(ld.Busdistance)
+        self.distance=copy(LayoutDefault.Busdistance)
 
     def draw(self):
         ''' Generates layout cell based on current parameters.
@@ -754,7 +747,7 @@ class Bus(LayoutPart) :
         width=self.size.x,\
         orientation=90)
 
-        self.cell=cell
+
 
         del pad
 
@@ -772,7 +765,7 @@ class EtchPit(LayoutPart) :
 
     Attributes
     ----------
-    active_area : sketch.Point
+    active_area : PyResLayout.Point
         area to be etched as length(Y) and width(X)
     x : float
         etch width
@@ -788,11 +781,11 @@ class EtchPit(LayoutPart) :
 
         super().__init__(*args,**kwargs)
 
-        self.active_area=copy(ld.EtchPitactive_area)
+        self.active_area=copy(LayoutDefault.EtchPitactive_area)
 
-        self.x=ld.EtchPit_x
+        self.x=LayoutDefault.EtchPit_x
 
-        self.layer=ld.EtchPitlayer
+        self.layer=LayoutDefault.EtchPitlayer
 
     def draw(self):
         ''' Generates layout cell based on current parameters.
@@ -836,8 +829,6 @@ class EtchPit(LayoutPart) :
 
         del main_etch
 
-        self.cell=etch
-
         return etch
 
 class Anchor(LayoutPart):
@@ -847,10 +838,10 @@ class Anchor(LayoutPart):
 
     Attributes
     ----------
-    size : sketch.Point
+    size : PyResLayout.Point
         length(Y) and size(X) of anchors
 
-    etch_margin : sketch.Point
+    etch_margin : PyResLayout.Point
         length(Y) and size(X) of margin between
         etched pattern and metal connection
 
@@ -877,14 +868,14 @@ class Anchor(LayoutPart):
 
         super().__init__(*args,**kwargs)
 
-        self.size=copy(ld.Anchorsize)
-        self.etch_margin=copy(ld.Anchoretch_margin)
-        self.etch_choice=ld.Anchoretch_choice
-        self.etch_x=ld.Anchoretch_x
-        self.x_offset=ld.Anchorx_offset
+        self.size=copy(LayoutDefault.Anchorsize)
+        self.etch_margin=copy(LayoutDefault.Anchoretch_margin)
+        self.etch_choice=LayoutDefault.Anchoretch_choice
+        self.etch_x=LayoutDefault.Anchoretch_x
+        self.x_offset=LayoutDefault.Anchorx_offset
 
-        self.layer=ld.Anchorlayer
-        self.etch_layer=ld.Anchoretch_layer
+        self.layer=LayoutDefault.Anchorlayer
+        self.etch_layer=LayoutDefault.Anchoretch_layer
 
     @_add_lookup_table
     def draw(self):
@@ -961,7 +952,7 @@ class Anchor(LayoutPart):
             cell.remove(etch_sx_ref)
             cell.remove(etch_dx_ref)
 
-        self.cell=cell
+
 
         del anchor, etch_sx,etch_dx
 
@@ -986,41 +977,41 @@ class Via(LayoutPart):
     Attributes
     ----------
     size : float
-        if type is 'rectangle', side of rectangle
-        if type is 'circle',diameter of cirlce
+        if shape is 'rectangle', side of rectangle
+        if shape is 'circle',diameter of cirlce
 
-    type : str (only 'rectangle' or 'circle')
+    shape : str (only 'rectangle' or 'circle')
         via shape
     layer : int
         via layer.
     '''
     size=_LayoutParamInterface()
 
-    type=_LayoutParamInterface('square','circle')
+    shape=_LayoutParamInterface('square','circle')
 
     def __init__(self,*args,**kwargs):
 
         super().__init__(*args,**kwargs)
 
-        self.layer=ld.Vialayer
-        self.type=ld.Viatype
-        self.size=ld.Viasize
+        self.layer=LayoutDefault.Vialayer
+        self.shape=LayoutDefault.Viashape
+        self.size=LayoutDefault.Viasize
 
     def draw(self):
 
-        if self.type=='square':
+        if self.shape=='square':
 
             cell=pg.rectangle(size=(self.size,self.size),\
                 layer=self.layer)
 
-        elif self.type=='circle':
+        elif self.shape=='circle':
 
             cell=pg.circle(radius=self.size/2,\
             layer=self.layer)
 
         else:
 
-            raise ValueError("Via Type can be \'square\' or \'circle\'")
+            raise ValueError("Via shape can be \'square\' or \'circle\'")
 
         cell.move(origin=(0,0),\
             destination=self.origin())
@@ -1032,7 +1023,7 @@ class Via(LayoutPart):
         width=cell.xmax-cell.xmin,\
         orientation=90))
 
-        self.cell=cell
+
 
         return cell
 
@@ -1075,15 +1066,15 @@ class Routing(LayoutPart):
 
     trace_width=_LayoutParamInterface()
 
-    def __init__(self,side='auto',trace_width=ld.Routingtrace_width,\
-        clearance=ld.Routingclearance,ports=ld.Routingports[0],\
-        layer=ld.Routinglayer,*args,**kwargs):
+    def __init__(self,side='auto',trace_width=LayoutDefault.Routingtrace_width,\
+        clearance=LayoutDefault.Routingclearance,ports=LayoutDefault.Routingports[0],\
+        layer=LayoutDefault.Routinglayer,*args,**kwargs):
 
         super().__init__(*args,**kwargs)
-        self.layer=ld.Routinglayer
-        self.trace_width=ld.Routingtrace_width
-        self.clearance=ld.Routingclearance
-        self.ports=ld.Routingports
+        self.layer=LayoutDefault.Routinglayer
+        self.trace_width=LayoutDefault.Routingtrace_width
+        self.clearance=LayoutDefault.Routingclearance
+        self.ports=LayoutDefault.Routingports
         self.side=side
 
     @property
@@ -1114,23 +1105,15 @@ class Routing(LayoutPart):
     @_add_lookup_table
     def draw(self):
 
-        cell=Device(self.name)
-
         path=self.path
 
         x=CrossSection()
 
         x.add(layer=self.layer,width=self.trace_width)
 
-        path_cell=x.extrude(path,simplify=5)
+        path_cell=x.extrude(path,simplify=1)
 
-        cell.absorb(cell<<path_cell)
-
-        cell=join(cell)
-
-        self.cell=cell
-
-        return cell
+        return path_cell
 
     def export_params(self):
 
@@ -1232,7 +1215,7 @@ class Routing(LayoutPart):
     @_add_lookup_table
     def path(self):
 
-        radius=20
+        radius=self.trace_width/3
 
         bbox=pg.bbox(self.clearance)
 
@@ -1249,20 +1232,12 @@ class Routing(LayoutPart):
 
         y_overtravel=ll.y-source.midpoint[1]-self.trace_width
 
-        taper_len=abs(min([y_overtravel,self.trace_width/4]))
-
         if destination.y<=ll.y : # destination is below clearance
 
             if not(destination.orientation==source.orientation+180 or \
                 destination.orientation==source.orientation-180):
 
                     raise Exception("Routing error: non-hindered routing needs +90 -> -90 oriented ports")
-
-            # source=self._add_taper(cell,source,len=taper_len)
-            # destination=self._add_taper(cell,destination,len=self.trace_width/4)
-
-            # source.name='source'
-            # destination.name='destination'
 
             distance=Point().from_iter(destination.midpoint)-\
                 Point().from_iter(source.midpoint)
@@ -1287,10 +1262,8 @@ class Routing(LayoutPart):
 
             elif source.orientation==0 : #right path
 
-                    # source=self._add_taper(cell,source,len==-taper_len)
-                    # destination=self._add_taper(cell,destination,len=self.trace_width/4)
-
                     source.name='source'
+
                     destination.name='destination'
 
                     p0=Point().from_iter(source.midpoint)
@@ -1312,7 +1285,9 @@ class Routing(LayoutPart):
                         path=pp.smooth(points=list_points_rx,radius=radius/2)
 
                     except :
+
                         print("error in +0 source, rx path")
+
                         import pdb; pdb.set_trace()
 
             if source.orientation==90 :
@@ -1354,7 +1329,9 @@ class Routing(LayoutPart):
                         path_lx=pp.smooth(points=list_points_lx,radius=radius/2)
 
                     except:
+
                         printf("error in +90 source, lx path")
+
                         import pdb; pdb.set_trace()
                     #right path
 
@@ -1373,6 +1350,7 @@ class Routing(LayoutPart):
                     except:
 
                         printf("error in +90 source, rx path")
+
                         import pdb; pdb.set_trace()
 
                     if self.side=='auto':
@@ -1430,12 +1408,6 @@ class Routing(LayoutPart):
 
             elif source.orientation==180 : #left path
 
-                # source=self._add_taper(cell,source,len==-taper_len)
-                # destination=self._add_taper(cell,destination,len=self.trace_width/4)
-
-                # source.name='source'
-                # destination.name='destination'
-
                 p0=Point().from_iter(source.midpoint)
                 p1=Point(ll.x-self.trace_width,p0.y)
 
@@ -1449,10 +1421,15 @@ class Routing(LayoutPart):
 
 
                 list_points_lx=[p0(),p1(),p2(),p3(),p4()]
+
                 try:
+
                     path=pp.smooth(points=list_points_lx,radius=radius/2)
+
                 except:
+
                     print("error in +0 source, lx path")
+
                     import pdb; pdb.set_trace()
 
         return path
@@ -1478,9 +1455,7 @@ class GSProbe(LayoutPart):
 
     Attributes
     ----------
-    size : float
-        if type is 'rectangle', side of rectangle
-        if type is 'circle',diameter of cirlce
+    size : PyResLayout.Point
 
     pitch : float
         probe pitch
@@ -1496,9 +1471,9 @@ class GSProbe(LayoutPart):
 
         super().__init__(*args,**kwargs)
 
-        self.layer=ld.GSProbelayer
-        self.pitch=ld.GSProbepitch
-        self.size=copy(ld.GSProbesize)
+        self.layer=LayoutDefault.GSProbelayer
+        self.pitch=LayoutDefault.GSProbepitch
+        self.size=copy(LayoutDefault.GSProbesize)
 
     def draw(self):
 
@@ -1538,7 +1513,7 @@ class GSProbe(LayoutPart):
         width=pad_x,\
         orientation=90))
 
-        self.cell=cell
+
 
         return cell
 
@@ -1549,9 +1524,7 @@ class GSGProbe(LayoutPart):
 
     Attributes
     ----------
-    size : float
-        if type is 'rectangle', side of rectangle
-        if type is 'circle',diameter of cirlce
+    size : PyResLayout.Point
 
     pitch : float
         probe pitch
@@ -1567,9 +1540,9 @@ class GSGProbe(LayoutPart):
 
         super().__init__(*args,**kwargs)
 
-        self.layer=ld.GSGProbelayer
-        self.pitch=ld.GSGProbepitch
-        self.size=copy(ld.GSGProbesize)
+        self.layer=LayoutDefault.GSGProbelayer
+        self.pitch=LayoutDefault.GSGProbepitch
+        self.size=copy(LayoutDefault.GSGProbesize)
 
     def draw(self):
 
@@ -1618,8 +1591,6 @@ class GSGProbe(LayoutPart):
         width=pad_x,\
         orientation=90))
 
-        self.cell=cell
-
         return cell
 
 class Pad(LayoutPart):
@@ -1650,10 +1621,10 @@ class Pad(LayoutPart):
     def __init__(self,*args,**kwargs):
 
         super().__init__(*args,**kwargs)
-        self.size=ld.Padsize
-        self.layer=ld.Padlayer
-        self.distance=copy(ld.Paddistance)
-        self.port=ld.Padport
+        self.size=LayoutDefault.Padsize
+        self.layer=LayoutDefault.Padlayer
+        self.distance=copy(LayoutDefault.Paddistance)
+        self.port=LayoutDefault.Padport
 
     def draw(self):
 
@@ -1676,8 +1647,6 @@ class Pad(LayoutPart):
         r1.add_port(port=south_port,name='conn')
 
         del r2
-
-        self.cell=r1
 
         return r1
 

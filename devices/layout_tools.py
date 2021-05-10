@@ -19,9 +19,9 @@ class Point:
 
     def __init__(self,x=0,y=0):
 
-        self.x=np.around(np.single(x),decimals=2)
+        self.x=x
 
-        self.y=np.around(np.single(y),decimals=2)
+        self.y=y
 
     def get_coord(self):
         ''' returns coordinates in a 2-d tuple'''
@@ -179,7 +179,7 @@ class LayoutDefault:
     #Via
 
     Vialayer=layerVias
-    Viatype='circle'
+    Viashape='circle'
     Viasize=5
 
     #GSGProbe
@@ -344,7 +344,7 @@ def join(device):
     ----------
     device : phidl.Device.
     '''
-    out_cell=pg.union(device,by_layer=True, precision=0.1,join_first=False)
+    out_cell=pg.union(device,by_layer=True, precision=0.001,join_first=False)
 
     return out_cell
 

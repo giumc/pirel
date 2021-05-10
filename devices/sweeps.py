@@ -16,6 +16,23 @@ import sys
 
 class SweepParam():
 
+    """ Class used to generate and combine sweep parameters in PArray/PMatrix.
+
+        More parameters can be swept at the same time by specifying the format
+            {name1:values1, name2:values2 } when building SweepParam.
+
+        Parameters
+        ----------
+            params : dict
+
+                a dict with {name:values} format.
+
+        To call a parameter sweep point, use the following syntax:
+            par=SweepParam({"Length":[1,2,3],"Width":[4,5,6]})
+            par(0)  ->returns {"Length":1,"Width":4}
+            par(1)  ->returns {"Length":2,"Width":5}.
+    """
+
     def __init__(self,params):
 
         if isinstance(params,dict):
@@ -47,6 +64,8 @@ class SweepParam():
 
     @property
     def labels(self):
+
+        """ parameter sweep names/values  in compact form"""
 
         param=self
 
@@ -80,15 +99,40 @@ class SweepParam():
 
     @property
     def names(self):
-
+        """ Iterable of parameter names"""
         return [x for x in self._dict.keys()]
 
     @property
     def values(self):
-
+        """iterable of parameter values"""
         return [_ for _ in self._dict.values()]
 
     def combine(self,sweep2):
+        """ Combine two SweepParam.
+
+            The parameters are combined with another SweepParam
+            instance to generate a new SweepParam.
+            If the instance has a length M and the parameter has a length N ,
+            resulting SweepParam will have length MxN.
+
+            Parameters
+            ----------
+                sweep2 : PyResLayout.SweepParam
+
+                    the SweepParam to be combined with the old one.
+
+            Returns
+            -------
+                sweep : PyResLayout.SweepParam
+
+            Example
+            -------
+                sw1 = SweepParam({"X":[3,4])
+                sw2 = SweepParam({"Y":[5,6])
+                sw3 = sw1.combine(sw2)
+
+                # sw3 -> {"X":[3,3,4,4],"Y":[5,6,5,6]}.
+        """
 
         sweep1=self
 
@@ -170,6 +214,17 @@ class SweepParam():
         return SweepParam(dict_new)
 
     def populate_plot_axis(self,plot,ax='x'):
+        """ Decorate plot axis with SweepParam name/values.
+
+            Parameters
+            ----------
+                plot : matplotlib.Axes
+
+                ax : str ('x' or 'y').
+
+            The function assumes that the plot ticks have the same length as the
+            SweepParam.
+        """
 
         fig=plt.gcf()
 
@@ -287,9 +342,57 @@ class SweepParam():
 
             raise ValueError("Axis can be 'x' or 'y'")
 
+    def subset(self,n):
+        """ Downsample sweep parameters.
+
+            Parameter
+            ---------
+                n : int
+
+                    new length of the SweepParam (needs to be smaller than original length).
+
+            Returns
+            -------
+                sweep : PyResLayout.SweepParam
+
+                    a new SweepParam with "downsampled" values.
+        """
+
+        if n>=len(self):
+
+            raise ValueError(f"""subset returns a smaller number of arrays
+                than the original subset\n, input less than {n}""")
+
+        from numpy import ceil
+
+        if len(self)%2==1:
+
+            spacing=int(ceil((len(self)+1)/n))
+
+        else:
+
+            spacing=int(ceil(len(self)/n))
+
+        new_dict={}
+
+        for name in self.names:
+
+            old_values=self._dict[name]
+            new_values=[old_values[x] for x in range(0,len(self),spacing)]
+
+            if not len(new_values)==n:
+
+                raise ValueError("bug in subset creation, wrong length")
+
+            else:
+
+                new_dict[name]=new_values
+
+        return SweepParam(new_dict)
+
 class _SweepParamValidator():
 
-    def __init__(self,def_param=ld.Arrayx_param):
+    def __init__(self,def_param=LayoutDefault.Arrayx_param):
 
         self.default_value=SweepParam(def_param)
 
@@ -372,19 +475,33 @@ class _SweepArrayValidator(_SweepParamValidator):
 
 class PArray(LayoutPart):
 
-    x_param=_SweepParamValidator(ld.Arrayx_param)
+    """ Class used to create a parametric array of cells.
 
-    def __init__(self,device,*args,**kwargs):
+        Parameters
+        ----------
+
+            device : PyResLayout.LayoutPart
+
+            x_param : PyResLayout.SweepParam
+
+                every of the x_param.names has to be a parameter of device.
+    """
+
+    x_param=_SweepParamValidator(LayoutDefault.Arrayx_param)
+
+    def __init__(self,device,x_param,*args,**kwargs):
 
         super().__init__(*args,**kwargs)
 
         self.device=device
 
-        self.x_spacing=ld.Arrayx_spacing
+        self.x_param=x_param
 
-        self.labels_top=ld.Arraylabels_top
+        self.x_spacing=LayoutDefault.Arrayx_spacing
 
-        self.labels_bottom=ld.Arraylabels_bottom
+        self.labels_top=LayoutDefault.Arraylabels_top
+
+        self.labels_bottom=LayoutDefault.Arraylabels_bottom
 
         self.text_params=copy(TextParam())
 
@@ -418,6 +535,8 @@ class PArray(LayoutPart):
 
     @property
     def table(self):
+
+        """ A pandas.DataFrame that represent all the parameters in PArray.device """
 
         param=self.x_param
 
@@ -463,7 +582,7 @@ class PArray(LayoutPart):
 
         df_original=device.export_params()
 
-        master_cell=Device(self.name)
+        master_cell=Device(name=self.name)
 
         cells=list()
 
@@ -481,9 +600,7 @@ class PArray(LayoutPart):
 
             print("drawing device {} of {}".format(index+1,len(param)),end="\r")
 
-            new_cell=device.draw()
-
-            new_cell._internal_name=self.name+'_'+str(index)
+            new_cell=Device(name=self.name+'_'+str(index)).add(join(device.draw()))
 
             if self.labels_top is not None:
 
@@ -511,17 +628,42 @@ class PArray(LayoutPart):
 
         del device, cells ,g
 
-        # master_cell=join(master_cell)
-
-        master_cell._internal_name=self.name
-
-        self.cell=master_cell
-
         return master_cell
 
     def auto_labels(self,top=True,bottom=True,top_label='',bottom_label='',\
         col_index=0,row_index=0):
 
+        """Generate automatically labels to attach to array cells.
+
+            resulting labels are stored in "labels_top" and "labels_bottom"
+            attributes.
+
+            Parameters
+            ----------
+                top : Boolean
+
+                    True/False controls creation of top labels
+
+                bottom : Boolean
+
+                    same as top
+
+                top_label : str
+
+                    common optional prefix to attach to top label
+
+                bottom_label : str
+
+                    common optional prefix to attach to bottom label
+
+                col_index : int
+
+                    offset for column indexing (used in bottom label)
+
+                row_index : int
+
+                    offset for row indexing (used in bottom label).
+        """
         param=self.x_param
 
         top_label=[top_label+" "+ x for x in param.labels]
@@ -546,6 +688,22 @@ class PArray(LayoutPart):
 
     def plot_param(self,param,blocking=True):
 
+        """Plots a parameter taken from export_all() across all swept cells.
+
+            Parameter
+            ---------
+                param : str
+
+                    has to be a key in the dict returned by export_all()
+
+                blocking : Boolean
+
+                    if True, blocks script when method is called
+
+            Returns
+            -------
+                fig : matplotlib.Figure.
+        """
         import matplotlib.pyplot as plt
         from matplotlib import cm
         from matplotlib.ticker import LinearLocator
@@ -618,15 +776,16 @@ class PArray(LayoutPart):
 
 class PMatrix(PArray):
 
-    y_param=_SweepParamValidator(ld.Matrixy_param)
+    y_param=_SweepParamValidator(LayoutDefault.Matrixy_param)
 
-    def __init__(self,device,*args,**kwargs):
+    def __init__(self,device,x_param,y_param,*args,**kwargs):
 
-        super().__init__(device,*args,**kwargs)
+        super().__init__(device,x_param,*args,**kwargs)
 
-        self.y_spacing=ld.Matrixy_spacing
-        self.labels_top=ld.Matrixlabels_top
-        self.labels_bottom=ld.Matrixlabels_bottom
+        self.y_spacing=LayoutDefault.Matrixy_spacing
+        self.y_param=y_param
+        self.labels_top=LayoutDefault.Matrixlabels_top
+        self.labels_bottom=LayoutDefault.Matrixlabels_bottom
 
     def draw(self):
 
@@ -659,8 +818,6 @@ class PMatrix(PArray):
             device.import_params(df)
 
             print("drawing array {} of {}".format(index+1,len(y_param)))
-
-            # sys.stdout.flush()
 
             if top_label_matrix is not None:
 
@@ -699,6 +856,7 @@ class PMatrix(PArray):
             new_cell=PArray.draw(self)
             # sys.stdout.flush()
             print("\033[K",end='')
+
             master_cell<<new_cell
 
             cells.append(new_cell)
@@ -712,8 +870,6 @@ class PMatrix(PArray):
         device.import_params(df_original)
 
         del device, cells ,g
-
-        self.cell=master_cell
 
         self.labels_top=top_label_matrix
 
@@ -854,70 +1010,68 @@ class PMatrix(PArray):
         self.import_params(df_original)
 
         return fig
-
-class PArraySeries(PArray):
-
-    x_param=_SweepArrayValidator(ld.Arrayx_param)
-
-    def __init__(self,device,*a,**k):
-
-        PArray.__init__(self,device,*a,*k)
-
-        self.y_spacing = 100
-
-    def draw(self):
-
-        cellparts=list()
-
-        device=self.device
-
-        df_original=device.export_params()
-
-        df=copy(df_original)
-
-        p=PArray(device)
-
-        for i,par in enumerate(self.x_param):
-
-            p.x_spacing=self.x_spacing
-
-            p.x_param=par
-
-            p.auto_labels(row_index=1,col_index=0)
-
-            cellparts.append(p.draw())
-
-        g=Group(cellparts)
-
-        g.distribute(direction='y',spacing=self.y_spacing)
-
-        g.align(alignment='xmin')
-
-        cell=Device(self.name)
-
-        [cell<<x for x in cellparts]
-
-        self.cell=cell
-
-        device.import_params(df_original)
-
-        return cell
-
-    @property
-    def table(self):
-
-        x_param=self.x_param
-
-        data_tot=DataFrame()
-
-        for p in x_param:
-
-            device=deepcopy(self.device)
-
-            parr=PArray(device)
-
-            parr.x_param=p
-
-            data_tot.append(parr.table)
-
-        return data_tot
+#
+# class PArraySeries(PArray):
+#
+#     x_param=_SweepArrayValidator(LayoutDefault.Arrayx_param)
+#
+#     def __init__(self,device,*a,**k):
+#
+#         PArray.__init__(self,device,*a,*k)
+#
+#         self.y_spacing = 100
+#
+#     def draw(self):
+#
+#         cellparts=list()
+#
+#         device=self.device
+#
+#         df_original=device.export_params()
+#
+#         df=copy(df_original)
+#
+#         p=PArray(device,self.x_param)
+#
+#         for i,par in enumerate(self.x_param):
+#
+#             p.x_spacing=self.x_spacing
+#
+#             p.x_param=par
+#
+#             p.auto_labels(row_index=1,col_index=0)
+#
+#             cellparts.append(p.draw())
+#
+#         g=Group(cellparts)
+#
+#         g.distribute(direction='y',spacing=self.y_spacing)
+#
+#         g.align(alignment='xmin')
+#
+#         cell=Device(self.name)
+#
+#         [cell<<x for x in cellparts]
+#
+#         device.import_params(df_original)
+#
+#         return cell
+#
+#     @property
+#     def table(self):
+#
+#         x_param=self.x_param
+#
+#         data_tot=DataFrame()
+#
+#         for p in x_param:
+#
+#             device=deepcopy(self.device)
+#
+#             parr=PArray(device)
+#
+#             parr.x_param=p
+#
+#             data_tot.append(parr.table)
+#
+#         return data_tot

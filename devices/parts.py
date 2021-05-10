@@ -10,8 +10,6 @@ import pandas as pd
 
 import warnings
 
-ld=LayoutDefault
-
 def Scaled(res):
 
     ''' Class Decorator that accept normalized parameters for resonator designs.
@@ -48,6 +46,8 @@ def Scaled(res):
             df=res.export_params(self)
 
             self._denormalize()
+
+            # df.update({"Type":"Scaled "+df["Type"]})
 
             return df
 
@@ -128,6 +128,8 @@ def Scaled(res):
 
             return self
 
+    Scaled.__name__=" ".join(["Scaled",res.__name__])
+
     return Scaled
 
 def addVia(res,side='top',bottom_conn=False):
@@ -186,7 +188,7 @@ def addVia(res,side='top',bottom_conn=False):
 
             self.via=Via(name=self.name+'Via')
 
-            self.padlayers=[ld.layerTop,ld.layerBottom]
+            self.padlayers=[LayoutDefault.layerTop,LayoutDefault.layerBottom]
 
             self.over_via=2
 
@@ -260,8 +262,6 @@ def addVia(res,side='top',bottom_conn=False):
                     pad=pg.compass(size=(bottom_port.width,self.via_distance),layer=self.padlayers[0])
 
                     bottom_port=self._attach_instance(rescell, pad, pad.ports['N'], viacell, bottom_port)
-
-            self.cell=rescell
 
             return rescell
 
@@ -368,6 +368,8 @@ def addVia(res,side='top',bottom_conn=False):
 
             return nvias_x,nvias_y
 
+    addVia.__name=" ".join([res.__name__,"w Via"])
+
     return addVia
 
 def addPad(res):
@@ -409,8 +411,6 @@ def addPad(res):
 
                 destcell.absorb(ref)
 
-            self.cell=destcell
-
             return destcell
 
         def export_params(self):
@@ -445,6 +445,8 @@ def addPad(res):
 
             return r0
 
+    addPad.__name__=" ".join([res.__name__," w Pad"])
+
     return addPad
 
 def addProbe(res,probe):
@@ -459,7 +461,7 @@ def addProbe(res,probe):
 
             self.probe=probe(self.name+"Probe")
 
-            self.gnd_routing_width=ld.DUTrouting_width
+            self.gnd_routing_width=LayoutDefault.DUTrouting_width
 
         def draw(self):
 
@@ -498,18 +500,20 @@ def addProbe(res,probe):
 
                 r_lx_cell=routing_lx.draw()
 
-                routing_c=pg.compass(size=(self.anchor.metalized.x,\
-                    probe_dut_distance.y),layer=self.probe.layer)
-
                 routing_rx=self._route(bbox,probe_port_rx,dut_port_top)
 
                 r_rx_cell=routing_rx.draw()
 
-                routing_tot=pg.boolean(r_lx_cell,r_rx_cell,'or',layer=self.probe.layer)
+                routing_gnd=pg.boolean(r_lx_cell,r_rx_cell,'or',layer=self.probe.layer)
 
-                center_routing=routing_tot<<routing_c
+                routing_c=pg.compass(size=(self.anchor.metalized.x,\
+                    probe_dut_distance.y),layer=self.probe.layer)
+
+                center_routing=DeviceReference(routing_c)
 
                 center_routing.connect(center_routing.ports['S'],destination=dut_port_bottom)
+
+                routing_tot=routing_gnd.add(center_routing)
 
             elif isinstance(self.probe,GSProbe):
 
@@ -532,13 +536,11 @@ def addProbe(res,probe):
 
                     routing_tot.add(patch_top)
 
-            routing_tot.add(probe_ref)
-
-            routing_tot=Device(name=self.name+"Probe").add(join(routing_tot)).flatten()
+            routing_tot=join(routing_tot.add(probe_ref)).flatten()
 
             cell.add_ref(routing_tot,alias=self.name+'Probe')
 
-            self.cell=cell
+
 
             return cell
 
@@ -552,7 +554,7 @@ def addProbe(res,probe):
 
             routing.trace_width=self.gnd_routing_width
 
-            routing.ports=(p1,p2)
+            routing.ports=tuple(copy(x) for x in [p1,p2])
 
             return routing
 
@@ -565,9 +567,6 @@ def addProbe(res,probe):
             t_probe=add_prefix_dict(t_probe,'Probe')
 
             t.update(t_probe)
-
-            # t.update({"Resistance":super().resistance_squares+self.probe_resistance_squares})
-            # t.update({"ProbeResistance":self.probe_resistance_squares})
 
             return t
 
@@ -631,6 +630,8 @@ def addProbe(res,probe):
         def probe_dut_distance(self):
             return Point(0,self.idt.active_area.x/2)
 
+    addProbe.__name__=" ".join([res.__name__,"w Probe"])
+
     return addProbe
 
 def addLargeGnd(probe):
@@ -643,7 +644,7 @@ def addLargeGnd(probe):
 
             probe.__init__(self,*args,**kwargs)
 
-            self.ground_size=ld.GSGProbe_LargePadground_size
+            self.ground_size=LayoutDefault.GSGProbe_LargePadground_size
 
         def draw(self):
 
@@ -682,9 +683,7 @@ def addLargeGnd(probe):
 
                     cell.absorb(groundref)
 
-            cell=join(cell)
-
-            cell._internal_name=self.name
+            cell=Device(name=self.name).add(join(cell))
 
             [cell.add_port(_) for _ in oldports]
 
@@ -716,9 +715,11 @@ def addLargeGnd(probe):
 
                         cell.add_port(right_port)
 
-            self.cell=cell
+
 
             return cell
+
+    addLargeGnd.__name__=" ".join([probe.__name__,"w Large Ground"])
 
     return addLargeGnd
 
@@ -742,7 +743,6 @@ def array(res,n):
 
             self.n_copies=n
 
-        @_add_lookup_table
         def draw(self):
 
             unit_cell=res.draw(self)
@@ -782,9 +782,7 @@ def array(res,n):
 
             cell.add(bus_top)
 
-            cell=join(cell)
-
-            cell._internal_name=self.name
+            cell.flatten()
 
             bc=add_compass(join(cell))
 
@@ -795,8 +793,6 @@ def array(res,n):
             cell.add_port(port=bus_top.ports['N'],name='top')
 
             cell.add_port(port=bc.ports['S'],name='bottom')
-
-            self.cell=cell
 
             return cell
 
@@ -852,6 +848,8 @@ def array(res,n):
 
             return df
 
+    array.__name__= " ".join([f"{n} array of ",res.__name__])
+
     return array
 
 def calibration(res,type):
@@ -867,51 +865,70 @@ def calibration(res,type):
         def __init__(self,*a,**k):
 
             super().__init__(*a,**k)
+
             self.type=type
 
         def draw(self):
 
             cell=res.draw(self)
 
+            ports=cell.get_ports()
+
+            cell.flatten()
+
             if type=='open':
 
-                for name in cell.aliases.keys():
-
-                    if not 'Probe' in name:
-
-                        cell.remove(cell.aliases[name])
-
-            self.cell=Device(name=self.name+"CalOpen").add(cell)
+                cell.remove_polygons(lambda pts,layer,datatype: not layer== LayoutDefault.layerEtch)
 
             if type=='short':
 
-                for name in cell.aliases.keys():
+                cell.remove_polygons(lambda pts,layer,datatype: not layer== LayoutDefault.layerEtch)
 
-                    if "Device" in name:
+                top_port=cell.ports['top']
+                bottom_port=cell.ports['bottom']
 
-                        dev=cell.aliases[name]
+                short=pg.taper(length=top_port.y-bottom_port.y,\
+                width1=top_port.width,\
+                width2=bottom_port.width,layer=self.idt.layer)
 
-                        top_port=dev.ports['top']
-                        bottom_port=dev.ports['bottom']
+                s_ref=cell<<short
 
-                        short=pg.taper(length=top_port.y-bottom_port.y,\
-                        width1=top_port.width,\
-                        width2=bottom_port.width,layer=self.probe.layer)
+                s_ref.connect(short.ports[1],\
+                    destination=top_port)
 
-                        s_ref=cell<<short
+                s_ref.rotate(center=top_port.center,\
+                angle=180)
+                cell.absorb(s_ref)
 
-                        s_ref.connect(short.ports[1],\
-                            destination=top_port)
-
-                        s_ref.rotate(center=top_port.center,\
-                        angle=180)
-                        cell.absorb(s_ref)
-
-                        cell.remove(dev)
-
-            self.cell=cell
+            cell=join(cell)
+            [cell.add_port(p) for p in ports]
 
             return cell
+
+        @property
+        @_add_lookup_table
+        def resistance_squares(self):
+
+            if type=='open':
+
+                from numpy import Inf
+                return inf
+
+            elif type=='short':
+
+                cell=res.draw(self)
+
+                ports=cell.get_ports()
+
+                top_port=cell.ports['top']
+                bottom_port=cell.ports['bottom']
+
+                l=top_port.y-bottom_port.y
+                w=(top_port.width+bottom_port.width)/2
+
+                return l/w
+
+    calibration.__name__=f"{type} fixture for {res.__name__}"
 
     return calibration
 
@@ -921,7 +938,7 @@ class LFERes(LayoutPart):
 
         LayoutPart.__init__(self,*args,**kwargs)
 
-        self.layer=ld.IDTlayer
+        self.layer=LayoutDefault.IDTlayer
 
         self.idt=IDT(name=self.name+'IDT')
 
@@ -931,18 +948,14 @@ class LFERes(LayoutPart):
 
         self.anchor=Anchor(name=self.name+'Anchor')
 
-        # self._set_relations()
+        self._set_relations()
 
         self._stretch_top_margin=False
 
     @_add_lookup_table
     def draw(self):
 
-        o=self.origin
-
-        self.idt.origin=o
-
-        self.idt.layer=self.layer
+        self._set_relations()
 
         idt_cell=self.idt.draw()
 
@@ -954,23 +967,12 @@ class LFERes(LayoutPart):
 
         idt_bottom_port=idt_ref.ports['bottom']
 
-        self.bus.size=Point(\
-            idt_bottom_port.width,\
-            self.bus.size.y)
-
-        self.bus.distance=Point(\
-            0,idt_top_port.y-idt_bottom_port.y+self.bus.size.y)
-
-        self.bus.layer=self.layer
-
         bus_cell = self.bus.draw()
 
         bus_ref= cell<<bus_cell
 
         bus_ref.connect(port=bus_cell.ports['conn'],\
         destination=idt_bottom_port)
-
-        self.etchpit.active_area=Point(self.idt.active_area.x,cell.ysize+self.anchor.etch_margin.y*2)
 
         etch_cell=self.etchpit.draw()
 
@@ -983,15 +985,6 @@ class LFERes(LayoutPart):
         overlap=-self.bus.size.y-self.anchor.etch_margin.y)
 
         cell.absorb(etch_ref)
-
-        self.anchor.etch_x=self.etchpit.x*2+self.etchpit.active_area.x
-
-        self.anchor.layer=self.layer
-
-        if self.anchor.metalized.x>self.bus.size.x:
-
-            self.anchor.etch_margin.x=(self.bus.size.x-self.anchor.size.x)/2
-            warnings.warn("Anchor metal is too wide, reduced to match Bus width size")
 
         anchor_cell=self.anchor.draw()
 
@@ -1027,52 +1020,52 @@ class LFERes(LayoutPart):
         outport_bottom.orientation=-90
         outport_top.midpoint=(\
             outport_top.x,\
-            outport_top.y+self.anchor.size.y)
+            outport_top.y+self.anchor.metalized.y)
         outport_bottom.midpoint=(\
             outport_bottom.x,\
-            outport_bottom.y-self.anchor.size.y)
+            outport_bottom.y-self.anchor.metalized.y)
 
         cell.absorb(anchor_top)
         cell.absorb(anchor_bottom)
 
-        cell_out=join(cell)
+        cell.flatten()
 
-        cell_out._internal_name=self.name
-
-        cell_out.add_port(outport_top)
-        cell_out.add_port(outport_bottom)
+        cell.add_port(outport_top)
+        cell.add_port(outport_bottom)
 
         del idt_cell,bus_cell,etch_cell,anchor_cell
 
-        self.cell=cell_out
 
-        return cell_out
+
+        return cell
 
     def export_params(self):
+
+        self._set_relations()
 
         t=super().export_params()
 
         t_res=self.idt.export_params()
 
-        t_res.pop('Name')
+        t_res=pop_all_dict(t_res,["Name","Type"])
 
         t_res=add_prefix_dict(t_res,"IDT")
 
         t_bus=self.bus.export_params()
 
-        t_bus=pop_all_dict(t_bus, ['Name','DistanceX','DistanceY','SizeX'])
+        t_bus=pop_all_dict(t_bus, ['Name','Type','DistanceX','DistanceY','SizeX'])
 
         t_bus=add_prefix_dict(t_bus,"Bus")
 
         t_etch=self.etchpit.export_params()
 
-        t_etch=pop_all_dict(t_etch,['Name','ActiveAreaX','ActiveAreaY'])
+        t_etch=pop_all_dict(t_etch,['Name','Type','ActiveAreaX','ActiveAreaY'])
 
         t_etch=add_prefix_dict(t_etch,"Etch")
 
         t_anchor=self.anchor.export_params()
 
-        t_anchor=pop_all_dict(t_anchor,['Name','EtchX','XOffset','EtchChoice'])
+        t_anchor=pop_all_dict(t_anchor,['Name','Type','EtchX','XOffset','EtchChoice'])
 
         t_anchor=add_prefix_dict(t_anchor,'Anchor')
 
@@ -1092,7 +1085,7 @@ class LFERes(LayoutPart):
         if_match_import(self.etchpit,df,"Etch")
         if_match_import(self.anchor,df,"Anchor")
 
-        # self._set_relations()
+        self._set_relations()
 
     def _set_relations(self):
 
@@ -1165,7 +1158,7 @@ class FBERes(LFERes):
 
         self.plate_position='out, short'
 
-        self.platelayer=ld.FBEResplatelayer
+        self.platelayer=LayoutDefault.FBEResplatelayer
 
     def draw(self):
 
@@ -1271,7 +1264,7 @@ class FBERes(LFERes):
             cell.absorb(plate_ref)
 
             del plate
-        self.cell=cell
+
 
         return cell
 
@@ -1281,7 +1274,7 @@ class TFERes(LFERes):
 
         super().__init__(*args,**kwargs)
 
-        self.bottomlayer=ld.TFEResbottomlayer
+        self.bottomlayer=LayoutDefault.TFEResbottomlayer
 
     def draw(self):
 
@@ -1324,7 +1317,7 @@ class TFERes(LFERes):
 
         anchor_ref.connect(anchor_ref.ports['conn'],\
             destination=cell.ports['top'],\
-            overlap=self.anchor.size.y)
+            overlap=self.anchor.metalized.y)
 
         cell.absorb(anchor_ref)
 
@@ -1332,15 +1325,13 @@ class TFERes(LFERes):
 
         anchor_ref_2.connect(anchor_ref_2.ports['conn'],\
             destination=cell.ports['bottom'],\
-            overlap=self.anchor.size.y)
+            overlap=self.anchor.metalized.y)
 
         cell.absorb(anchor_ref_2)
 
         out_ports=cell.get_ports()
 
-        cell=join(cell)
-
-        cell._internal_name=self.name
+        cell=Device(name=self.name).add(join(cell))
 
         for p in out_ports:
 
@@ -1348,7 +1339,7 @@ class TFERes(LFERes):
 
         del idt_bottom, bus_bottom, anchor_bottom
 
-        self.cell=cell
+
 
         return cell
 
@@ -1368,7 +1359,7 @@ class WBArray(LayoutPart):
 
             self.device=LFERes(name=self.name+'Device')
 
-        self.n=ld.Stackn
+        self.n=LayoutDefault.Stackn
 
         self.gnd_width=self.device.pad.size*1.5
 
@@ -1435,6 +1426,6 @@ class WBArray(LayoutPart):
 
             cell.name=dut.name
 
-        self.cell=cell
+
 
         return cell
