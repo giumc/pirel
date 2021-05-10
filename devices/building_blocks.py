@@ -287,7 +287,7 @@ class _LayoutParamInterface():
 
             if not value in self.constraints:
 
-                raise ValueError(f"""{value} is not legal for{old_param}\n
+                raise ValueError(f""" Value {value} is not legal for attribute {self.public_name}\n
                             legal values are {self.constraints}""")
 
         if not hasattr(owner,self.private_name):
@@ -409,7 +409,7 @@ class LayoutPart(ABC) :
 
         return [*df.keys()]
 
-    def bbox_mod(self,bbox):
+    def _bbox_mod(self,bbox):
         ''' Default method that returns bbox for the class .
 
         Can be overridden by subclasses of LayoutPart that require customized

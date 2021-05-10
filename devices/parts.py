@@ -14,7 +14,15 @@ def Scaled(res):
 
     ''' Class Decorator that accept normalized parameters for resonator designs.
 
-    For details on scaling, see help on draw function.
+    Descaling rules:
+        IDT gap (d) = IDT gap (n) * pitch
+        IDT length (d) = IDT length (n) * pitch
+        Bus length (d) = Bus length (n) * pitch
+        Etch pit width (d) = Etch pit width (d) * active region width
+        Anchor width (d) = Anchor width (n) * active region width
+        Anchor length (d) = Anchor length (n) * active region width
+        Anchor Margin Y (d) = Anchor Margin Y (n) * Anchor length
+        Anchor Margin X (d) = Anchor Margin X (n) * Anchor width.
 
     Parameters
     ----------
@@ -285,9 +293,9 @@ def addVia(res,side='top',bottom_conn=False):
 
             if_match_import(self.via,df,"Via")
 
-        def bbox_mod(self,bbox):
+        def _bbox_mod(self,bbox):
 
-            LayoutPart.bbox_mod(self,bbox)
+            LayoutPart._bbox_mod(self,bbox)
 
             ll=Point().from_iter(bbox[0])
 
@@ -488,7 +496,7 @@ def addProbe(res,probe):
 
             dut_port_top=device_cell.ports['top']
 
-            bbox=super().bbox_mod(bbox)
+            bbox=super()._bbox_mod(bbox)
 
             if isinstance(self.probe,GSGProbe):
 
@@ -602,7 +610,7 @@ def addProbe(res,probe):
 
             bbox=device_cell.bbox
 
-            bbox=super().bbox_mod(bbox)
+            bbox=super()._bbox_mod(bbox)
 
             probe_cell=self.probe.draw()
 
@@ -852,25 +860,23 @@ def array(res,n):
 
     return array
 
-def calibration(res,type):
-
-    available_types=('short','open')
-
-    if not type in available_types:
-
-        raise ValueError("calibration type unavailable. Available types are\n:{}".format("\n".join(available_types)))
+def calibration(res,type='open'):
 
     class calibration(res):
 
-        def __init__(self,*a,**k):
+        fixture_type=_LayoutParamInterface('short','open')
+
+        def __init__(self,type='open',*a,**k):
 
             super().__init__(*a,**k)
 
-            self.type=type
+            self.fixture_type=type
 
         def draw(self):
 
             cell=res.draw(self)
+
+            type=self.fixture_type
 
             ports=cell.get_ports()
 
@@ -908,6 +914,8 @@ def calibration(res,type):
         @property
         @_add_lookup_table
         def resistance_squares(self):
+
+            type=self.fixture_type
 
             if type=='open':
 
