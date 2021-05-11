@@ -204,30 +204,32 @@ def addVia(cls,side='top',bottom_conn=False):
 
             self.via_area=Point(100,100)
 
+        @_add_lookup_table
+
         def draw(self):
 
-            rescell=cls.draw(self)
+            cell=Device(name=self.name)
 
-            active_width=rescell.xsize
+            resdef=cell.add_ref(cls.draw(self))
+
+            active_width=resdef.xsize
 
             nvias_x,nvias_y=self.get_n_vias()
 
             unit_cell=self._draw_padded_via()
 
-            viacell=CellArray(unit_cell,\
+            viacell=join(CellArray(unit_cell,\
                 columns=nvias_x,rows=nvias_y,\
-                spacing=(unit_cell.xsize,unit_cell.ysize))
+                spacing=(unit_cell.xsize,unit_cell.ysize))).flatten()
 
-            viacell=Device(name=self.name+"Via").add(join(viacell)).flatten()
-
-            viacell.add_port(Port(name='top',\
+            viacell.add_port(Port(name='conn',\
                 midpoint=(viacell.x,viacell.ymax),\
                 width=viacell.xsize,\
                 orientation=90))
 
             try:
 
-                top_port=rescell.ports['top']
+                top_port=resdef.ports['top']
 
             except Exception:
 
@@ -235,7 +237,7 @@ def addVia(cls,side='top',bottom_conn=False):
 
             try:
 
-                bottom_port=rescell.ports['bottom']
+                bottom_port=resdef.ports['bottom']
 
             except Exception:
 
@@ -247,7 +249,7 @@ def addVia(cls,side='top',bottom_conn=False):
 
                     try :
 
-                        top_port=rescell.ports['top']
+                        top_port=resdef.ports['top']
 
                     except Exception:
 
@@ -255,13 +257,13 @@ def addVia(cls,side='top',bottom_conn=False):
 
                     pad=pg.compass(size=(top_port.width,self.via_distance),layer=self.padlayers[0])
 
-                    top_port=self._attach_instance(rescell, pad, pad.ports['S'], viacell, top_port)
+                    top_port=self._attach_instance(cell, pad, pad.ports['S'], viacell, top_port)
 
                 if sides=='bottom':
 
                     try :
 
-                        bottom_port=rescell.ports['bottom']
+                        bottom_port=resdef.ports['bottom']
 
                     except Exception:
 
@@ -269,9 +271,15 @@ def addVia(cls,side='top',bottom_conn=False):
 
                     pad=pg.compass(size=(bottom_port.width,self.via_distance),layer=self.padlayers[0])
 
-                    bottom_port=self._attach_instance(rescell, pad, pad.ports['N'], viacell, bottom_port)
+                    bottom_port=self._attach_instance(cell, pad, pad.ports['N'], viacell, bottom_port)
 
-            return rescell
+            cell.flatten()
+
+            for name,port in resdef.ports.items():
+
+                cell.add_port(port,name)
+
+            return cell
 
         def export_params(self):
 
@@ -315,32 +323,30 @@ def addVia(cls,side='top',bottom_conn=False):
 
         def _draw_padded_via(self):
 
-            viacell=self.via.draw()
+            viaref=DeviceReference(self.via.draw())
 
             size=float(self.via.size*self.over_via)
 
-            port=viacell.get_ports()[0]
+            port=viaref.ports['conn']
 
             trace=pg.rectangle(size=(size,size),layer=self.padlayers[0])
 
-            trace.move(origin=trace.center.tolist(),\
-                destination=viacell.center.tolist())
+            trace.move(origin=trace.center,\
+                destination=viaref.center)
 
             trace2=pg.copy_layer(trace,layer=self.padlayers[0],new_layer=self.padlayers[1])
 
             cell=Device(self.name)
 
-            cell.absorb((cell<<trace))
+            cell.absorb(cell<<trace)
 
-            cell.absorb((cell<<trace2))
+            cell.absorb(cell<<trace2)
 
-            cell.absorb(cell<<viacell)
+            cell.add(viaref)
 
             port.midpoint=(port.midpoint[0],cell.ymax)
 
             port.width=size
-
-            cell=join(cell)
 
             cell.add_port(port)
 
@@ -361,7 +367,7 @@ def addVia(cls,side='top',bottom_conn=False):
 
             viaref=cell.add_ref(viacell,alias=self.name+'Via'+port.name)
 
-            viaref.connect(viacell.ports["top"],\
+            viaref.connect(viacell.ports["conn"],\
             destination=port,\
             overlap=-self.via_distance)
 
@@ -406,20 +412,26 @@ def addPad(cls):
 
         def draw(self):
 
-            destcell=cls.draw(self)
+            cell=Device(name=self.name)
 
-            for port in destcell.get_ports():
+            d_ref=cell.add_ref(cls.draw(self))
+
+            for name,port in d_ref.ports.items():
 
                 self.pad.port=port
 
-                ref=destcell<<self.pad.draw()
+                pad_ref=cell.add_ref(self.pad.draw())
 
-                ref.connect(ref.ports['conn'],\
+                pad_ref.connect(pad_ref.ports['conn'],\
                     destination=port)
 
-                destcell.absorb(ref)
+                cell.absorb(pad_ref)
 
-            return destcell
+                cell.add_port(port,name)
+
+            cell.absorb(d_ref)
+
+            return cell
 
         def export_params(self):
 
@@ -453,7 +465,7 @@ def addPad(cls):
 
             return r0
 
-    addPad.__name__=" ".join([cls.__name__," w Pad"])
+    addPad.__name__=" ".join([cls.__name__,"w Pad"])
 
     return addPad
 
@@ -654,18 +666,21 @@ def addLargeGnd(probe):
 
             self.ground_size=LayoutDefault.GSGProbe_LargePadground_size
 
+        @_add_lookup_table
         def draw(self):
 
-            cell=probe.draw(self)
+            cell=Device(name=self.name)
 
-            oldports=[_ for _ in cell.get_ports()]
+            oldprobe=cell<<probe.draw(self)
+
+            cell.absorb(oldprobe)
 
             groundpad=pg.compass(size=(self.ground_size,self.ground_size),\
             layer=self.layer)
 
             [_,_,ul,ur]=get_corners(groundpad)
 
-            for p in cell.get_ports():
+            for name,p in oldprobe.ports.items():
 
                 name=p.name
 
@@ -679,7 +694,6 @@ def addLargeGnd(probe):
                         destination=p.endpoints[1])
 
                         left_port=groundref.ports['N']
-                        left_port.name=p.name
 
                     elif 'right' in name:
 
@@ -687,43 +701,36 @@ def addLargeGnd(probe):
                         destination=p.endpoints[0])
 
                         right_port=groundref.ports['N']
-                        right_port.name=p.name
 
                     cell.absorb(groundref)
 
-            cell=Device(name=self.name).add(join(cell))
+                else :
 
-            [cell.add_port(_) for _ in oldports]
+                    cell.add_port(p)
 
-            for p in cell.get_ports():
-
-                name=p.name
+            for name,port in oldprobe.ports.items():
 
                 if 'gnd' in name:
 
                     if 'left' in name:
 
-                        cell.remove(cell.ports[name])
-
-                        left_port.midpoint=(left_port.midpoint[0]+self.ground_size/2,\
-                            left_port.midpoint[1]-self.ground_size/2)
-
-                        left_port.orientation=180
+                        left_port=Port(name=name,\
+                            midpoint=(left_port.midpoint[0]+self.ground_size/2,\
+                            left_port.midpoint[1]-self.ground_size/2),\
+                            orientation=180,\
+                            width=self.ground_size)
 
                         cell.add_port(left_port)
 
                     elif 'right' in name:
 
-                        cell.remove(cell.ports[name])
-
-                        right_port.midpoint=(right_port.midpoint[0]-self.ground_size/2,\
-                            right_port.midpoint[1]-self.ground_size/2)
-
-                        right_port.orientation=0
+                        right_port=Port(name=name,\
+                        midpoint=(right_port.midpoint[0]-self.ground_size/2,\
+                            right_port.midpoint[1]-self.ground_size/2),\
+                        orientation=0,\
+                        width=self.ground_size)
 
                         cell.add_port(right_port)
-
-
 
             return cell
 
@@ -741,7 +748,7 @@ def array(cls,n):
 
         bus_ext_length=LayoutParamInterface()
 
-        n_=LayoutParamInterface()
+        n_blocks=LayoutParamInterface()
 
         def __init__(self,*args,**kwargs):
 
@@ -751,6 +758,7 @@ def array(cls,n):
 
             self.n_blocks=n
 
+        @_add_lookup_table
         def draw(self):
 
             unit_cell=cls.draw(self)
@@ -786,21 +794,14 @@ def array(cls,n):
             bus_top.move(origin=bus_top.ports['S'].midpoint,\
                 destination=(cell.center[0],cell.ymax))
 
-            cell.add(bus_bottom)
+            cell<<(bus_bottom)
 
-            cell.add(bus_top)
+            cell<<(bus_top)
 
             cell.flatten()
 
-            bc=add_compass(join(cell))
-
-            bc.ports['N'].width=lx_top.width
-
-            bc.ports['S'].width=xsize_bottom
-
-            cell.add_port(port=bus_top.ports['N'],name='top')
-
-            cell.add_port(port=bc.ports['S'],name='bottom')
+            cell.add_port(port=bus_bottom.ports["S"],name="bottom")
+            cell.add_port(port=bus_top.ports["N"],name="top")
 
             return cell
 
@@ -907,6 +908,7 @@ def calibration(cls,type='open'):
                 cell.absorb(s_ref)
 
             cell=join(cell)
+            
             [cell.add_port(p) for p in ports]
 
             return cell
@@ -920,7 +922,7 @@ def calibration(cls,type='open'):
             if type=='open':
 
                 from numpy import Inf
-                return inf
+                return Inf
 
             elif type=='short':
 
@@ -940,7 +942,7 @@ def calibration(cls,type='open'):
 
     return calibration
 
-def bondstack(cls,n,sharedpad=True):
+def bondstack(cls,n,sharedpad=False):
 
     if not isinstance(n,int):
 
@@ -965,6 +967,8 @@ def bondstack(cls,n,sharedpad=True):
             cell=padded_cls.draw(self)
 
             return cell
+
+    bondstack.__name__=" ".join([f"Bondstack of {n}",padded_cls.__name__])
 
     return bondstack
 
@@ -1196,9 +1200,12 @@ class FBERes(LFERes):
 
         self.platelayer=LayoutDefault.FBEResplatelayer
 
+    @_add_lookup_table
     def draw(self):
 
-        cell=LFERes.draw(self)
+        cell=Device(name=self.name)
+
+        lfe_res=cell.add_ref(LFERes.draw(self))
 
         if self.plate_position=='out, short':
 
@@ -1301,6 +1308,10 @@ class FBERes(LFERes):
 
             del plate
 
+        cell.absorb(lfe_res)
+        for name,port in lfe_res.ports.items():
+
+            cell.add_port(port,name)
 
         return cell
 
@@ -1314,7 +1325,9 @@ class TFERes(LFERes):
 
     def draw(self):
 
-        cell=LFERes.draw(self)
+        cell=Device(name=self.name)
+
+        cell.add_ref(LFERes.draw(self))
 
         idt_bottom=copy(self.idt)
 
@@ -1323,6 +1336,7 @@ class TFERes(LFERes):
         idt_ref=cell<<idt_bottom.draw()
 
         p_bott=idt_ref.ports['bottom']
+
         p_bott_coord=Point().from_iter(p_bott.midpoint)
 
         idt_ref.mirror(p1=(p_bott_coord-Point(p_bott.width/2,0))(),\
@@ -1367,14 +1381,10 @@ class TFERes(LFERes):
 
         out_ports=cell.get_ports()
 
-        cell=Device(name=self.name).add(join(cell))
-
         for p in out_ports:
 
             cell.add_port(p)
 
         del idt_bottom, bus_bottom, anchor_bottom
-
-
 
         return cell

@@ -135,7 +135,7 @@ from PyResLayout import *
 # print(d)
 # d.view()
 # exit()
-#
+# #
 # device=addVia(Scaled(array(LFERes,3)))
 # probe=addLargeGnd(GSGProbe)
 # d=addProbe(device,probe)("tutorial")
@@ -171,14 +171,14 @@ from PyResLayout import *
 #
 # dut=addProbe(device,probe)
 
-dut=Scaled(FBERes)
+dut=array(calibration(Scaled(FBERes),'short'),3)#bondstack(Scaled(FBERes),3)
 
 d=dut(name="tutorial")
 # print(d)
 
 param=d.export_params()
 param["IDTPitch"]=7
-param["PlatePosition"]='b'
+param["PlatePosition"]='in, short'
 param["IDTN"]=2
 param["IDTYOffset"]=1
 param["IDTLength"]=10
@@ -201,6 +201,8 @@ param["PadDistance"]=5
 d.import_params(param)
 
 print(d)
+
+import pdb; pdb.set_trace()
 
 d.view()
 

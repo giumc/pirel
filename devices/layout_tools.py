@@ -315,8 +315,6 @@ def draw_array(cell,x,y,row_spacing=0,column_spacing=0):
 
         cellmat.append(cellvec)
 
-    new_cell=join(new_cell)
-
     for p in ports:
 
         new_cell.add_port(p)

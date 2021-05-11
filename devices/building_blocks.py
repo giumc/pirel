@@ -262,6 +262,9 @@ class _LayoutParam():
 
                 self._value=value
 
+    def __repr__(self):
+        return self
+
 class LayoutParamInterface():
 
     def __init__(self,*args):
@@ -374,7 +377,7 @@ class LayoutPart(ABC) :
         self.name=name
 
         self.origin=copy(LayoutDefault.origin)
-        
+
     def view(self,blocking=True):
         ''' Visualize cell layout with current parameters.
 
@@ -474,9 +477,6 @@ class LayoutPart(ABC) :
             out_dict.update(param.param)
 
         out_dict.update({"Type":self.__class__.__name__})
-        # if hasattr(self,'resistance_squares'):
-        #
-        #     out_dict.update({"Resistance":getattr(self,'resistance_squares')})
 
         return out_dict
 
@@ -993,6 +993,7 @@ class Via(LayoutPart):
         self.shape=LayoutDefault.Viashape
         self.size=LayoutDefault.Viasize
 
+    @_add_lookup_table
     def draw(self):
 
         if self.shape=='square':
@@ -1012,9 +1013,7 @@ class Via(LayoutPart):
         cell.move(origin=(0,0),\
             destination=self.origin())
 
-        cell.name=self.name
-
-        cell.add_port(Port(name=self.name,\
+        cell.add_port(Port(name='conn',\
         midpoint=cell.center,\
         width=cell.xmax-cell.xmin,\
         orientation=90))
