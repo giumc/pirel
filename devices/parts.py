@@ -205,7 +205,6 @@ def addVia(cls,side='top',bottom_conn=False):
             self.via_area=Point(100,100)
 
         @_add_lookup_table
-
         def draw(self):
 
             cell=Device(name=self.name)
@@ -410,6 +409,7 @@ def addPad(cls):
 
             self.pad=Pad(name=self.name+'Pad')
 
+        @_add_lookup_table
         def draw(self):
 
             cell=Device(name=self.name)
@@ -483,6 +483,7 @@ def addProbe(cls,probe):
 
             self.gnd_routing_width=LayoutDefault.DUTrouting_width
 
+        @_add_lookup_table
         def draw(self):
 
             device_cell=cls.draw(self)
@@ -794,13 +795,16 @@ def array(cls,n):
             bus_top.move(origin=bus_top.ports['S'].midpoint,\
                 destination=(cell.center[0],cell.ymax))
 
-            cell<<(bus_bottom)
+            cell<<bus_bottom
 
-            cell<<(bus_top)
+            cell<<bus_top
+
+            import pdb; pdb.set_trace()
 
             cell.flatten()
 
             cell.add_port(port=bus_bottom.ports["S"],name="bottom")
+
             cell.add_port(port=bus_top.ports["N"],name="top")
 
             return cell
@@ -873,6 +877,7 @@ def calibration(cls,type='open'):
 
             self.fixture_type=type
 
+        @_add_lookup_table
         def draw(self):
 
             cell=cls.draw(self)
@@ -908,13 +913,13 @@ def calibration(cls,type='open'):
                 cell.absorb(s_ref)
 
             cell=join(cell)
-            
+
             [cell.add_port(p) for p in ports]
 
             return cell
 
         @property
-        @_add_lookup_table
+        #@_add_lookup_table
         def resistance_squares(self):
 
             type=self.fixture_type
@@ -962,6 +967,7 @@ def bondstack(cls,n,sharedpad=False):
             self.n_copies=n
             self.sharedpad=sharedpad
 
+        @_add_lookup_table
         def draw(self):
 
             cell=padded_cls.draw(self)
@@ -1323,6 +1329,7 @@ class TFERes(LFERes):
 
         self.bottomlayer=LayoutDefault.TFEResbottomlayer
 
+    @_add_lookup_table
     def draw(self):
 
         cell=Device(name=self.name)

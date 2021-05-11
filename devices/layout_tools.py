@@ -447,7 +447,7 @@ def _add_lookup_table(fun):
 
     def wrapper(self):
 
-        totparamlist=self.export_params()
+        totparamlist=self.__class__.export_params(self)
 
         paramlist={}
 

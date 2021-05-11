@@ -171,7 +171,7 @@ from PyResLayout import *
 #
 # dut=addProbe(device,probe)
 
-dut=array(calibration(Scaled(FBERes),'short'),3)#bondstack(Scaled(FBERes),3)
+dut=addProbe(array(calibration(Scaled(FBERes),'short'),3),GSGProbe)#bondstack(Scaled(FBERes),3)
 
 d=dut(name="tutorial")
 # print(d)
@@ -198,13 +198,13 @@ param["PadDistance"]=5
 # param['ViaDistance']=100
 # param['ProbeGroundSize']=250
 
+
 d.import_params(param)
 
-print(d)
+d.view()
 
 import pdb; pdb.set_trace()
-
-d.view()
+print(d)
 
 exit()
 
