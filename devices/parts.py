@@ -2,7 +2,7 @@ from building_blocks import *
 
 from layout_tools import *
 
-from building_blocks import _LayoutParamInterface
+from building_blocks import LayoutParamInterface
 
 from layout_tools import _add_lookup_table
 
@@ -10,7 +10,7 @@ import pandas as pd
 
 import warnings
 
-def Scaled(res):
+def Scaled(cls):
 
     ''' Class Decorator that accept normalized parameters for resonator designs.
 
@@ -26,24 +26,24 @@ def Scaled(res):
 
     Parameters
     ----------
-    res : class
+    cls : class
 
         pass class of resonator to be decorated.
         (i.e. Scaled(LFE)(name="normalized LFE")).
     '''
 
-    class Scaled(res):
+    class Scaled(cls):
 
         def __init__(self,*args,**kwargs):
 
-            res.__init__(self,*args,**kwargs)
+            cls.__init__(self,*args,**kwargs)
             self._normalized=False
 
         def import_params(self,df):
 
             self._normalize()
 
-            res.import_params(self,df)
+            cls.import_params(self,df)
 
             self._denormalize()
 
@@ -51,7 +51,7 @@ def Scaled(res):
 
             self._normalize()
 
-            df=res.export_params(self)
+            df=cls.export_params(self)
 
             self._denormalize()
 
@@ -136,18 +136,18 @@ def Scaled(res):
 
             return self
 
-    Scaled.__name__=" ".join(["Scaled",res.__name__])
+    Scaled.__name__=" ".join(["Scaled",cls.__name__])
 
     return Scaled
 
-def addVia(res,side='top',bottom_conn=False):
+def addVia(cls,side='top',bottom_conn=False):
     ''' Class decorator to add vias to resonators.
 
     you can select side (top,bottom or both) and if keep the bottom pad of the via.
 
     Parameters
     ----------
-    res : class
+    cls : class
         the class that needs vias
 
     side : 'top','bottom', or iterable of both
@@ -182,17 +182,17 @@ def addVia(res,side='top',bottom_conn=False):
 
     side=[(_).lower() for _ in side]
 
-    class addVia(res):
+    class addVia(cls):
 
-        over_via=_LayoutParamInterface()
+        over_via=LayoutParamInterface()
 
-        via_distance=_LayoutParamInterface()
+        via_distance=LayoutParamInterface()
 
-        via_area=_LayoutParamInterface()
+        via_area=LayoutParamInterface()
 
         def __init__(self,*args,**kwargs):
 
-            res.__init__(self,*args,**kwargs)
+            cls.__init__(self,*args,**kwargs)
 
             self.via=Via(name=self.name+'Via')
 
@@ -206,7 +206,7 @@ def addVia(res,side='top',bottom_conn=False):
 
         def draw(self):
 
-            rescell=res.draw(self)
+            rescell=cls.draw(self)
 
             active_width=rescell.xsize
 
@@ -275,7 +275,7 @@ def addVia(res,side='top',bottom_conn=False):
 
         def export_params(self):
 
-            t=res.export_params(self)
+            t=cls.export_params(self)
 
             t_via=self.via.export_params()
 
@@ -289,7 +289,7 @@ def addVia(res,side='top',bottom_conn=False):
 
         def import_params(self, df):
 
-            res.import_params(self,df)
+            cls.import_params(self,df)
 
             if_match_import(self.via,df,"Via")
 
@@ -376,15 +376,15 @@ def addVia(res,side='top',bottom_conn=False):
 
             return nvias_x,nvias_y
 
-    addVia.__name=" ".join([res.__name__,"w Via"])
+    addVia.__name=" ".join([cls.__name__,"w Via"])
 
     return addVia
 
-def addPad(res):
+def addPad(cls):
     ''' Class decorator to add probing pads to existing cells.
         Parameters
         ----------
-        res : PyResLayout.LayoutPart
+        cls : PyResLayout.LayoutPart
             design where pads have to be added
 
         Attributes
@@ -396,17 +396,17 @@ def addPad(res):
             see help for more info.
         '''
 
-    class addPad(res):
+    class addPad(cls):
 
         def __init__(self,*args,**kwargs):
 
-            res.__init__(self,*args,**kwargs)
+            cls.__init__(self,*args,**kwargs)
 
             self.pad=Pad(name=self.name+'Pad')
 
         def draw(self):
 
-            destcell=res.draw(self)
+            destcell=cls.draw(self)
 
             for port in destcell.get_ports():
 
@@ -428,7 +428,7 @@ def addPad(res):
 
             t_pad=add_prefix_dict(t_pad,"Pad")
 
-            t=res.export_params(self)
+            t=cls.export_params(self)
 
             t.update(t_pad)
 
@@ -436,7 +436,7 @@ def addPad(res):
 
         def import_params(self, df):
 
-            res.import_params(self,df)
+            cls.import_params(self,df)
 
             if_match_import(self.pad,df,"Pad")
 
@@ -445,7 +445,7 @@ def addPad(res):
 
             r0=super().resistance_squares
 
-            for port in res.draw(self).get_ports():
+            for port in cls.draw(self).get_ports():
 
                 self.pad.port=port
 
@@ -453,19 +453,19 @@ def addPad(res):
 
             return r0
 
-    addPad.__name__=" ".join([res.__name__," w Pad"])
+    addPad.__name__=" ".join([cls.__name__," w Pad"])
 
     return addPad
 
-def addProbe(res,probe):
+def addProbe(cls,probe):
 
-    class addProbe(res):
+    class addProbe(cls):
 
-        gnd_routing_width=_LayoutParamInterface()
+        gnd_routing_width=LayoutParamInterface()
 
         def __init__(self,*args,**kwargs):
 
-            res.__init__(self,*args,**kwargs)
+            cls.__init__(self,*args,**kwargs)
 
             self.probe=probe(self.name+"Probe")
 
@@ -473,7 +473,7 @@ def addProbe(res,probe):
 
         def draw(self):
 
-            device_cell=res.draw(self)
+            device_cell=cls.draw(self)
 
             probe_cell=self.probe.draw()
 
@@ -568,7 +568,7 @@ def addProbe(res,probe):
 
         def export_params(self):
 
-            t=res.export_params(self)
+            t=cls.export_params(self)
 
             t_probe=self.probe.export_params()
 
@@ -580,7 +580,7 @@ def addProbe(res,probe):
 
         def import_params(self,df):
 
-            res.import_params(self,df)
+            cls.import_params(self,df)
 
             if_match_import(self.probe,df,"Probe")
 
@@ -602,7 +602,7 @@ def addProbe(res,probe):
         @_add_lookup_table
         def probe_resistance_squares(self):
 
-            device_cell=res.draw(self)
+            device_cell=cls.draw(self)
 
             dut_port_bottom=device_cell.ports['bottom']
 
@@ -638,7 +638,7 @@ def addProbe(res,probe):
         def probe_dut_distance(self):
             return Point(0,self.idt.active_area.x/2)
 
-    addProbe.__name__=" ".join([res.__name__,"w Probe"])
+    addProbe.__name__=" ".join([cls.__name__,"w Probe"])
 
     return addProbe
 
@@ -646,7 +646,7 @@ def addLargeGnd(probe):
 
     class addLargeGnd(probe):
 
-        ground_size=_LayoutParamInterface()
+        ground_size=LayoutParamInterface()
 
         def __init__(self,*args,**kwargs):
 
@@ -731,37 +731,37 @@ def addLargeGnd(probe):
 
     return addLargeGnd
 
-def array(res,n):
+def array(cls,n):
 
     if not isinstance(n,int):
 
         raise ValueError(" n needs to be integer")
 
-    class array(res):
+    class array(cls):
 
-        bus_ext_length=_LayoutParamInterface()
+        bus_ext_length=LayoutParamInterface()
 
-        n_copies=_LayoutParamInterface()
+        n_=LayoutParamInterface()
 
         def __init__(self,*args,**kwargs):
 
-            res.__init__(self,*args,**kwargs)
+            cls.__init__(self,*args,**kwargs)
 
             self.bus_ext_length=30
 
-            self.n_copies=n
+            self.n_blocks=n
 
         def draw(self):
 
-            unit_cell=res.draw(self)
+            unit_cell=cls.draw(self)
 
             port_names=list(unit_cell.ports.keys())
 
             cell=draw_array(unit_cell,\
-                self.n_copies,1)
+                self.n_blocks,1)
 
             lx_bottom=cell.ports[port_names[1]+str(0)]
-            rx_bottom=cell.ports[port_names[1]+str(self.n_copies-1)]
+            rx_bottom=cell.ports[port_names[1]+str(self.n_blocks-1)]
 
             xsize_bottom=rx_bottom.midpoint[0]+rx_bottom.width/2-\
                 (lx_bottom.midpoint[0]-lx_bottom.width/2)
@@ -775,7 +775,7 @@ def array(res,n):
                 destination=(cell.center[0],cell.ymin))
 
             lx_top=cell.ports[port_names[0]+str(0)]
-            rx_top=cell.ports[port_names[0]+str(self.n_copies-1)]
+            rx_top=cell.ports[port_names[0]+str(self.n_blocks-1)]
 
             xsize_top=rx_top.midpoint[0]+rx_top.width/2-\
                 (lx_top.midpoint[0]-lx_top.width/2)
@@ -810,7 +810,7 @@ def array(res,n):
 
             r=super().resistance_squares
 
-            cell=res.draw(self)
+            cell=cls.draw(self)
 
             for p in cell.get_ports():
 
@@ -824,9 +824,9 @@ def array(res,n):
 
             l=self.bus_ext_length
 
-            n_copies=self.n_copies
+            n_blocks=self.n_blocks
 
-            if n_copies==1:
+            if n_blocks==1:
 
                 return r+l/w
 
@@ -834,19 +834,19 @@ def array(res,n):
 
                 x_dist=self.idt.active_area.x+self.etchpit.x*2
 
-                if n_copies%2==1 :
+                if n_blocks%2==1 :
 
-                    return parallel_res(r+l/w,(r+2*x_dist/l)/(n_copies-1))
+                    return parallel_res(r+l/w,(r+2*x_dist/l)/(n_blocks-1))
 
-                if n_copies%2==0 :
+                if n_blocks%2==0 :
 
-                    if n_copies==2:
+                    if n_blocks==2:
 
                         return (r+x_dist/l)/2
 
                     else:
 
-                        return parallel_res((r+x_dist/l)/2,(r+2*x_dist/l)/(n_copies-2))
+                        return parallel_res((r+x_dist/l)/2,(r+2*x_dist/l)/(n_blocks-2))
 
         def export_all(self):
 
@@ -856,17 +856,17 @@ def array(res,n):
 
             return df
 
-    array.__name__= " ".join([f"{n} array of ",res.__name__])
+    array.__name__= " ".join([f"{n} array of ",cls.__name__])
 
     return array
 
-def calibration(res,type='open'):
+def calibration(cls,type='open'):
 
-    class calibration(res):
+    class calibration(cls):
 
-        fixture_type=_LayoutParamInterface('short','open')
+        fixture_type=LayoutParamInterface('short','open')
 
-        def __init__(self,type='open',*a,**k):
+        def __init__(self,*a,**k):
 
             super().__init__(*a,**k)
 
@@ -874,7 +874,7 @@ def calibration(res,type='open'):
 
         def draw(self):
 
-            cell=res.draw(self)
+            cell=cls.draw(self)
 
             type=self.fixture_type
 
@@ -924,7 +924,7 @@ def calibration(res,type='open'):
 
             elif type=='short':
 
-                cell=res.draw(self)
+                cell=cls.draw(self)
 
                 ports=cell.get_ports()
 
@@ -936,9 +936,37 @@ def calibration(res,type='open'):
 
                 return l/w
 
-    calibration.__name__=f"{type} fixture for {res.__name__}"
+    calibration.__name__=f"{type} fixture for {cls.__name__}"
 
     return calibration
+
+def bondstack(cls,n,sharedpad=True):
+
+    if not isinstance(n,int):
+
+        raise ValueError(" n needs to be integer")
+
+    padded_cls=addPad(cls)
+
+    class bondstack(padded_cls):
+
+        n_copies=LayoutParamInterface()
+
+        sharedpad=LayoutParamInterface(True,False)
+
+        def __init__(self,*a,**k):
+
+            padded_cls.__init__(self,*a,**k)
+            self.n_copies=n
+            self.sharedpad=sharedpad
+
+        def draw(self):
+
+            cell=padded_cls.draw(self)
+
+            return cell
+
+    return bondstack
 
 class LFERes(LayoutPart):
 
@@ -1157,8 +1185,8 @@ class LFERes(LayoutPart):
 
 class FBERes(LFERes):
 
-    plate_position=_LayoutParamInterface(\
-        'in, short','out, short','in, long','in_short')
+    plate_position=LayoutParamInterface(\
+        'in, short','out, short','in, long','in, short')
 
     def __init__(self,*args,**kwargs):
 
@@ -1346,93 +1374,6 @@ class TFERes(LFERes):
             cell.add_port(p)
 
         del idt_bottom, bus_bottom, anchor_bottom
-
-
-
-        return cell
-
-class WBArray(LayoutPart):
-
-    def __init__(self,*args,**kwargs):
-
-        super().__init__(*args,**kwargs)
-
-        try:
-
-            if isinstance(args[0],LayoutPart):
-
-                self.device=args[0]
-
-        except Exception:
-
-            self.device=LFERes(name=self.name+'Device')
-
-        self.n=LayoutDefault.Stackn
-
-        self.gnd_width=self.device.pad.size*1.5
-
-        self.test=True
-
-    @property
-    def device(self):
-
-        self._unpadded_device.import_params(self._padded_device.export_params())
-        return self._padded_device
-
-    @device.setter
-    def device(self,dev):
-
-        self._unpadded_device=dev
-
-        device_with_pads=addPad(dev.__class__)()
-
-        device_with_pads.import_params(dev.export_params())
-
-        self._padded_device=device_with_pads
-
-    def draw(self):
-
-        device=self.device
-
-        cell=draw_array(device.draw(),\
-            self.n,1)
-
-        gnd_width=self.gnd_width
-
-        gndpad=pg.compass(size=(cell.xsize,gnd_width),layer=device.pad.layer)
-
-        gnd_ref=cell<<gndpad
-
-        gnd_ref.connect(gndpad.ports['N'],\
-            destination=out_port)
-
-        cell.absorb(gnd_ref)
-
-        cell=join(cell)
-
-        cell.add_port(out_port)
-
-        if self.test:
-
-            dut=addProbe(self.device,GSGProbe())
-
-            dut.import_params(self._unpadded_device.export_params())
-
-            dut.draw()
-
-            cell.add(dut.cell)
-
-            self.text_params.update({'location':'left'})
-            self.add_text(cell,\
-            text_opts=self.text_params)
-
-            g=Group([cell,dut.cell])
-
-            g.distribute(direction='x',spacing=150)
-
-            cell=join(cell)
-
-            cell.name=dut.name
 
 
 

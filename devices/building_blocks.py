@@ -30,8 +30,6 @@ from layout_tools import *
 
 from layout_tools import _add_lookup_table
 
-# from layout_tools import LayoutDefault as LayoutDefault
-
 class TextParam():
     ''' Class to store text data and to add it in cells.
 
@@ -213,7 +211,7 @@ class TextParam():
 
         return text_cell
 
-class LayoutParam():
+class _LayoutParam():
 
     def __init__(self,name,value):
 
@@ -243,7 +241,7 @@ class LayoutParam():
 
         if len(df)>1:
 
-            raise ValueError("Pass a single element dict to set a LayoutParam")
+            raise ValueError("Pass a single element dict to set a _LayoutParam")
 
         name=[*df][0]
         value=[*df.values()][0]
@@ -264,7 +262,7 @@ class LayoutParam():
 
                 self._value=value
 
-class _LayoutParamInterface():
+class LayoutParamInterface():
 
     def __init__(self,*args):
 
@@ -292,7 +290,7 @@ class _LayoutParamInterface():
 
         if not hasattr(owner,self.private_name):
 
-                setattr(owner,self.private_name,LayoutParam(self.public_name,value))
+                setattr(owner,self.private_name,_LayoutParam(self.public_name,value))
 
                 if not hasattr(owner,'_params_list'):
 
@@ -327,7 +325,7 @@ class _LayoutParamInterface():
             else:
 
                 raise   ValueError(f"""Attempt to unlawful assingment between \n
-                    type {oldvalue.__class__} and type {value.__class__} in LayoutParam {self.public_name}""")
+                    type {oldvalue.__class__} and type {value.__class__} in _LayoutParam {self.public_name}""")
 
     def __get__(self,owner,objtype=None):
 
@@ -361,7 +359,7 @@ class LayoutPart(ABC) :
 
     '''
 
-    name=_LayoutParamInterface()
+    name=LayoutParamInterface()
 
     def __init__(self,name='default',*args,**kwargs):
         ''' Constructor for LayoutPart.
@@ -376,8 +374,7 @@ class LayoutPart(ABC) :
         self.name=name
 
         self.origin=copy(LayoutDefault.origin)
-
-
+        
     def view(self,blocking=True):
         ''' Visualize cell layout with current parameters.
 
@@ -488,8 +485,7 @@ class LayoutPart(ABC) :
 
         Parameters
         ----------
-        df : dict
-            parameter table, needs to be of length 1.
+        df : dict.
         '''
 
         for param in self._params_list:
@@ -547,17 +543,17 @@ class IDT(LayoutPart) :
             finger number.
     '''
 
-    length =_LayoutParamInterface()
+    length =LayoutParamInterface()
 
-    pitch = _LayoutParamInterface()
+    pitch = LayoutParamInterface()
 
-    y_offset =_LayoutParamInterface()
+    y_offset =LayoutParamInterface()
 
-    coverage =_LayoutParamInterface()
+    coverage =LayoutParamInterface()
 
-    n =_LayoutParamInterface()
+    n =LayoutParamInterface()
 
-    active_area_margin=_LayoutParamInterface()
+    active_area_margin=LayoutParamInterface()
 
     def __init__(self,*args,**kwargs):
 
@@ -702,9 +698,9 @@ class Bus(LayoutPart) :
     layer : int
         bus layer.
     '''
-    size=_LayoutParamInterface()
+    size=LayoutParamInterface()
 
-    distance=_LayoutParamInterface()
+    distance=LayoutParamInterface()
 
     def __init__(self,*args,**kwargs):
 
@@ -773,9 +769,9 @@ class EtchPit(LayoutPart) :
         etch pit layer
     '''
 
-    active_area=_LayoutParamInterface()
+    active_area=LayoutParamInterface()
 
-    x=_LayoutParamInterface()
+    x=LayoutParamInterface()
 
     def __init__(self,*args,**kwargs):
 
@@ -858,11 +854,11 @@ class Anchor(LayoutPart):
         etch layer.
     '''
 
-    size=_LayoutParamInterface()
-    etch_margin=_LayoutParamInterface()
-    etch_choice=_LayoutParamInterface(True,False)
-    etch_x=_LayoutParamInterface()
-    x_offset=_LayoutParamInterface()
+    size=LayoutParamInterface()
+    etch_margin=LayoutParamInterface()
+    etch_choice=LayoutParamInterface(True,False)
+    etch_x=LayoutParamInterface()
+    x_offset=LayoutParamInterface()
 
     def __init__(self,*args,**kwargs):
 
@@ -985,9 +981,9 @@ class Via(LayoutPart):
     layer : int
         via layer.
     '''
-    size=_LayoutParamInterface()
+    size=LayoutParamInterface()
 
-    shape=_LayoutParamInterface('square','circle')
+    shape=LayoutParamInterface('square','circle')
 
     def __init__(self,*args,**kwargs):
 
@@ -1022,8 +1018,6 @@ class Via(LayoutPart):
         midpoint=cell.center,\
         width=cell.xmax-cell.xmin,\
         orientation=90))
-
-
 
         return cell
 
@@ -1062,9 +1056,14 @@ class Routing(LayoutPart):
 
     layer : int
         metal layer.
+
+    side : str (can be "auto","left","right")
+
+        where to go if there is an obstacle.
+        if "auto", will select minimum length path.
     '''
 
-    trace_width=_LayoutParamInterface()
+    trace_width=LayoutParamInterface()
 
     def __init__(self,side='auto',trace_width=LayoutDefault.Routingtrace_width,\
         clearance=LayoutDefault.Routingclearance,ports=LayoutDefault.Routingports[0],\
@@ -1464,8 +1463,8 @@ class GSProbe(LayoutPart):
         via layer.
     '''
 
-    pitch=_LayoutParamInterface()
-    size=_LayoutParamInterface()
+    pitch=LayoutParamInterface()
+    size=LayoutParamInterface()
 
     def __init__(self,*args,**kwargs):
 
@@ -1513,8 +1512,6 @@ class GSProbe(LayoutPart):
         width=pad_x,\
         orientation=90))
 
-
-
         return cell
 
 class GSGProbe(LayoutPart):
@@ -1533,8 +1530,8 @@ class GSGProbe(LayoutPart):
         via layer.
     '''
 
-    pitch=_LayoutParamInterface()
-    size=_LayoutParamInterface()
+    pitch=LayoutParamInterface()
+    size=LayoutParamInterface()
 
     def __init__(self,*args,**kwargs):
 
@@ -1614,9 +1611,9 @@ class Pad(LayoutPart):
         via layer.
     '''
 
-    size=_LayoutParamInterface()
+    size=LayoutParamInterface()
 
-    distance=_LayoutParamInterface()
+    distance=LayoutParamInterface()
 
     def __init__(self,*args,**kwargs):
 

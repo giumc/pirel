@@ -164,18 +164,21 @@ from PyResLayout import *
 # print(d)
 # d.view()
 # exit()
+# #
+# probe=addLargeGnd(GSGProbe)
 #
-probe=addLargeGnd(GSGProbe)
+# device=array(calibration(Scaled(FBERes),'short'),3)
+#
+# dut=addProbe(device,probe)
 
-device=array(calibration(Scaled(FBERes),'short'),3)
+dut=Scaled(FBERes)
 
-dut=addProbe(device,probe)
-
-d=dut("tutorial")
+d=dut(name="tutorial")
 # print(d)
 
 param=d.export_params()
 param["IDTPitch"]=7
+param["PlatePosition"]='b'
 param["IDTN"]=2
 param["IDTYOffset"]=1
 param["IDTLength"]=10
@@ -186,12 +189,14 @@ param["AnchorSizeY"]=0.5
 param["AnchorSizeX"]=0.5
 param["AnchorEtchMarginX"]=0.2
 param["AnchorEtchMarginY"]=0.2
-param['ViaAreaX']=300
-param['ViaAreaY']=300
-param['ViaSize']=30
-param['OverVia']=1.5
-param['ViaDistance']=100
-param['ProbeGroundSize']=250
+param["PadSize"]=10
+param["PadDistance"]=5
+# param['ViaAreaX']=300
+# param['ViaAreaY']=300
+# param['ViaSize']=30
+# param['OverVia']=1.5
+# param['ViaDistance']=100
+# param['ProbeGroundSize']=250
 
 d.import_params(param)
 
