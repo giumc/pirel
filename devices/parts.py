@@ -10,6 +10,8 @@ import pandas as pd
 
 import warnings
 
+from functools import cache
+
 def Scaled(cls):
 
     ''' Class Decorator that accept normalized parameters for resonator designs.
@@ -54,8 +56,6 @@ def Scaled(cls):
             df=cls.export_params(self)
 
             self._denormalize()
-
-            # df.update({"Type":"Scaled "+df["Type"]})
 
             return df
 
@@ -204,7 +204,6 @@ def addVia(cls,side='top',bottom_conn=False):
 
             self.via_area=Point(100,100)
 
-        @_add_lookup_table
         def draw(self):
 
             cell=Device(name=self.name)
@@ -409,7 +408,7 @@ def addPad(cls):
 
             self.pad=Pad(name=self.name+'Pad')
 
-        @_add_lookup_table
+
         def draw(self):
 
             cell=Device(name=self.name)
@@ -483,7 +482,7 @@ def addProbe(cls,probe):
 
             self.gnd_routing_width=LayoutDefault.DUTrouting_width
 
-        @_add_lookup_table
+
         def draw(self):
 
             device_cell=cls.draw(self)
@@ -606,13 +605,13 @@ def addProbe(cls,probe):
             return df
 
         @property
-        @_add_lookup_table
+
         def resistance_squares(self):
 
             return super().resistance_squares+self.probe_resistance_squares
 
         @property
-        @_add_lookup_table
+
         def probe_resistance_squares(self):
 
             device_cell=cls.draw(self)
@@ -667,7 +666,7 @@ def addLargeGnd(probe):
 
             self.ground_size=LayoutDefault.GSGProbe_LargePadground_size
 
-        @_add_lookup_table
+
         def draw(self):
 
             cell=Device(name=self.name)
@@ -759,7 +758,6 @@ def array(cls,n):
 
             self.n_blocks=n
 
-        @_add_lookup_table
         def draw(self):
 
             unit_cell=cls.draw(self)
@@ -799,8 +797,6 @@ def array(cls,n):
 
             cell<<bus_top
 
-            import pdb; pdb.set_trace()
-
             cell.flatten()
 
             cell.add_port(port=bus_bottom.ports["S"],name="bottom")
@@ -810,7 +806,6 @@ def array(cls,n):
             return cell
 
         @property
-        @_add_lookup_table
         def resistance_squares(self):
 
             r=super().resistance_squares
@@ -861,6 +856,11 @@ def array(cls,n):
 
             return df
 
+        @classmethod
+        def __internal_params(self):
+
+            return self._params_list
+
     array.__name__= " ".join([f"{n} array of ",cls.__name__])
 
     return array
@@ -877,14 +877,17 @@ def calibration(cls,type='open'):
 
             self.fixture_type=type
 
-        @_add_lookup_table
         def draw(self):
 
-            cell=cls.draw(self)
+            cell=Device(name=self.name)
+
+            ref=cell.add_ref(cls.draw(self))
+
+            cell.flatten()
 
             type=self.fixture_type
 
-            ports=cell.get_ports()
+            ports=ref.ports
 
             cell.flatten()
 
@@ -896,8 +899,8 @@ def calibration(cls,type='open'):
 
                 cell.remove_polygons(lambda pts,layer,datatype: not layer== LayoutDefault.layerEtch)
 
-                top_port=cell.ports['top']
-                bottom_port=cell.ports['bottom']
+                top_port=ref.ports['top']
+                bottom_port=ref.ports['bottom']
 
                 short=pg.taper(length=top_port.y-bottom_port.y,\
                 width1=top_port.width,\
@@ -912,14 +915,11 @@ def calibration(cls,type='open'):
                 angle=180)
                 cell.absorb(s_ref)
 
-            cell=join(cell)
-
-            [cell.add_port(p) for p in ports]
+            [cell.add_port(port=p,name=n) for n,p in ports.items()]
 
             return cell
 
         @property
-        #@_add_lookup_table
         def resistance_squares(self):
 
             type=self.fixture_type
@@ -967,7 +967,7 @@ def bondstack(cls,n,sharedpad=False):
             self.n_copies=n
             self.sharedpad=sharedpad
 
-        @_add_lookup_table
+
         def draw(self):
 
             cell=padded_cls.draw(self)
@@ -998,7 +998,7 @@ class LFERes(LayoutPart):
 
         self._stretch_top_margin=False
 
-    @_add_lookup_table
+
     def draw(self):
 
         self._set_relations()
@@ -1161,7 +1161,7 @@ class LFERes(LayoutPart):
             warnings.warn("Anchor metal is too wide, reduced to match Bus width size")
 
     @property
-    @_add_lookup_table
+
     def resistance_squares(self):
 
         self.draw()
@@ -1183,7 +1183,7 @@ class LFERes(LayoutPart):
         return df
 
     @property
-    @_add_lookup_table
+
     def area_aspect_ratio(self):
 
         cell=LFERes.draw(self)
@@ -1206,7 +1206,7 @@ class FBERes(LFERes):
 
         self.platelayer=LayoutDefault.FBEResplatelayer
 
-    @_add_lookup_table
+
     def draw(self):
 
         cell=Device(name=self.name)
@@ -1329,7 +1329,7 @@ class TFERes(LFERes):
 
         self.bottomlayer=LayoutDefault.TFEResbottomlayer
 
-    @_add_lookup_table
+
     def draw(self):
 
         cell=Device(name=self.name)

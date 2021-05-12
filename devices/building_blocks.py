@@ -263,7 +263,9 @@ class _LayoutParam():
                 self._value=value
 
     def __repr__(self):
-        return self
+        return str(self.param)
+
+    __str__=__repr__
 
 class LayoutParamInterface():
 
@@ -333,8 +335,6 @@ class LayoutParamInterface():
     def __get__(self,owner,objtype=None):
 
         if not hasattr(owner,self.private_name):
-
-            # warnings.Warn("{} not correctly initialized".format(self.private_name))
 
             return self._def_value
 
@@ -676,6 +676,7 @@ class IDT(LayoutPart) :
     def calc_length(self,c0_dens,z0,f,n):
 
         from numpy import ceil
+
         from math import pi
 
         if not round(n)==0:
@@ -873,7 +874,7 @@ class Anchor(LayoutPart):
         self.layer=LayoutDefault.Anchorlayer
         self.etch_layer=LayoutDefault.Anchoretch_layer
 
-    @_add_lookup_table
+
     def draw(self):
         ''' Generates layout cell based on current parameters.
 
@@ -993,7 +994,7 @@ class Via(LayoutPart):
         self.shape=LayoutDefault.Viashape
         self.size=LayoutDefault.Viasize
 
-    @_add_lookup_table
+
     def draw(self):
 
         if self.shape=='square':
@@ -1100,7 +1101,7 @@ class Routing(LayoutPart):
 
         return rect
 
-    @_add_lookup_table
+
     def draw(self):
 
         path=self.path
@@ -1210,7 +1211,7 @@ class Routing(LayoutPart):
             return port
 
     @property
-    @_add_lookup_table
+
     def path(self):
 
         radius=self.trace_width/3
@@ -1250,7 +1251,7 @@ class Routing(LayoutPart):
 
             list_points=np.array([p0(),p1(),p2(),p3()])
 
-            path=pp.smooth(points=list_points,radius=radius/2)
+            path=pp.smooth(points=list_points,radius=radius/4)
 
         else: #destination is above clearance
 
@@ -1280,7 +1281,7 @@ class Routing(LayoutPart):
 
                     try:
 
-                        path=pp.smooth(points=list_points_rx,radius=radius/2)
+                        path=pp.smooth(points=list_points_rx,radius=radius/4)
 
                     except :
 
@@ -1291,24 +1292,6 @@ class Routing(LayoutPart):
             if source.orientation==90 :
 
                 if source.x+self.trace_width>ll.x and source.x-self.trace_width<lr.x: #source tucked inside clearance
-
-                    # if self.side=='auto':
-
-                        # source=self._add_taper(cell,source,len=taper_len)
-                        # destination=self._add_taper(cell,destination,len=self.trace_width/4)
-
-                    # elif self.side=='left':
-
-                        # source=self._add_ramp_lx(cell,source,len=taper_len)
-                        # destination=self._add_taper(cell,destination,len=self.trace_width/4)
-
-                    # elif self.side=='right':
-
-                        # source=self._add_ramp_rx(cell,source,len=taper_len)
-                        # destination=self._add_taper(cell,destination,len=self.trace_width/4)
-
-                    # source.name='source'
-                    # destination.name='destination'
 
                     p0=Point().from_iter(source.midpoint)
 
@@ -1324,7 +1307,7 @@ class Routing(LayoutPart):
                     list_points_lx=[p0(),p1(),p2(),p3(),p4(),p5()]
 
                     try:
-                        path_lx=pp.smooth(points=list_points_lx,radius=radius/2)
+                        path_lx=pp.smooth(points=list_points_lx,radius=radius/4)
 
                     except:
 
@@ -1343,7 +1326,7 @@ class Routing(LayoutPart):
 
                     try:
 
-                        path_rx=pp.smooth(points=list_points_rx,radius=radius/2)
+                        path_rx=pp.smooth(points=list_points_rx,radius=radius/4)
 
                     except:
 
@@ -1375,11 +1358,6 @@ class Routing(LayoutPart):
 
                 else:   # source is not tucked under the clearance
 
-                    # source=self._add_taper(cell,source,len=taper_len)
-                    # destination=self._add_taper(cell,destination,len=self.trace_width/4)
-
-                    # source.name='source'
-                    # destination.name='destination'
 
                     p0=Point().from_iter(source.midpoint)
 
@@ -1398,7 +1376,7 @@ class Routing(LayoutPart):
 
                     try:
 
-                        path=pp.smooth(points=list_points,radius=radius/2)#source tucked inside clearance
+                        path=pp.smooth(points=list_points,radius=radius/4)#source tucked inside clearance
 
                     except:
 
@@ -1422,7 +1400,7 @@ class Routing(LayoutPart):
 
                 try:
 
-                    path=pp.smooth(points=list_points_lx,radius=radius/2)
+                    path=pp.smooth(points=list_points_lx,radius=radius/4)
 
                 except:
 
@@ -1441,7 +1419,7 @@ class Routing(LayoutPart):
         return cell_frame
 
     @property
-    @_add_lookup_table
+
     def resistance_squares(self):
 
         return self.path.length()/self.trace_width

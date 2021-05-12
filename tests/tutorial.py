@@ -203,7 +203,6 @@ d.import_params(param)
 
 d.view()
 
-import pdb; pdb.set_trace()
 print(d)
 
 exit()

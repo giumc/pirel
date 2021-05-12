@@ -445,9 +445,14 @@ def parallel_res(*args):
 
 def _add_lookup_table(fun):
 
+    from functools import wraps
+
+    @wraps(fun)
     def wrapper(self):
 
-        totparamlist=self.__class__.export_params(self)
+        import pdb; pdb.set_trace()
+
+        totparamlist=self.export_params()
 
         paramlist={}
 
@@ -480,3 +485,4 @@ def _add_lookup_table(fun):
             return xout
 
     return wrapper
+    

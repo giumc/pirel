@@ -1,11 +1,11 @@
 from PyResLayout import *
 import numpy as np
 
-device=addProbe(array(Scaled(LFERes),3),addLargeGnd(GSGProbe))(name="HI")
+dut=array(Scaled(LFERes),3)
+probe=addLargeGnd(GSGProbe)
+device=addProbe(dut,probe)(name="HI")
 
 param=device.export_params()
-
-# print("\n".join(device.get_params_name()))
 
 param["IDTPitch"]=7
 
@@ -39,56 +39,36 @@ param["GndRoutingWidth"]=150
 
 device.import_params(param)
 
-# print(device)
-
-array=PArray(device,name="HiArray")
-
-array.x_spacing=200
-
 param1=SweepParam({"IDTCoverage":[0.3,0.5,0.7]})
 
 param2=SweepParam({"BusSizeY":[2,4,8]})
 
-array.x_param=param1.combine(param2)
+array=PArray(device,param1.combine(param2),name="HiArray")
 
-# print(array)
+array.x_spacing=200
 
-# array.x_param={"IDTCoverage": [ _ for _ in np.arange(0.2,1,0.2)],\
-#     "IDTcitch":[_ for _ in np.arange(5,25,5)] }
+array.auto_labels()
 
-# array.auto_labels()
+array.view()
 
-# exit()
-
-# array.view()
-
-# array.plot_param("AnchorSizeX")
-
-# array.table.to_excel('arraytest.xlsx')
-
-# array.plot_param(("IDTResistance","BusResistance",'Resistance'))
-
-# print(array.device)
-
-# exit()
-
-#
-mat=PMatrix(device,"Hi")
-mat.x_param=param1.combine(param2)
-mat.y_param=SweepParam({"AnchorSizeX":[0.1, 0.3,0.6]})
+mat=PMatrix(device,\
+param1.combine(param2),\
+SweepParam({"AnchorSizeX":[0.1, 0.3,0.6]}),name="Hi")
 
 mat.x_spacing=200
+
 mat.y_spacing=400
 
 mat.auto_labels(col_index=3,row_index=3)
 
 mat.view()
 
+print(mat.table)
 # fig=mat.plot_param('Resistance')
-import cProfile
-import pstats
-profile = cProfile.Profile()
-profile.runcall(export_matrix_data,mat,path=os.path.dirname(__file__),param='Resistance')
-ps = pstats.Stats(profile)
-ps.sort_stats('cumtime')
-ps.print_stats(20)
+# import cProfile
+# import pstats
+# profile = cProfile.Profile()
+# profile.runcall(export_matrix_data,mat,path=os.path.dirname(__file__),param='Resistance')
+# ps = pstats.Stats(profile)
+# ps.sort_stats('cumtime')
+# ps.print_stats(20)
