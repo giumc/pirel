@@ -437,7 +437,7 @@ def dice(cell,width=100,layer=LayoutDefault.layerTop,spacing=150):
 
     TextParam(\
         {'size':700,\
-        'label':cell.name,\
+        'label':cell._internal_name,\
         'location':'bottom',\
         'distance':Point(0,-width-spacing/2),\
         'layer':layer}).add_text(cell)
