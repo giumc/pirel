@@ -74,14 +74,14 @@ from PyResLayout import *
 
 # TFERes().view()
 
-# d=addPad(TFERes)()
+d=addPad(TFERes)()
 # print(d)
-# param=d.export_params()
-# param['PadSize']=150
-# param['PadDistance']=100
-# d.import_params(param)
-# d.view()
-# exit()
+param=d.export_params()
+param['PadSize']=150
+param['PadDistance']=100
+d.import_params(param)
+d.view()
+exit()
 
 # d=Scaled(TFERes)()
 # param=d.export_params()

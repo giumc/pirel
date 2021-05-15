@@ -408,7 +408,6 @@ def addPad(cls):
 
             self.pad=Pad(name=self.name+'Pad')
 
-
         def draw(self):
 
             cell=Device(name=self.name)
@@ -1329,7 +1328,6 @@ class TFERes(LFERes):
 
         self.bottomlayer=LayoutDefault.TFEResbottomlayer
 
-
     def draw(self):
 
         cell=Device(name=self.name)
@@ -1352,8 +1350,6 @@ class TFERes(LFERes):
         idt_ref.move(origin=(idt_ref.xmin,idt_ref.ymax),\
             destination=(idt_ref.xmin,idt_ref.ymax+self.idt.length+self.idt.y_offset))
 
-        cell.absorb(idt_ref)
-
         bus_bottom=copy(self.bus)
 
         bus_bottom.layer=self.bottomlayer
@@ -1373,18 +1369,20 @@ class TFERes(LFERes):
         anchor_ref=cell<<anchor_bottom.draw()
 
         anchor_ref.connect(anchor_ref.ports['conn'],\
-            destination=cell.ports['top'],\
-            overlap=self.anchor.metalized.y)
+            destination=idt_ref.ports['top'],\
+            overlap=-self.bus.size.y)
 
         cell.absorb(anchor_ref)
 
         anchor_ref_2=cell<<anchor_bottom.draw()
 
         anchor_ref_2.connect(anchor_ref_2.ports['conn'],\
-            destination=cell.ports['bottom'],\
-            overlap=self.anchor.metalized.y)
+            destination=idt_ref.ports['bottom'],\
+            overlap=-self.bus.size.y)
 
         cell.absorb(anchor_ref_2)
+
+        cell.absorb(idt_ref)
 
         out_ports=cell.get_ports()
 
@@ -1392,6 +1390,5 @@ class TFERes(LFERes):
 
             cell.add_port(p)
 
-        del idt_bottom, bus_bottom, anchor_bottom
 
         return cell
