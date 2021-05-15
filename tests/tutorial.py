@@ -1,9 +1,14 @@
 from PyResLayout import *
 
-# d=IDT()
-# print(d)
-# d.view()
-# exit()
+d=IDT()
+params=d.export_params()
+
+params["ActiveAreaMargin"]=2.0
+params["N"]=4
+
+d.import_params(params)
+print(d)
+exit()
 
 # q=Bus()
 # print(q)
@@ -59,11 +64,11 @@ from PyResLayout import *
 # t["AnchorSizeX"]=40
 # t["AnchorSizeY"]=40
 # t["EtchX"]=160
-# t["PlatePosition"]='in, long'
+# t["PlatePosition"]='out, long'
 # d.import_params(t)
 # print(d)
 # d.view()
-
+# exit()
 # exit()
 # d=TFERes()
 # print(d)
@@ -74,14 +79,14 @@ from PyResLayout import *
 
 # TFERes().view()
 
-d=addPad(TFERes)()
-# print(d)
-param=d.export_params()
-param['PadSize']=150
-param['PadDistance']=100
-d.import_params(param)
-d.view()
-exit()
+# d=addPad(TFERes)()
+# # print(d)
+# param=d.export_params()
+# param['PadSize']=150
+# param['PadDistance']=100
+# d.import_params(param)
+# d.view()
+# exit()
 
 # d=Scaled(TFERes)()
 # param=d.export_params()
@@ -97,7 +102,7 @@ exit()
 # param["AnchorEtchMarginX"]=0.2
 # param["AnchorEtchMarginY"]=0.2
 # d.import_params(param)
-#
+
 # print(d)
 # d.view()
 #exit()
@@ -165,13 +170,13 @@ exit()
 # d.view()
 # exit()
 # #
-# probe=addLargeGnd(GSGProbe)
-#
-# device=array(calibration(Scaled(FBERes),'short'),3)
-#
-# dut=addProbe(device,probe)
+probe=addLargeGnd(GSGProbe)
 
-dut=addProbe(array(calibration(Scaled(FBERes),'short'),3),GSGProbe)#bondstack(Scaled(FBERes),3)
+device=array(calibration(Scaled(FBERes),'short'),3)
+
+dut=addProbe(device,probe)
+
+# dut=addProbe(array(calibration(Scaled(FBERes),'short'),3),GSGProbe)#bondstack(Scaled(FBERes),3)
 
 d=dut(name="tutorial")
 # print(d)
@@ -197,7 +202,6 @@ param["PadDistance"]=5
 # param['OverVia']=1.5
 # param['ViaDistance']=100
 # param['ProbeGroundSize']=250
-
 
 d.import_params(param)
 

@@ -111,6 +111,22 @@ class Point:
 
             raise Exception("Division Point/x0 is not possible here")
 
+    def __eq__(self,p2):
+
+        if not isinstance(p2,Point):
+
+            raise ValueError(f"cannot compare Point and {p2.__class__}")
+
+        else:
+
+            if self.x==p2.x and self.y==p2.y:
+
+                return True
+
+            else:
+
+                return False
+
     __rmul__=__mul__
 
 class LayoutDefault:
@@ -129,15 +145,15 @@ class LayoutDefault:
 
     #text
 
-    TextParams={'font':"BebasNeue-Regular.otf",'size':125,'location':'top',\
+    TextParams={'font':"BebasNeue-Regular.otf",'size':125.0,'location':'top',\
         'distance':Point(0,100),'label':"default",'layer':layerTop}
 
     #IDT
 
-    IDT_y = 200
-    IDTpitch = 8
+    IDT_y = 200.0
+    IDTpitch = 8.0
     IDTcoverage = 0.7
-    IDTy_offset = 10
+    IDTy_offset = 10.0
     IDTlayer = layerTop
     IDTn = 40
 
@@ -158,7 +174,7 @@ class LayoutDefault:
         2*Bussize.y)
     Anchoretch_margin=Point(4,4)
     Anchoretch_x=EtchPit_x
-    Anchorx_offset=0
+    Anchorx_offset=0.0
     Anchorlayer=IDTlayer
     Anchoretch_layer=EtchPitlayer
     Anchoretch_choice=True
@@ -169,9 +185,9 @@ class LayoutDefault:
 
     FBEResplatelayer=layerBottom
     #GSProbe
-    GSProbepitch = 150
+    GSProbepitch = 150.0
     GSProbepad_size = Point(80,80)
-    GSProberouting_width = 80
+    GSProberouting_width = 80.0
     GSProbelayer = layerTop
     GSProberouting = True
     GSProbespacing = Point(20,30)
@@ -185,7 +201,7 @@ class LayoutDefault:
     #GSGProbe
 
     GSGProbelayer=layerTop
-    GSGProbepitch=200
+    GSGProbepitch=200.0
     GSGProbesize=Point(100,100)
 
     GSProbelayer=GSGProbelayer
@@ -198,7 +214,7 @@ class LayoutDefault:
 
     #Routing
 
-    Routingtrace_width=80
+    Routingtrace_width=80.
     Routingclearance=(Point(0,250)(),Point(300,550)())
     Routinglayer=layerTop
     Routingports=(Port(name='1',midpoint=(450,0),\
@@ -208,14 +224,13 @@ class LayoutDefault:
 
     #DUT
     DUTrouting_width=Routingtrace_width
-    DUTprobe_dut_distance=50
 
     #GSGProbe_LargePad
-    GSGProbe_LargePadground_size=200
+    GSGProbe_LargePadground_size=200.0
 
     #ParametricArray
 
-    Arrayx_spacing=50
+    Arrayx_spacing=50.0
     Arrayx_param={"IDTPitch":[_ for _ in range(1,4)]}
     Arraylabels_top=["IDTP"+str(x) for x in range(1,4)]
     Arraylabels_bottom=[str(x) for x in range(1,4)]
@@ -233,9 +248,9 @@ class LayoutDefault:
 
     #Pad
 
-    Padsize=400
+    Padsize=400.0
     Padlayer=IDTlayer
-    Paddistance=200
+    Paddistance=200.0
     Padport=Port(name='top',midpoint=(50,50),width=100,\
         orientation=-90)
 
@@ -443,7 +458,7 @@ def parallel_res(*args):
 
     return 1/sum_y
 
-def _add_lookup_table(fun):
+def cached(fun):
 
     from functools import wraps
 
@@ -452,17 +467,15 @@ def _add_lookup_table(fun):
 
         import pdb; pdb.set_trace()
 
-        totparamlist=self.export_params()
-
-        paramlist={}
+        params=self.get_class_param()
 
         dict_name="_"+fun.__name__+"_lookup"
 
-        for name in totparamlist.keys():
+        paramlist={}
 
-            if not "Name" in name:
+        for name in params:
 
-                paramlist[name]=totparamlist[name]
+            paramlist.update({name:getattr(self,name)})
 
         paramlist=tuple(paramlist.items())
 
@@ -485,4 +498,3 @@ def _add_lookup_table(fun):
             return xout
 
     return wrapper
-    

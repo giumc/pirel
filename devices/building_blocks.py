@@ -28,7 +28,7 @@ from pandas import Series,DataFrame
 
 from layout_tools import *
 
-from layout_tools import _add_lookup_table
+from functools import cache
 
 class TextParam():
     ''' Class to store text data and to add it in cells.
@@ -236,31 +236,79 @@ class _LayoutParam():
 
             return {self.label+"X":self._value.x,self.label+"Y":self._value.y}
 
-    @param.setter
-    def param(self,df):
+    @property
+    def value(self):
 
-        if len(df)>1:
+        return self._value
 
-            raise ValueError("Pass a single element dict to set a _LayoutParam")
+    @value.setter
+    def value(self,new_value):
 
-        name=[*df][0]
-        value=[*df.values()][0]
+        if isinstance(self.value,float):
 
-        if isinstance(self._value,Point):
+            if isinstance(new_value,(int,float)):
 
-            if name==self.label+"X":
+                self._value=new_value*1.0
 
-                self._value.x=value
+        elif self.value.__class__==new_value.__class__:
 
-            elif name==self.label+"Y":
-
-                self._value.y=value
+            self._value=new_value
 
         else:
 
-            if name==self.label:
+            raise ValueError(f"Cannot assign type {new_value.__class__} to {self.label}")
 
-                self._value=value
+    @property
+    def x(self):
+
+        return self.__get_coord('x')
+
+    @property
+    def y(self):
+
+        return self.__get_coord('y')
+
+    @x.setter
+    def x(self,value):
+
+        self.__set_coord('x',value)
+
+    @y.setter
+    def y(self,value):
+
+        self.__set_coord('y',value)
+
+    def __get_coord(self,type):
+
+        if isinstance(self.value,Point):
+
+            if not type in ('x','y'):
+
+                raise ValueError("Coordinate should be either {}".format(" or".join(('x','y'))))
+
+            else:
+
+                return getattr(self.value,type)
+
+        else:
+
+            raise ValueError(f"{self.value} is not a {Point.__class__}, so you can't get {type}")
+
+    def __set_coord(self,type,value):
+
+        if isinstance(self.value,Point):
+
+            if not type in ('x','y'):
+
+                raise ValueError("Coordinate should be either {}".format(" or".join(('x','y'))))
+
+            else:
+
+                return setattr(self.value,type,value)
+
+        else:
+
+            raise ValueError(f"{self.value} is not a {Point.__class__}, so you can't set {type}")
 
     def __repr__(self):
         return str(self.param)
@@ -284,63 +332,46 @@ class LayoutParamInterface():
         self.public_name=name
         self.private_name="_"+name
 
-    def __set__(self,owner,value):
+    def __set__(self,owner,new_value):
 
         if self.constraints is not None:
 
-            if not value in self.constraints:
+            if not new_value in self.constraints:
 
-                raise ValueError(f""" Value {value} is not legal for attribute {self.public_name}\n
+                raise ValueError(f""" Value {new_value} is not legal for attribute {self.public_name}\n
                             legal values are {self.constraints}""")
 
         if not hasattr(owner,self.private_name):
 
-                setattr(owner,self.private_name,_LayoutParam(self.public_name,value))
+            new_param=_LayoutParam(self.public_name,new_value)
 
-                if not hasattr(owner,'_params_list'):
+            setattr(owner,self.private_name,new_param)
 
-                    owner._params_list=[getattr(owner,self.private_name)]
+            if not hasattr(owner,'_params_dict'):
 
-                else:
-
-                    owner._params_list.append(getattr(owner,self.private_name))
-
-        else:
-
-            oldvalue=getattr(owner,self.private_name)._value
-
-            if isinstance(oldvalue,(int,float)) and isinstance(value,(int,float)):
-
-                    old_param=getattr(owner,self.private_name)
-
-                    old_param._value=value
-
-            elif isinstance(oldvalue,str) and isinstance(value,str):
-
-                    old_param=getattr(owner,self.private_name)
-
-                    old_param._value=value
-
-            elif isinstance(value,oldvalue.__class__):
-
-                    old_param=getattr(owner,self.private_name)
-
-                    old_param._value=value
+                setattr(owner,'_params_dict',{new_param.label:self.private_name})
 
             else:
 
-                raise   ValueError(f"""Attempt to unlawful assingment between \n
-                    type {oldvalue.__class__} and type {value.__class__} in _LayoutParam {self.public_name}""")
+                old_list=getattr(owner,'_params_dict')
+
+                old_list.update({new_param.label:self.private_name})
+
+        else:
+
+            old_param=getattr(owner,self.private_name)
+
+            old_param.value=new_value
 
     def __get__(self,owner,objtype=None):
 
         if not hasattr(owner,self.private_name):
 
-            return self._def_value
+            raise ValueError(f"{self.public_name} not in {owner.__class__}")
 
         else:
 
-            return getattr(owner,self.private_name)._value
+            return getattr(owner,self.private_name).value
 
 class LayoutPart(ABC) :
     ''' Abstract class that implements features common to all layout classes.
@@ -373,7 +404,6 @@ class LayoutPart(ABC) :
         name : str
             optional,default is 'default'.
         '''
-
         self.name=name
 
         self.origin=copy(LayoutDefault.origin)
@@ -401,13 +431,6 @@ class LayoutPart(ABC) :
         lib=gdspy.GdsLibrary('test')
         lib.add(self.draw())
         gdspy.LayoutViewer(lib)
-
-    def get_params_name(self):
-        ''' Get a list of the available parameters in the class. '''
-
-        df=self.export_params()
-
-        return [*df.keys()]
 
     def _bbox_mod(self,bbox):
         ''' Default method that returns bbox for the class .
@@ -466,33 +489,45 @@ class LayoutPart(ABC) :
 
     def export_params(self):
 
+        param_dict=self._params_dict
+
         out_dict={}
 
-        for param in self._params_list:
+        for param_name in param_dict.values():
 
-            if param.label in out_dict.keys():
-
-                    raise ValueError("{} is a duplicate parameter name".format(paramdict.label))
-
-            out_dict.update(param.param)
+            out_dict.update(getattr(self,param_name).param)
 
         out_dict.update({"Type":self.__class__.__name__})
 
         return out_dict
 
     def import_params(self,df):
-        ''' Pass to cell parameters in a DataFrame.
+        ''' Pass to cell parameters in a dict.
 
         Parameters
         ----------
         df : dict.
         '''
 
-        for param in self._params_list:
+        for param_label,param_key in self._params_dict.items():
 
-            for name,value in df.items():
+            param_key=param_key.lstrip("_")
 
-                param.param={name:value}
+            if param_label in df.keys():
+
+                setattr(self,param_key,df[param_label])
+
+            elif param_label+'X' in df.keys():
+
+                old_point=getattr(self,param_key)
+
+                setattr(self,param_key,Point(df[param_label+"X"],old_point.y))
+
+            elif param_label+'Y' in df.keys():
+
+                old_point=getattr(self,param_key)
+
+                setattr(self,param_key,Point(old_point.x,df[param_label+"Y"]))
 
     def export_all(self):
 
@@ -512,6 +547,19 @@ class LayoutPart(ABC) :
             d1[cols]=d2[cols].iat[0]
 
         return d1
+
+    @classmethod
+    def get_class_param(cls):
+
+        out_list=[]
+
+        for p in cls.__dict__.values():
+
+            if isinstance(p,LayoutParamInterface):
+
+                out_list.append(p.public_name)
+
+        return out_list
 
     def __repr__(self):
 
@@ -566,6 +614,7 @@ class IDT(LayoutPart) :
         self.layer=LayoutDefault.IDTlayer
         self.active_area_margin=LayoutDefault.LFEResactive_area_margin
 
+    @cached
     def draw(self):
         ''' Generates layout cell based on current parameters.
 
@@ -576,6 +625,7 @@ class IDT(LayoutPart) :
         cell : phidl.Device.
         '''
 
+        print("\rCalculating...")
         o=self.origin
 
         rect=pg.rectangle(size=(self.coverage*self.pitch,self.length),\
@@ -583,7 +633,7 @@ class IDT(LayoutPart) :
 
         rect.move(origin=(0,0),destination=o())
 
-        unitcell=Device(self.name)
+        unitcell=Device()
 
         r1=unitcell << rect
         unitcell.absorb(r1)
@@ -631,8 +681,6 @@ class IDT(LayoutPart) :
         orientation=90))
 
         del unitcell,rect
-
-
 
         return cell
 
@@ -1101,7 +1149,6 @@ class Routing(LayoutPart):
 
         return rect
 
-
     def draw(self):
 
         path=self.path
@@ -1211,7 +1258,6 @@ class Routing(LayoutPart):
             return port
 
     @property
-
     def path(self):
 
         radius=self.trace_width/3
@@ -1419,7 +1465,6 @@ class Routing(LayoutPart):
         return cell_frame
 
     @property
-
     def resistance_squares(self):
 
         return self.path.length()/self.trace_width

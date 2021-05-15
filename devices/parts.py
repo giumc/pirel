@@ -4,8 +4,6 @@ from layout_tools import *
 
 from building_blocks import LayoutParamInterface
 
-from layout_tools import _add_lookup_table
-
 import pandas as pd
 
 import warnings
@@ -206,7 +204,8 @@ def addVia(cls,side='top',bottom_conn=False):
 
         def draw(self):
 
-            cell=Device(name=self.name)
+            cell=Device()
+            cell.name=self.name
 
             resdef=cell.add_ref(cls.draw(self))
 
@@ -410,7 +409,9 @@ def addPad(cls):
 
         def draw(self):
 
-            cell=Device(name=self.name)
+            cell=Device()
+
+            cell.name=self.name
 
             d_ref=cell.add_ref(cls.draw(self))
 
@@ -480,7 +481,6 @@ def addProbe(cls,probe):
             self.probe=probe(self.name+"Probe")
 
             self.gnd_routing_width=LayoutDefault.DUTrouting_width
-
 
         def draw(self):
 
@@ -665,7 +665,6 @@ def addLargeGnd(probe):
 
             self.ground_size=LayoutDefault.GSGProbe_LargePadground_size
 
-
         def draw(self):
 
             cell=Device(name=self.name)
@@ -766,6 +765,8 @@ def array(cls,n):
             cell=draw_array(unit_cell,\
                 self.n_blocks,1)
 
+            cell.name=self.name
+
             lx_bottom=cell.ports[port_names[1]+str(0)]
             rx_bottom=cell.ports[port_names[1]+str(self.n_blocks-1)]
 
@@ -854,11 +855,6 @@ def array(cls,n):
             df["SingleDeviceResistance"]=super().resistance_squares
 
             return df
-
-        @classmethod
-        def __internal_params(self):
-
-            return self._params_list
 
     array.__name__= " ".join([f"{n} array of ",cls.__name__])
 
@@ -997,7 +993,6 @@ class LFERes(LayoutPart):
 
         self._stretch_top_margin=False
 
-
     def draw(self):
 
         self._set_relations()
@@ -1091,27 +1086,19 @@ class LFERes(LayoutPart):
         t=super().export_params()
 
         t_res=self.idt.export_params()
-
         t_res=pop_all_dict(t_res,["Name","Type"])
-
         t_res=add_prefix_dict(t_res,"IDT")
 
         t_bus=self.bus.export_params()
-
         t_bus=pop_all_dict(t_bus, ['Name','Type','DistanceX','DistanceY','SizeX'])
-
         t_bus=add_prefix_dict(t_bus,"Bus")
 
         t_etch=self.etchpit.export_params()
-
         t_etch=pop_all_dict(t_etch,['Name','Type','ActiveAreaX','ActiveAreaY'])
-
         t_etch=add_prefix_dict(t_etch,"Etch")
 
         t_anchor=self.anchor.export_params()
-
         t_anchor=pop_all_dict(t_anchor,['Name','Type','EtchX','XOffset','EtchChoice'])
-
         t_anchor=add_prefix_dict(t_anchor,'Anchor')
 
         t.update(t_res)
@@ -1160,7 +1147,6 @@ class LFERes(LayoutPart):
             warnings.warn("Anchor metal is too wide, reduced to match Bus width size")
 
     @property
-
     def resistance_squares(self):
 
         self.draw()
@@ -1182,7 +1168,6 @@ class LFERes(LayoutPart):
         return df
 
     @property
-
     def area_aspect_ratio(self):
 
         cell=LFERes.draw(self)
@@ -1195,7 +1180,7 @@ class LFERes(LayoutPart):
 class FBERes(LFERes):
 
     plate_position=LayoutParamInterface(\
-        'in, short','out, short','in, long','in, short')
+        'in, short','out, short','in, long','out, long')
 
     def __init__(self,*args,**kwargs):
 
@@ -1204,7 +1189,6 @@ class FBERes(LFERes):
         self.plate_position='out, short'
 
         self.platelayer=LayoutDefault.FBEResplatelayer
-
 
     def draw(self):
 
