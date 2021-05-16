@@ -196,10 +196,6 @@ def addVia(cls,side='top',bottom_conn=False):
 
             cls.__init__(self,*args,**kwargs)
 
-            for p,c in self.__components.items():
-
-                setattr(self,p.lower(),c(name=self.name+p))
-
             self.padlayers=[LayoutDefault.layerTop,LayoutDefault.layerBottom]
 
             self.over_via=2
@@ -302,8 +298,6 @@ def addVia(cls,side='top',bottom_conn=False):
 
             cls.import_params(self,df)
 
-            if_match_import(self.via,df,"Via")
-
         def _bbox_mod(self,bbox):
 
             LayoutPart._bbox_mod(self,bbox)
@@ -376,6 +370,11 @@ def addVia(cls,side='top',bottom_conn=False):
 
             return port
 
+        @classmethod
+        def get_components(self):
+
+            return copy(super().get_components()).update(self.__components)
+
         def get_n_vias(self):
 
             import numpy as np
@@ -384,31 +383,6 @@ def addVia(cls,side='top',bottom_conn=False):
             nvias_y=max(1,int(np.floor(self.via_area.y/self.via.size/self.over_via)))
 
             return nvias_x,nvias_y
-
-        @classmethod
-        def get_class_param(self):
-
-            param=LayoutPart.get_class_param(self)
-
-            [param.append(x) for x in cls.get_class_param()]
-            
-            for p,c in self.__components.items():
-
-                [param.append(p+x) for x in c.get_class_param()]
-
-            return param
-
-        def __getattr__(self,name):
-
-            for p in self.__components.keys():
-
-                if name.startswith(p):
-
-                    return getattr(getattr(self,p.lower()),name.replace(p,''))
-
-            else:
-
-                raise AttributeError
 
     addVia.__name=" ".join([cls.__name__,"w Via"])
 
@@ -1012,10 +986,6 @@ class LFERes(LayoutPart):
 
         super().__init__(*args,**kwargs)
 
-        for p,cls in self.__components.items():
-
-            setattr(self,p.lower(),cls(name=self.name+p))
-
         self._set_relations()
 
         self._stretch_top_margin=False
@@ -1137,10 +1107,6 @@ class LFERes(LayoutPart):
 
         super().import_params(df)
 
-        for name in self.__components.keys():
-
-            if_match_import(getattr(self,name.lower()),df,name)
-
         self._set_relations()
 
     def _set_relations(self):
@@ -1200,29 +1166,9 @@ class LFERes(LayoutPart):
         return height/width
 
     @classmethod
-    def get_class_param(self):
+    def get_components(self):
 
-        param=LayoutPart.get_class_param()
-
-        for prefix,cls in self.__components.items():
-
-            [param.append(prefix+x) for x in cls.get_class_param()]
-
-        return param
-
-    def __getattr__(self,name):
-
-        for p in self.__components.keys():
-
-            if name.startswith(p):
-
-                return getattr(\
-                    getattr(self,p.lower()),\
-                    name.replace(p,''))
-
-        else:
-
-            raise AttributeError
+        return self.__components
 
 class FBERes(LFERes):
 

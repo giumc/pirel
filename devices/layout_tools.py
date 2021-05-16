@@ -1,8 +1,15 @@
+
+from abc import ABC, abstractmethod
+
+from copy import copy,deepcopy
+
 import numpy as np
 
 import phidl.geometry as pg
 
 from phidl.device_layout import Port,CellArray
+
+from pandas import Series,DataFrame
 
 from phidl import set_quickplot_options
 
@@ -254,6 +261,378 @@ class LayoutDefault:
     Padport=Port(name='top',midpoint=(50,50),width=100,\
         orientation=-90)
 
+class _LayoutParam():
+
+    def __init__(self,name,value):
+
+        self._name=name
+        self._value=value
+
+    @property
+    def label(self):
+
+        import re
+
+        return re.sub(r'(?:^|_)([a-z])', lambda x: x.group(1).upper(), self._name)
+
+    @property
+    def param(self):
+
+        if not isinstance(self._value,Point):
+
+            return {self.label:self._value}
+
+        else:
+
+            return {self.label+"X":self._value.x,self.label+"Y":self._value.y}
+
+    @property
+    def value(self):
+
+        return self._value
+
+    @value.setter
+    def value(self,new_value):
+
+        if isinstance(self.value,float):
+
+            if isinstance(new_value,(int,float)):
+
+                self._value=new_value*1.0
+
+        elif self.value.__class__==new_value.__class__:
+
+            self._value=new_value
+
+        else:
+
+            raise ValueError(f"Cannot assign type {new_value.__class__} to {self.label}")
+
+    @property
+    def x(self):
+
+        return self.__get_coord('x')
+
+    @property
+    def y(self):
+
+        return self.__get_coord('y')
+
+    @x.setter
+    def x(self,value):
+
+        self.__set_coord('x',value)
+
+    @y.setter
+    def y(self,value):
+
+        self.__set_coord('y',value)
+
+    def __get_coord(self,type):
+
+        if isinstance(self.value,Point):
+
+            if not type in ('x','y'):
+
+                raise ValueError("Coordinate should be either {}".format(" or".join(('x','y'))))
+
+            else:
+
+                return getattr(self.value,type)
+
+        else:
+
+            raise ValueError(f"{self.value} is not a {Point.__class__}, so you can't get {type}")
+
+    def __set_coord(self,type,value):
+
+        if isinstance(self.value,Point):
+
+            if not type in ('x','y'):
+
+                raise ValueError("Coordinate should be either {}".format(" or".join(('x','y'))))
+
+            else:
+
+                return setattr(self.value,type,value)
+
+        else:
+
+            raise ValueError(f"{self.value} is not a {Point.__class__}, so you can't set {type}")
+
+    def __repr__(self):
+        return str(self.param)
+
+    __str__=__repr__
+
+class LayoutParamInterface():
+
+    def __init__(self,*args):
+
+        if args:
+
+            self.constraints=args
+
+        else :
+
+            self.constraints=None
+
+    def __set_name__(self,owner,name):
+
+        self.public_name=name
+        self.private_name="_"+name
+
+    def __set__(self,owner,new_value):
+
+        if self.constraints is not None:
+
+            if not new_value in self.constraints:
+
+                raise ValueError(f""" Value {new_value} is not legal for attribute {self.public_name}\n
+                            legal values are {self.constraints}""")
+
+        if not hasattr(owner,self.private_name):
+
+            new_param=_LayoutParam(self.public_name,new_value)
+
+            setattr(owner,self.private_name,new_param)
+
+            if not hasattr(owner,'_params_dict'):
+
+                setattr(owner,'_params_dict',{new_param.label:self.private_name})
+
+            else:
+
+                old_list=getattr(owner,'_params_dict')
+
+                old_list.update({new_param.label:self.private_name})
+
+        else:
+
+            old_param=getattr(owner,self.private_name)
+
+            old_param.value=new_value
+
+    def __get__(self,owner,objtype=None):
+
+        if not hasattr(owner,self.private_name):
+
+            raise ValueError(f"{self.public_name} not in {owner.__class__}")
+
+        else:
+
+            return getattr(owner,self.private_name).value
+
+class LayoutPart(ABC) :
+    ''' Abstract class that implements features common to all layout classes.
+
+        Attributes
+        ---------
+
+        name : str
+
+            instance name
+        origin : PyResLayout.Point
+            layout cell origin
+
+        cell :  phidl.Device
+            container of last generated cell
+
+        text_params : property
+            see help
+
+    '''
+
+    name=LayoutParamInterface()
+
+    def __init__(self,name='default',*args,**kwargs):
+        ''' Constructor for LayoutPart.
+
+        Parameters
+        ----------
+
+        name : str
+            optional,default is 'default'.
+        '''
+
+        self.name=name
+
+        self.origin=copy(LayoutDefault.origin)
+
+        for p,cls in self.get_components().items():
+
+            setattr(self,p.lower(),cls(name=self.name+p))
+
+        self.__class__.draw=cached(self.__class__)(self.__class__.draw)
+
+    def view(self,blocking=True):
+        ''' Visualize cell layout with current parameters.
+
+        Parameters
+        ----------
+        blocking : boolean
+
+            if true,block scripts until window is closed.
+        '''
+
+        set_quickplot_options(blocking=blocking)
+        qp(self.draw())
+        return
+
+    def view_gds(self):
+        ''' Visualize gds cell layout with current parameters.
+
+        Blocks scripts excecution until figure is closed
+
+        '''
+        lib=gdspy.GdsLibrary('test')
+        lib.add(self.draw())
+        gdspy.LayoutViewer(lib)
+
+    def _bbox_mod(self,bbox):
+        ''' Default method that returns bbox for the class .
+
+        Can be overridden by subclasses of LayoutPart that require customized
+        bounding boxes.
+
+        Parameters
+        ---------
+
+        bbox : iterable of 2 iterables of length 2
+            lower left coordinates , upper right coordinates
+
+        Returns
+        ------
+        bbox : iterable of two iterables of length 2
+            lower left, upper right.
+        '''
+
+        msgerr="pass 2 (x,y) coordinates as a bbox"
+
+        try :
+
+            iter(bbox)
+
+            for x in bbox:
+
+                iter(x)
+
+        except Exception:
+
+            raise ValueError(msgerr)
+
+        if not len(bbox)==2:
+
+            raise ValueError(msgerr)
+
+
+        if not all([len(x)==2 for x in bbox]):
+
+            raise ValueError(msgerr)
+
+        return bbox
+
+    @abstractmethod
+    def draw(self):
+        ''' Draws cell based on current parameters.
+
+        Abstract Method, to be implemented when subclassing.
+
+        Returns
+        -------
+        cell : phidl.Device.
+        '''
+        pass
+
+    def export_params(self):
+
+        param_dict=self._params_dict
+
+        out_dict={}
+
+        for p,c in self.get_components().items():
+
+            component_params=getattr(self,p.lower()).export_params()
+
+            for name,value in component_params.items():
+
+                if not name=='Type':
+                    
+                    out_dict.update({p+name:value})
+
+        for param_name in param_dict.values():
+
+            out_dict.update(getattr(self,param_name).param)
+
+        out_dict.update({"Type":self.__class__.__name__})
+
+        return out_dict
+
+    def import_params(self,df):
+        ''' Pass to cell parameters in a dict.
+
+        Parameters
+        ----------
+        df : dict.
+        '''
+
+        for param_label,param_key in self._params_dict.items():
+
+            param_key=param_key.lstrip("_")
+
+            if param_label in df.keys():
+
+                setattr(self,param_key,df[param_label])
+
+            elif param_label+'X' in df.keys():
+
+                old_point=getattr(self,param_key)
+
+                setattr(self,param_key,Point(df[param_label+"X"],old_point.y))
+
+            elif param_label+'Y' in df.keys():
+
+                old_point=getattr(self,param_key)
+
+                setattr(self,param_key,Point(old_point.x,df[param_label+"Y"]))
+
+        for name in self.get_components().keys():
+
+            if_match_import(getattr(self,name.lower()),df,name)
+
+    def export_all(self):
+
+        df=self.export_params()
+
+        if hasattr(self,'resistance_squares'):
+
+            df["Resistance"]=self.resistance_squares
+
+        return df
+
+    @classmethod
+    def get_components(self):
+
+        return {}
+
+    def __getattr__(self,name):
+
+        for p , c in self.get_components().items():
+
+            if name.startswith(p):
+
+                return getattr(getattr(self,p.lower()),name.replace(p,""))
+
+        else:
+
+            raise AttributeError
+
+    def __repr__(self):
+
+        df=Series(self.export_all())
+
+        return df.to_string()
+
 def add_compass(device):
     ''' add four ports at the bbox of a cell.
 
@@ -457,3 +836,72 @@ def parallel_res(*args):
         sum_y=sum_y+1/arg
 
     return 1/sum_y
+
+def get_class_param(cls):
+
+    out_list=[]
+
+    for p in cls.__dict__.values():
+
+        if isinstance(p,LayoutParamInterface):
+
+            out_list.append(p.public_name)
+
+    for p,c in cls.get_components().items():
+
+        [out_list.append(p+x) for x in get_class_param(c)]
+
+    return out_list
+
+def cached(cls):
+
+    def cache_dec(fun):
+
+        from functools import wraps
+
+        @wraps(fun)
+        def wrapper(self):
+
+            params=get_class_param(cls)
+
+            dict_name="_"+fun.__name__+"_lookup"
+
+            paramlist={}
+
+            for name in params:
+
+                value=getattr(self,name)
+
+                if isinstance(value,Point):
+
+                    paramlist.update({name:value()})
+
+                else:
+
+                    paramlist.update({name:value})
+
+            paramlist=tuple(paramlist.items())
+
+            if not hasattr(cls,dict_name):
+
+                setattr(cls,dict_name,{})
+
+            dict_lookup=getattr(cls,dict_name)
+
+            if paramlist in dict_lookup.keys():
+
+                print(f"Retrieving cell for {cls}...\n")
+                return dict_lookup[paramlist]
+
+            else:
+
+                print(f"Calculating cell for {cls}...\n")
+                xout=fun(self)
+
+                dict_lookup[paramlist]=xout
+
+                return xout
+
+        return wrapper
+
+    return cache_dec
