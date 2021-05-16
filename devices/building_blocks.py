@@ -404,9 +404,12 @@ class LayoutPart(ABC) :
         name : str
             optional,default is 'default'.
         '''
+
         self.name=name
 
         self.origin=copy(LayoutDefault.origin)
+
+        self.__class__.draw=cached(self.__class__)(self.__class__.draw)
 
     def view(self,blocking=True):
         ''' Visualize cell layout with current parameters.
@@ -548,19 +551,6 @@ class LayoutPart(ABC) :
 
         return d1
 
-    @classmethod
-    def get_class_param(cls):
-
-        out_list=[]
-
-        for p in cls.__dict__.values():
-
-            if isinstance(p,LayoutParamInterface):
-
-                out_list.append(p.public_name)
-
-        return out_list
-
     def __repr__(self):
 
         df=Series(self.export_all())
@@ -613,8 +603,8 @@ class IDT(LayoutPart) :
         self.n=LayoutDefault.IDTn
         self.layer=LayoutDefault.IDTlayer
         self.active_area_margin=LayoutDefault.LFEResactive_area_margin
+        # IDT.draw=cached(IDT)(IDT.draw)
 
-    @cached
     def draw(self):
         ''' Generates layout cell based on current parameters.
 
@@ -625,7 +615,6 @@ class IDT(LayoutPart) :
         cell : phidl.Device.
         '''
 
-        print("\rCalculating...")
         o=self.origin
 
         rect=pg.rectangle(size=(self.coverage*self.pitch,self.length),\
@@ -1030,6 +1019,7 @@ class Via(LayoutPart):
     layer : int
         via layer.
     '''
+
     size=LayoutParamInterface()
 
     shape=LayoutParamInterface('square','circle')
@@ -1673,3 +1663,68 @@ class Pad(LayoutPart):
     def resistance_squares(self):
 
         return 1+self.distance/self.port.width
+
+def get_class_param(cls):
+
+    out_list=[]
+
+    for p in cls.__dict__.values():
+
+        if isinstance(p,LayoutParamInterface):
+
+            out_list.append(p.public_name)
+
+    return out_list
+
+def cached(cls):
+
+    def cache_dec(fun):
+
+        from functools import wraps
+
+        @wraps(fun)
+        def wrapper(self):
+
+            params=get_class_param(cls)
+
+            dict_name="_"+fun.__name__+"_lookup"
+
+            paramlist={}
+
+            for name in params:
+
+                value=getattr(self,name)
+
+                if isinstance(value,Point):
+
+                    paramlist.update({name:value()})
+
+                else:
+
+                    paramlist.update({name:value})
+
+            paramlist=tuple(paramlist.items())
+
+            if not hasattr(cls,dict_name):
+
+                setattr(cls,dict_name,{})
+
+            dict_lookup=getattr(cls,dict_name)
+
+            if paramlist in dict_lookup.keys():
+
+                print(f"Retrieving cell for {cls}...\n")
+                return dict_lookup[paramlist]
+
+            else:
+
+                print(f"Calculating cell for {cls}...\n")
+                xout=fun(self)
+
+                dict_lookup[paramlist]=xout
+
+                return xout
+
+        return wrapper
+
+    return cache_dec

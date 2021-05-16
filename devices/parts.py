@@ -10,6 +10,8 @@ import warnings
 
 from functools import cache
 
+from itertools import chain
+
 def Scaled(cls):
 
     ''' Class Decorator that accept normalized parameters for resonator designs.
@@ -182,6 +184,8 @@ def addVia(cls,side='top',bottom_conn=False):
 
     class addVia(cls):
 
+        __components={"Via":Via}
+
         over_via=LayoutParamInterface()
 
         via_distance=LayoutParamInterface()
@@ -192,7 +196,9 @@ def addVia(cls,side='top',bottom_conn=False):
 
             cls.__init__(self,*args,**kwargs)
 
-            self.via=Via(name=self.name+'Via')
+            for p,c in self.__components.items():
+
+                setattr(self,p.lower(),c(name=self.name+p))
 
             self.padlayers=[LayoutDefault.layerTop,LayoutDefault.layerBottom]
 
@@ -378,6 +384,31 @@ def addVia(cls,side='top',bottom_conn=False):
             nvias_y=max(1,int(np.floor(self.via_area.y/self.via.size/self.over_via)))
 
             return nvias_x,nvias_y
+
+        @classmethod
+        def get_class_param(self):
+
+            param=LayoutPart.get_class_param(self)
+
+            [param.append(x) for x in cls.get_class_param()]
+            
+            for p,c in self.__components.items():
+
+                [param.append(p+x) for x in c.get_class_param()]
+
+            return param
+
+        def __getattr__(self,name):
+
+            for p in self.__components.keys():
+
+                if name.startswith(p):
+
+                    return getattr(getattr(self,p.lower()),name.replace(p,''))
+
+            else:
+
+                raise AttributeError
 
     addVia.__name=" ".join([cls.__name__,"w Via"])
 
@@ -975,19 +1006,15 @@ def bondstack(cls,n,sharedpad=False):
 
 class LFERes(LayoutPart):
 
+    __components={'IDT':IDT,"Bus":Bus,"EtchPit":EtchPit,"Anchor":Anchor}
+
     def __init__(self,*args,**kwargs):
 
-        LayoutPart.__init__(self,*args,**kwargs)
+        super().__init__(*args,**kwargs)
 
-        self.layer=LayoutDefault.IDTlayer
+        for p,cls in self.__components.items():
 
-        self.idt=IDT(name=self.name+'IDT')
-
-        self.bus=Bus(name=self.name+'Bus')
-
-        self.etchpit=EtchPit(name=self.name+'EtchPit')
-
-        self.anchor=Anchor(name=self.name+'Anchor')
+            setattr(self,p.lower(),cls(name=self.name+p))
 
         self._set_relations()
 
@@ -1075,8 +1102,6 @@ class LFERes(LayoutPart):
 
         del idt_cell,bus_cell,etch_cell,anchor_cell
 
-
-
         return cell
 
     def export_params(self):
@@ -1112,16 +1137,13 @@ class LFERes(LayoutPart):
 
         super().import_params(df)
 
-        if_match_import(self.idt,df,"IDT")
-        if_match_import(self.bus,df,"Bus")
-        if_match_import(self.etchpit,df,"Etch")
-        if_match_import(self.anchor,df,"Anchor")
+        for name in self.__components.keys():
+
+            if_match_import(getattr(self,name.lower()),df,name)
 
         self._set_relations()
 
     def _set_relations(self):
-
-        self.idt.layer=self.layer
 
         self.bus.size=Point(\
             self.idt.active_area.x-\
@@ -1132,14 +1154,14 @@ class LFERes(LayoutPart):
         self.bus.distance=Point(\
             0,self.idt.active_area.y+self.bus.size.y)
 
-        self.bus.layer=self.layer
+        self.bus.layer=self.idt.layer
 
         self.etchpit.active_area=Point(self.idt.active_area.x,\
             self.idt.active_area.y+2*self.bus.size.y+self.anchor.etch_margin.y*2)
 
         self.anchor.etch_x=self.etchpit.x*2+self.etchpit.active_area.x
 
-        self.anchor.layer=self.layer
+        self.anchor.layer=self.idt.layer
 
         if self.anchor.metalized.x>self.bus.size.x:
 
@@ -1176,6 +1198,31 @@ class LFERes(LayoutPart):
         height=cell.ysize-self.anchor.etch_margin.y-2*self.anchor.size.y
 
         return height/width
+
+    @classmethod
+    def get_class_param(self):
+
+        param=LayoutPart.get_class_param()
+
+        for prefix,cls in self.__components.items():
+
+            [param.append(prefix+x) for x in cls.get_class_param()]
+
+        return param
+
+    def __getattr__(self,name):
+
+        for p in self.__components.keys():
+
+            if name.startswith(p):
+
+                return getattr(\
+                    getattr(self,p.lower()),\
+                    name.replace(p,''))
+
+        else:
+
+            raise AttributeError
 
 class FBERes(LFERes):
 
@@ -1373,6 +1420,5 @@ class TFERes(LFERes):
         for p in out_ports:
 
             cell.add_port(p)
-
 
         return cell
