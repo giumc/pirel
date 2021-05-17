@@ -7,7 +7,7 @@ import numpy as np
 
 import phidl.geometry as pg
 
-from phidl.device_layout import Port,CellArray
+from phidl.device_layout import Port,CellArray,Device
 
 from pandas import Series,DataFrame
 
@@ -557,7 +557,7 @@ class LayoutPart(ABC) :
             for name,value in component_params.items():
 
                 if not name=='Type':
-                    
+
                     out_dict.update({p+name:value})
 
         for param_name in param_dict.values():
@@ -633,7 +633,7 @@ class LayoutPart(ABC) :
 
         return df.to_string()
 
-def add_compass(device):
+def add_compass(device : Device) -> Device:
     ''' add four ports at the bbox of a cell.
 
     Parameters
@@ -657,7 +657,8 @@ def add_compass(device):
 
     return device
 
-def draw_array(cell,x,y,row_spacing=0,column_spacing=0):
+def draw_array(cell : Device, x : int, y : int, \
+    row_spacing : float = 0 , column_spacing : float = 0 ) -> Device:
     ''' returns a spaced matrix of identical cells.
 
         draw_array() preserves ports in the original cells
@@ -717,7 +718,7 @@ def draw_array(cell,x,y,row_spacing=0,column_spacing=0):
 
     return new_cell
 
-def print_ports(device):
+def print_ports(device : Device):
     ''' print a list of ports in the cell.
 
     Parameters
@@ -729,7 +730,7 @@ def print_ports(device):
 
         print(i,p,'\n')
 
-def join(device):
+def join(device : Device) -> Device:
     ''' returns a copy of device with all polygons joined.
 
     Parameters
@@ -740,7 +741,7 @@ def join(device):
 
     return out_cell
 
-def get_corners(device):
+def get_corners(device : Device) :
     ''' get corners of a device.
 
     Parameters
@@ -768,7 +769,7 @@ def get_corners(device):
 
     return ll,lr,ul,ur
 
-def check_cell(device):
+def check_cell(device : Device):
     ''' Shows the device layout.
 
     Blocks script until window is closed.
@@ -788,15 +789,14 @@ def if_match_import(obj,param,tag):
 
     tag : str
 
-    df : pd.DataFrame
-
     Use:
         if_match_import() looks for 'tag' in 'param' string;
-        if 'tag' is found at begignning of 'param',
+        if 'tag' is found at beginning of 'param',
         'tag' it is removed from 'param'.
-        A copy of 'df' with 'param' key changed into the new string
-         is passed to obj.import_params().
+        A copy of 'param' with 'param' key changed into the new string
+        is passed to obj.import_params().
     '''
+    
     from re import search
 
     for name,value in param.items():
@@ -890,12 +890,12 @@ def cached(cls):
 
             if paramlist in dict_lookup.keys():
 
-                print(f"Retrieving cell for {cls}...\n")
+                print(f"Retrieving cell for {cls.__name__}...",end='\r')
                 return dict_lookup[paramlist]
 
             else:
 
-                print(f"Calculating cell for {cls}...\n")
+                print(f"Calculating cell for {cls.__name__}...",end='\r')
                 xout=fun(self)
 
                 dict_lookup[paramlist]=xout

@@ -184,8 +184,6 @@ def addVia(cls,side='top',bottom_conn=False):
 
     class addVia(cls):
 
-        __components={"Via":Via}
-
         over_via=LayoutParamInterface()
 
         via_distance=LayoutParamInterface()
@@ -294,10 +292,6 @@ def addVia(cls,side='top',bottom_conn=False):
 
             return t
 
-        def import_params(self, df):
-
-            cls.import_params(self,df)
-
         def _bbox_mod(self,bbox):
 
             LayoutPart._bbox_mod(self,bbox)
@@ -373,7 +367,9 @@ def addVia(cls,side='top',bottom_conn=False):
         @classmethod
         def get_components(self):
 
-            return copy(super().get_components()).update(self.__components)
+            import pdb; pdb.set_trace()
+
+            return copy(cls.get_components()).update(self.__components)
 
         def get_n_vias(self):
 
@@ -384,7 +380,9 @@ def addVia(cls,side='top',bottom_conn=False):
 
             return nvias_x,nvias_y
 
-    addVia.__name=" ".join([cls.__name__,"w Via"])
+    addVia.__name__=" ".join([cls.__name__,"w Via"])
+
+    addVia.__components={"Via":Via}
 
     return addVia
 

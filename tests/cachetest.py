@@ -1,6 +1,6 @@
 from PyResLayout import *
 
-d=Scaled(LFERes) ()
+d=addVia(Scaled(LFERes),'top') ()
 
 d.view()
 d.view()
