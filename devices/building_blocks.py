@@ -634,8 +634,6 @@ class Anchor(LayoutPart):
             cell.remove(etch_sx_ref)
             cell.remove(etch_dx_ref)
 
-
-
         del anchor, etch_sx,etch_dx
 
         return cell

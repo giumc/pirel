@@ -610,8 +610,8 @@ class LayoutPart(ABC) :
 
         return df
 
-    @classmethod
-    def get_components(self):
+    @staticmethod
+    def get_components():
 
         return {}
 
@@ -777,7 +777,7 @@ def check_cell(device : Device):
     set_quickplot_options(blocking=True)
     qp(device)
 
-def if_match_import(obj,param,tag):
+def if_match_import(obj : LayoutPart ,param : dict, tag : str ):
     ''' used to load data in subclasses.
 
     Parameters
@@ -785,18 +785,18 @@ def if_match_import(obj,param,tag):
     obj : LayoutPart
         a instance that might contain parameters in 'df'
 
-    param : str
+    param : dict
 
     tag : str
 
     Use:
         if_match_import() looks for 'tag' in 'param' string;
-        if 'tag' is found at beginning of 'param',
-        'tag' it is removed from 'param'.
+        if 'tag' is found in a key of 'param',
+        'tag' it is removed from that key,
         A copy of 'param' with 'param' key changed into the new string
         is passed to obj.import_params().
     '''
-    
+
     from re import search
 
     for name,value in param.items():
@@ -819,13 +819,11 @@ def add_prefix_dict(old_dict,tag):
 
     return new_dict
 
-def pop_all_dict(old_dict,elems):
+def pop_all_dict(old_dict : dict ,elems : list):
 
     for el in elems:
 
         old_dict.pop(el)
-
-    return old_dict
 
 def parallel_res(*args):
 
@@ -875,7 +873,7 @@ def cached(cls):
                 if isinstance(value,Point):
 
                     paramlist.update({name:value()})
-
+                    # TODO: make point hashable
                 else:
 
                     paramlist.update({name:value})
@@ -890,12 +888,12 @@ def cached(cls):
 
             if paramlist in dict_lookup.keys():
 
-                print(f"Retrieving cell for {cls.__name__}...",end='\r')
+                print(f"Retrieving cell for {cls.__name__}...\n")
                 return dict_lookup[paramlist]
 
             else:
 
-                print(f"Calculating cell for {cls.__name__}...",end='\r')
+                print(f"Calculating cell for {cls.__name__}...\n")
                 xout=fun(self)
 
                 dict_lookup[paramlist]=xout

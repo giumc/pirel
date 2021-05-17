@@ -2,15 +2,9 @@ from building_blocks import *
 
 from layout_tools import *
 
-from building_blocks import LayoutParamInterface
-
 import pandas as pd
 
 import warnings
-
-from functools import cache
-
-from itertools import chain
 
 def Scaled(cls):
 
@@ -282,13 +276,8 @@ def addVia(cls,side='top',bottom_conn=False):
 
             t=cls.export_params(self)
 
-            t_via=self.via.export_params()
+            pop_all_dict(t,['ViaName'])
 
-            t_via.pop('Name')
-
-            t_via=add_prefix_dict(t_via,'Via')
-
-            t.update(t_via)
 
             return t
 
@@ -364,12 +353,14 @@ def addVia(cls,side='top',bottom_conn=False):
 
             return port
 
-        @classmethod
-        def get_components(self):
+        @staticmethod
+        def get_components():
 
-            import pdb; pdb.set_trace()
+            supercomp=cls.get_components()
 
-            return copy(cls.get_components()).update(self.__components)
+            supercomp.update({"Via":Via})
+
+            return supercomp
 
         def get_n_vias(self):
 
@@ -381,8 +372,6 @@ def addVia(cls,side='top',bottom_conn=False):
             return nvias_x,nvias_y
 
     addVia.__name__=" ".join([cls.__name__,"w Via"])
-
-    addVia.__components={"Via":Via}
 
     return addVia
 
@@ -407,8 +396,6 @@ def addPad(cls):
         def __init__(self,*args,**kwargs):
 
             cls.__init__(self,*args,**kwargs)
-
-            self.pad=Pad(name=self.name+'Pad')
 
         def draw(self):
 
@@ -437,14 +424,9 @@ def addPad(cls):
 
         def export_params(self):
 
-            t_pad=self.pad.export_params()
-            t_pad.pop("Name")
-
-            t_pad=add_prefix_dict(t_pad,"Pad")
-
             t=cls.export_params(self)
 
-            t.update(t_pad)
+            pop_all_dict(t,["PadName"])
 
             return t
 
@@ -453,6 +435,15 @@ def addPad(cls):
             cls.import_params(self,df)
 
             if_match_import(self.pad,df,"Pad")
+
+        @staticmethod
+        def get_components():
+
+            supercomp=cls.get_components()
+
+            supercomp.update({"Pad":Pad})
+
+            return supercomp
 
         @property
         def resistance_squares(self):
@@ -480,8 +471,6 @@ def addProbe(cls,probe):
         def __init__(self,*args,**kwargs):
 
             cls.__init__(self,*args,**kwargs)
-
-            self.probe=probe(self.name+"Probe")
 
             self.gnd_routing_width=LayoutDefault.DUTrouting_width
 
@@ -584,11 +573,7 @@ def addProbe(cls,probe):
 
             t=cls.export_params(self)
 
-            t_probe=self.probe.export_params()
-
-            t_probe=add_prefix_dict(t_probe,'Probe')
-
-            t.update(t_probe)
+            pop_all_dict(t, ["ProbeName"])
 
             return t
 
@@ -607,13 +592,20 @@ def addProbe(cls,probe):
             return df
 
         @property
-
         def resistance_squares(self):
 
             return super().resistance_squares+self.probe_resistance_squares
 
-        @property
+        @staticmethod
+        def get_components():
 
+            supercomp=cls.get_components()
+
+            supercomp.update({"Probe":probe})
+
+            return supercomp
+
+        @property
         def probe_resistance_squares(self):
 
             device_cell=cls.draw(self)
@@ -965,10 +957,11 @@ def bondstack(cls,n,sharedpad=False):
             self.n_copies=n
             self.sharedpad=sharedpad
 
-
         def draw(self):
 
             cell=padded_cls.draw(self)
+
+            import pdb; pdb.set_trace()
 
             return cell
 
@@ -977,8 +970,6 @@ def bondstack(cls,n,sharedpad=False):
     return bondstack
 
 class LFERes(LayoutPart):
-
-    __components={'IDT':IDT,"Bus":Bus,"EtchPit":EtchPit,"Anchor":Anchor}
 
     def __init__(self,*args,**kwargs):
 
@@ -1078,26 +1069,13 @@ class LFERes(LayoutPart):
 
         t=super().export_params()
 
-        t_res=self.idt.export_params()
-        t_res=pop_all_dict(t_res,["Name","Type"])
-        t_res=add_prefix_dict(t_res,"IDT")
+        pop_all_dict(t,["IDT"+x for x in ["Name"]])
 
-        t_bus=self.bus.export_params()
-        t_bus=pop_all_dict(t_bus, ['Name','Type','DistanceX','DistanceY','SizeX'])
-        t_bus=add_prefix_dict(t_bus,"Bus")
+        pop_all_dict(t, ["Bus"+x for x in ['Name','DistanceX','DistanceY','SizeX']])
 
-        t_etch=self.etchpit.export_params()
-        t_etch=pop_all_dict(t_etch,['Name','Type','ActiveAreaX','ActiveAreaY'])
-        t_etch=add_prefix_dict(t_etch,"Etch")
+        pop_all_dict(t,["EtchPit"+x for x in['Name','ActiveAreaX','ActiveAreaY']])
 
-        t_anchor=self.anchor.export_params()
-        t_anchor=pop_all_dict(t_anchor,['Name','Type','EtchX','XOffset','EtchChoice'])
-        t_anchor=add_prefix_dict(t_anchor,'Anchor')
-
-        t.update(t_res)
-        t.update(t_bus)
-        t.update(t_etch)
-        t.update(t_anchor)
+        pop_all_dict(t,["Anchor"+x for x in ['Name','EtchX','XOffset','EtchChoice']])
 
         return t
 
@@ -1135,7 +1113,7 @@ class LFERes(LayoutPart):
     @property
     def resistance_squares(self):
 
-        self.draw()
+        self._set_relations()
 
         ridt=self.idt.resistance_squares
         rbus=self.bus.resistance_squares
@@ -1156,17 +1134,18 @@ class LFERes(LayoutPart):
     @property
     def area_aspect_ratio(self):
 
-        cell=LFERes.draw(self)
+        self._set_relations()
 
         width=cell.xsize-2*self.etchpit.x
+
         height=cell.ysize-self.anchor.etch_margin.y-2*self.anchor.size.y
 
         return height/width
 
-    @classmethod
-    def get_components(self):
+    @staticmethod
+    def get_components():
 
-        return self.__components
+        return {'IDT':IDT,"Bus":Bus,"EtchPit":EtchPit,"Anchor":Anchor}
 
 class FBERes(LFERes):
 
@@ -1183,7 +1162,9 @@ class FBERes(LFERes):
 
     def draw(self):
 
-        cell=Device(name=self.name)
+        cell=Device()
+
+        cell.name=self.name
 
         lfe_res=cell.add_ref(LFERes.draw(self))
 
@@ -1206,6 +1187,7 @@ class FBERes(LFERes):
             cell.absorb(plate_ref)
 
             del plate
+
 
         elif self.plate_position=='in, short':
 
@@ -1289,6 +1271,7 @@ class FBERes(LFERes):
             del plate
 
         cell.absorb(lfe_res)
+
         for name,port in lfe_res.ports.items():
 
             cell.add_port(port,name)
