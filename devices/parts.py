@@ -551,8 +551,6 @@ def addProbe(cls,probe):
 
             cell.add_ref(routing_tot,alias=self.name+'Probe')
 
-
-
             return cell
 
         def _route(self,bbox,p1,p2):
@@ -747,7 +745,7 @@ def array(cls,n):
 
             cls.__init__(self,*args,**kwargs)
 
-            self.bus_ext_length=30
+            self.bus_ext_length=LayoutDefault.arraybusextlength
 
             self.n_blocks=n
 

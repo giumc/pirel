@@ -12,12 +12,12 @@ import pandas as pd
 #     addLargeGnd(GSGProbe))(name="DEF")
 #
 d=addProbe(\
-    array(Scaled(FBERes),3),\
+    addVia(array(Scaled(FBERes),3),['top','bottom']),\
     addLargeGnd(GSGProbe))(name="DEF")
 
 base_params=d.export_params()
 #
-base_params["PrrobeGroundPadSize"]=400
+base_params["ProbeGroundPadSize"]=400
 base_params["ProbeSizeX"]=100
 base_params["ProbePitch"]=200
 base_params["ProbeSizeY"]=100
@@ -38,15 +38,18 @@ base_params["AnchorEtchMarginY"]=0.2
 
 base_params["BusExtLength"]=0.5*7
 
-base_params["ViaSize"]=40
-base_params["ViaAreaX"]=300
-base_params["ViaAreaY"]=300
+base_params["ViaSize"]=20
+base_params["ViaAreaX"]=100
+base_params["ViaAreaY"]=100
 base_params["ViaShape"]='square'
-base_params["Overvia"]=2
+base_params["Overvia"]=3
 
 d.import_params(base_params)
 
-d.draw().write_gds("test.gds")
+print(d)
+
+d.view()
+# d.draw().write_gds("test.gds")
 
 # check_cell(verniers())
 # check_cell(alignment_marks_4layers())

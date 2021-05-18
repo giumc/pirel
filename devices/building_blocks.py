@@ -2,6 +2,8 @@ from phidl.device_layout import Device, Port, DeviceReference, Group
 
 import phidl.geometry as pg
 
+import phidl.path as pp
+
 from phidl import set_quickplot_options
 
 from phidl import quickplot as qp
@@ -9,8 +11,6 @@ from phidl import quickplot as qp
 from phidl import Path,CrossSection
 
 import os
-
-import phidl.path as pp
 
 import gdspy
 
@@ -678,7 +678,6 @@ class Via(LayoutPart):
         self.shape=LayoutDefault.Viashape
         self.size=LayoutDefault.Viasize
 
-
     def draw(self):
 
         if self.shape=='square':
@@ -737,6 +736,8 @@ class Routing(LayoutPart):
         for now, the ports have to be oriented as follows:
             +90 -> -90 if below obstacle
             +90 -> +90 if above obstacle
+            0 -> +90 if above obstacle
+            180 -> +90 if above obstacle
 
     layer : int
         metal layer.
@@ -745,9 +746,11 @@ class Routing(LayoutPart):
 
         where to go if there is an obstacle.
         if "auto", will select minimum length path.
+
     '''
 
     trace_width=LayoutParamInterface()
+    ports=LayoutParamInterface()
 
     def __init__(self,side='auto',trace_width=LayoutDefault.Routingtrace_width,\
         clearance=LayoutDefault.Routingclearance,ports=LayoutDefault.Routingports[0],\
@@ -801,17 +804,9 @@ class Routing(LayoutPart):
 
         df=super().export_params()
 
-        df["Ports"]=self.ports
-
+        df.pop("Ports")
+        
         return df
-
-    def import_params(self,df):
-
-        super().import_params()
-
-        if "Ports" in df.keys():
-
-            self.ports=df["Ports"]
 
     def _add_taper(self,cell,port,len=10):
 

@@ -261,6 +261,10 @@ class LayoutDefault:
     Padport=Port(name='top',midpoint=(50,50),width=100,\
         orientation=-90)
 
+    #array
+
+    arraybusextlength=30.0
+
 class _LayoutParam():
 
     def __init__(self,name,value):
@@ -584,13 +588,13 @@ class LayoutPart(ABC) :
 
                 setattr(self,param_key,df[param_label])
 
-            elif param_label+'X' in df.keys():
+            if param_label+'X' in df.keys():
 
                 old_point=getattr(self,param_key)
 
                 setattr(self,param_key,Point(df[param_label+"X"],old_point.y))
 
-            elif param_label+'Y' in df.keys():
+            if param_label+'Y' in df.keys():
 
                 old_point=getattr(self,param_key)
 
@@ -809,7 +813,7 @@ def if_match_import(obj : LayoutPart ,param : dict, tag : str ):
 
             obj.import_params({varname:value})
 
-def add_prefix_dict(old_dict,tag):
+def add_prefix_dict(old_dict,tag) -> dict:
 
     new_dict={}
 
@@ -825,7 +829,7 @@ def pop_all_dict(old_dict : dict ,elems : list):
 
         old_dict.pop(el)
 
-def parallel_res(*args):
+def parallel_res(*args) -> float:
 
     sum_y=0
 
@@ -835,7 +839,7 @@ def parallel_res(*args):
 
     return 1/sum_y
 
-def get_class_param(cls):
+def get_class_param(cls : LayoutPart.__class__ ) -> list:
 
     out_list=[]
 
@@ -888,12 +892,12 @@ def cached(cls):
 
             if paramlist in dict_lookup.keys():
 
-                print(f"Retrieving cell for {cls.__name__}...\n")
+                # print(f"Retrieving cell for {cls.__name__}...\n")
                 return dict_lookup[paramlist]
 
             else:
 
-                print(f"Calculating cell for {cls.__name__}...\n")
+                # print(f"Calculating cell for {cls.__name__}...\n")
                 xout=fun(self)
 
                 dict_lookup[paramlist]=xout
