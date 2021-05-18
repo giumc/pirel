@@ -24,13 +24,14 @@ class Point:
     y : float.
     '''
 
-    def __init__(self,x=0,y=0):
+    def __init__(self,coord=(0,0)):
 
-        self.x=x
+        self.x=coord[0]
 
-        self.y=y
+        self.y=coord[1]
 
-    def get_coord(self):
+    @property
+    def coord(self):
         ''' returns coordinates in a 2-d tuple'''
 
         return (self.x,self.y)
@@ -44,7 +45,7 @@ class Point:
         x1=self.x+p.x
         y1=self.y+p.y
 
-        return Point(x1,y1)
+        return Point((x1,y1))
 
     def __sub__(self,p):
 
@@ -56,7 +57,7 @@ class Point:
 
         y1=self.y-p.y
 
-        return Point(x1,y1)
+        return Point((x1,y1))
 
     def __truediv__(self,x0):
 
@@ -66,7 +67,7 @@ class Point:
             x1=p.x/x0
             y1=p.y/x0
 
-            return Point(x1,y1)
+            return Point((x1,y1))
 
         else:
 
@@ -76,34 +77,7 @@ class Point:
 
         return f"x={self.x} y ={self.y}"
 
-    def __call__(self):
-
-        return (self.x,self.y)
-
     __radd__ = __add__
-
-    def from_iter(self,l):
-        '''build a new Point from an iterable.
-
-        Parameters
-        ----------
-
-        l : length 2 iterable of floats
-
-        Returns
-        -------
-        p : sketch.Point
-            a new point.
-        '''
-
-        if not len(l)==2:
-
-            raise Exception("Point can be built from iterable of length 2 only")
-
-        self.x=l[0]
-        self.y=l[1]
-
-        return self
 
     def __mul__(self,x0):
 
@@ -112,7 +86,7 @@ class Point:
             x1=self.x*x0
             y1=self.y*x0
 
-            return Point(x1,y1)
+            return Point((x1,y1))
 
         else:
 
@@ -136,10 +110,14 @@ class Point:
 
     __rmul__=__mul__
 
+    def __hash__(self):
+
+        return self.coord
+
 class LayoutDefault:
     '''container of PyResLayout constants.'''
 
-    origin=Point(0,0)
+    origin=Point((0,0))
     layerSi = 0
     layerBottom = 1
     layerTop = 2
@@ -166,8 +144,8 @@ class LayoutDefault:
 
     #Bus
 
-    Bussize=Point(IDTpitch*2*IDTn,IDTpitch*2)
-    Busdistance=Point(0,IDT_y+IDTy_offset)
+    Bussize=Point((IDTpitch*2*IDTn,IDTpitch*2))
+    Busdistance=Point((0,IDT_y+IDTy_offset))
 
     #EtchPit
 
@@ -193,11 +171,11 @@ class LayoutDefault:
     FBEResplatelayer=layerBottom
     #GSProbe
     GSProbepitch = 150.0
-    GSProbepad_size = Point(80,80)
+    GSProbepad_size = Point((80,80))
     GSProberouting_width = 80.0
     GSProbelayer = layerTop
     GSProberouting = True
-    GSProbespacing = Point(20,30)
+    GSProbespacing = Point((20,30))
 
     #Via
 
@@ -209,7 +187,7 @@ class LayoutDefault:
 
     GSGProbelayer=layerTop
     GSGProbepitch=200.0
-    GSGProbesize=Point(100,100)
+    GSGProbesize=Point((100,100))
 
     GSProbelayer=GSGProbelayer
     GSProbepitch=GSGProbepitch
@@ -222,7 +200,7 @@ class LayoutDefault:
     #Routing
 
     Routingtrace_width=80.
-    Routingclearance=(Point(0,250)(),Point(300,550)())
+    Routingclearance=((0,250),(300,550))
     Routinglayer=layerTop
     Routingports=(Port(name='1',midpoint=(450,0),\
         width=50,orientation=90),\
@@ -592,13 +570,13 @@ class LayoutPart(ABC) :
 
                 old_point=getattr(self,param_key)
 
-                setattr(self,param_key,Point(df[param_label+"X"],old_point.y))
+                setattr(self,param_key,Point((df[param_label+"X"],old_point.y)))
 
             if param_label+'Y' in df.keys():
 
                 old_point=getattr(self,param_key)
 
-                setattr(self,param_key,Point(old_point.x,df[param_label+"Y"]))
+                setattr(self,param_key,Point((old_point.x,df[param_label+"Y"])))
 
         for name in self.get_components().keys():
 
@@ -686,7 +664,7 @@ def draw_array(cell : Device, x : int, y : int, \
 
     new_cell=pg.Device(cell.name+"array")
 
-    cell_size=Point().from_iter(cell.size)+Point(column_spacing,row_spacing)
+    cell_size=Point(cell.size)+Point((column_spacing,row_spacing))
 
     o,_,_,_=get_corners(new_cell)
 
