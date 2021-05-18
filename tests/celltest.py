@@ -12,7 +12,7 @@ import pandas as pd
 #     addLargeGnd(GSGProbe))(name="DEF")
 #
 d=addProbe(\
-    addVia(array(Scaled(FBERes),3),['top','bottom']),\
+    addVia(array(Scaled(FBERes),3),['top']),\
     addLargeGnd(GSGProbe))(name="DEF")
 
 base_params=d.export_params()
@@ -26,19 +26,20 @@ base_params["GNDRoutingWidth"]=250
 base_params["IDTPitch"]=7
 base_params["IDTN"]=2
 base_params["IDTOffset"]=1
-base_params["IDTLength"]=105
+base_params["IDTLength"]=10
 base_params["IDTCoverage"]=0.5
 base_params["BusSizeY"]=5
 base_params["EtchX"]=0.4
 base_params["AnchorSizeY"]=4
-base_params["AnchorSizeX"]=0.1
+base_params["AnchorSizeX"]=0.2
 base_params["AnchorXOffset"]=0
-base_params["AnchorEtchMarginX"]=0.1
+base_params["AnchorEtchMarginX"]=0.2
 base_params["AnchorEtchMarginY"]=0.2
 
 base_params["BusExtLength"]=0.5*7
 
 base_params["ViaSize"]=20
+base_params["ViaDistance"]=20
 base_params["ViaAreaX"]=100
 base_params["ViaAreaY"]=100
 base_params["ViaShape"]='square'

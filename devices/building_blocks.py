@@ -24,7 +24,7 @@ import warnings
 
 from layout_tools import *
 
-class TextParam():
+class TextParam:
     ''' Class to store text data and to add it in cells.
 
     It controls how the text labels generated are formatted.
@@ -149,7 +149,7 @@ class TextParam():
 
         text_location=self.get('location')
 
-        text_size=Point().from_iter(text_cell.size)
+        text_size=Point(text_cell.size)
 
         text_distance=self.get('distance')
 
@@ -176,7 +176,7 @@ class TextParam():
         cell.add(text_cell)
 
         text_cell.move(origin=(0,0),\
-            destination=o())
+            destination=o.coord)
 
         return cell
 
@@ -268,7 +268,7 @@ class IDT(LayoutPart) :
         rect=pg.rectangle(size=(self.coverage*self.pitch,self.length),\
             layer=self.layer)
 
-        rect.move(origin=(0,0),destination=o())
+        rect.move(origin=(0,0),destination=o.coord)
 
         unitcell=Device()
 
@@ -276,13 +276,13 @@ class IDT(LayoutPart) :
         unitcell.absorb(r1)
         r2 = unitcell << rect
 
-        r2.move(origin=o(),\
-        destination=(o+Point(self.pitch,self.y_offset))())
+        r2.move(origin=o.coord,\
+        destination=(o+Point(self.pitch,self.y_offset)).coord)
 
         r3= unitcell<< rect
 
-        r3.move(origin=o(),\
-            destination=(o+Point(2*self.pitch,0))())
+        r3.move(origin=o.coord,\
+            destination=(o+Point(2*self.pitch,0)).coord)
 
         unitcell.absorb(r2)
 
@@ -307,13 +307,13 @@ class IDT(LayoutPart) :
         cell=join(cell)
         cell.add_port(Port(name='bottom',\
         midpoint=(o+\
-        Point(midx,0))(),\
+        Point(midx,0)).coord,\
         width=totx,
         orientation=-90))
 
         cell.add_port(Port(name='top',\
         midpoint=(o+\
-        Point(midx,self.length+self.y_offset))(),\
+        Point(midx,self.length+self.y_offset)).coord,\
         width=totx,
         orientation=90))
 
@@ -409,9 +409,9 @@ class Bus(LayoutPart) :
         '''
         o=self.origin
 
-        pad=pg.rectangle(size=self.size(),\
+        pad=pg.rectangle(size=self.size.coord,\
         layer=self.layer).move(origin=(0,0),\
-        destination=o())
+        destination=o.coord)
 
         cell=Device(self.name)
 
@@ -419,13 +419,13 @@ class Bus(LayoutPart) :
         cell.absorb(r1)
         r2=cell <<pad
 
-        r2.move(origin=o(),\
-        destination=(o+self.distance)())
+        r2.move(origin=o.coord,\
+        destination=(o+self.distance).coord)
 
         cell.absorb(r2)
 
         cell.add_port(name='conn',\
-        midpoint=(o+Point(self.size.x/2,self.size.y))(),\
+        midpoint=(o+Point(self.size.x/2,self.size.y)).coord,\
         width=self.size.x,\
         orientation=90)
 
@@ -497,12 +497,12 @@ class EtchPit(LayoutPart) :
         etch.absorb(etch<<main_etch)
 
         port_up=Port('top',\
-        midpoint=(o+Point(self.x+self.active_area.x/2,self.active_area.y))(),\
+        midpoint=(o+Point(self.x+self.active_area.x/2,self.active_area.y)).coord,\
         width=self.active_area.x,\
         orientation=-90)
 
         port_down=Port('bottom',\
-        midpoint=(o+Point(self.x+self.active_area.x/2,0))(),\
+        midpoint=(o+Point(self.x+self.active_area.x/2,0)).coord,\
         width=self.active_area.x,\
         orientation=90)
 
@@ -586,7 +586,7 @@ class Anchor(LayoutPart):
         o=self.origin
 
         anchor=pg.rectangle(\
-            size=(self.size-Point(2*self.etch_margin.x,-2*self.etch_margin.y))(),\
+            size=(self.size-Point(2*self.etch_margin.x,-2*self.etch_margin.y)).coord,\
             layer=self.layer)
 
         etch_size=Point(\
@@ -598,28 +598,28 @@ class Anchor(LayoutPart):
         cell=Device(self.name)
 
         etch_sx=pg.rectangle(\
-            size=(etch_size-offset)(),\
+            size=(etch_size-offset).coord,\
             layer=self.etch_layer)
 
         etch_dx=pg.rectangle(\
-            size=(etch_size+offset)(),\
+            size=(etch_size+offset).coord,\
             layer=self.etch_layer)
 
         etch_sx_ref=(cell<<etch_sx).move(origin=(0,0),\
-        destination=(o-Point(0,self.etch_margin.y))())
+        destination=(o-Point(0,self.etch_margin.y)).coord)
 
         anchor_transl=o+Point(etch_sx.size[0]+self.etch_margin.x,-2*self.etch_margin.y)
 
         anchor_ref=(cell<<anchor).move(origin=(0,0),\
-        destination=anchor_transl())
+        destination=anchor_transl.coord)
 
         etchdx_transl=anchor_transl+Point(anchor.size[0]+self.etch_margin.x,+self.etch_margin.y)
 
         etch_dx_ref=(cell<<etch_dx).move(origin=(0,0),\
-        destination=etchdx_transl())
+        destination=etchdx_transl.coord)
 
         cell.add_port(name='conn',\
-        midpoint=(anchor_transl+Point(self.size.x/2-self.etch_margin.x,self.size.y+2*self.etch_margin.y))(),\
+        midpoint=(anchor_transl+Point(self.size.x/2-self.etch_margin.x,self.size.y+2*self.etch_margin.y)).coord,\
         width=self.size.x-2*self.etch_margin.x,\
         orientation=90)
 
@@ -695,7 +695,7 @@ class Via(LayoutPart):
             raise ValueError("Via shape can be \'square\' or \'circle\'")
 
         cell.move(origin=(0,0),\
-            destination=self.origin())
+            destination=self.origin.coord)
 
         cell.add_port(Port(name='conn',\
         midpoint=cell.center,\
@@ -805,7 +805,7 @@ class Routing(LayoutPart):
         df=super().export_params()
 
         df.pop("Ports")
-        
+
         return df
 
     def _add_taper(self,cell,port,len=10):
@@ -915,10 +915,10 @@ class Routing(LayoutPart):
 
                     raise Exception("Routing error: non-hindered routing needs +90 -> -90 oriented ports")
 
-            distance=Point().from_iter(destination.midpoint)-\
-                Point().from_iter(source.midpoint)
+            distance=Point(destination.midpoint)-\
+                Point(source.midpoint)
 
-            p0=Point().from_iter(source.midpoint)
+            p0=Point(source.midpoint)
 
             p1=p0+Point(0,distance.y/3)
 
@@ -926,7 +926,7 @@ class Routing(LayoutPart):
 
             p3=p2+Point(0,distance.y/3)
 
-            list_points=np.array([p0(),p1(),p2(),p3()])
+            list_points=np.array([p0.coord,p1.coord,p2.coord,p3.coord])
 
             path=pp.smooth(points=list_points,radius=radius/4)
 
@@ -942,19 +942,21 @@ class Routing(LayoutPart):
 
                     destination.name='destination'
 
-                    p0=Point().from_iter(source.midpoint)
+                    p0=Point(source.midpoint)
 
                     p1=Point(ur.x+self.trace_width,p0.y)
 
                     if abs((p1-p0).x)<=radius:
 
-                        p1.x=p1.x+2*radius*np.sign((p1-p0).x)
+                        p1=Point(\
+                            p1.x+2*radius*np.sign((p1-p0).x),
+                            p1.y)
 
                     p2=Point(p1.x,ur.y+self.trace_width)
                     p3=Point(destination.x,p2.y)
                     p4=Point(destination.x,destination.y)
 
-                    list_points_rx=[p0(),p1(),p2(),p3(),p4()]
+                    list_points_rx=[p0.coord,p1.coord,p2.coord,p3.coord,p4.coord]
 
                     try:
 
@@ -970,9 +972,9 @@ class Routing(LayoutPart):
 
                 if source.x+self.trace_width>ll.x and source.x-self.trace_width<lr.x: #source tucked inside clearance
 
-                    p0=Point().from_iter(source.midpoint)
+                    p0=Point(source.midpoint)
 
-                    center_box=Point().from_iter(bbox.center)
+                    center_box=Point(bbox.center)
 
                     #left path
                     p1=p0+Point(0,y_overtravel)
@@ -981,7 +983,7 @@ class Routing(LayoutPart):
                     p4=Point(destination.x,p3.y)
                     p5=Point(destination.x,destination.y)
 
-                    list_points_lx=[p0(),p1(),p2(),p3(),p4(),p5()]
+                    list_points_lx=[p0.coord,p1.coord,p2.coord,p3.coord,p4.coord,p5.coord]
 
                     try:
                         path_lx=pp.smooth(points=list_points_lx,radius=radius/4)
@@ -999,7 +1001,7 @@ class Routing(LayoutPart):
                     p4=Point(destination.x,p3.y)
                     p5=Point(destination.x,destination.y)
 
-                    list_points_rx=[p0(),p1(),p2(),p3(),p4(),p5()]
+                    list_points_rx=[p0.coord,p1.coord,p2.coord,p3.coord,p4.coord,p5.coord]
 
                     try:
 
@@ -1036,20 +1038,20 @@ class Routing(LayoutPart):
                 else:   # source is not tucked under the clearance
 
 
-                    p0=Point().from_iter(source.midpoint)
+                    p0=Point(source.midpoint)
 
                     ll,lr,ul,ur=get_corners(bbox)
 
                     y_overtravel=ll.y-p0.y
 
-                    center_box=Point().from_iter(bbox.center)
+                    center_box=Point(bbox.center)
 
                     #left path
                     p1=Point(p0.x,destination.y+self.trace_width)
                     p2=Point(destination.x,p1.y)
                     p3=Point(destination.x,destination.y)
 
-                    list_points=[p0(),p1(),p2(),p3()]
+                    list_points=[p0.coord,p1.coord,p2.coord,p3.coord]
 
                     try:
 
@@ -1061,19 +1063,21 @@ class Routing(LayoutPart):
 
             elif source.orientation==180 : #left path
 
-                p0=Point().from_iter(source.midpoint)
+                p0=Point(source.midpoint)
                 p1=Point(ll.x-self.trace_width,p0.y)
 
                 if abs((p1-p0).x) <= radius:
 
-                    p1.x=p1.x+2*radius*np.sign((p1-p0).x)
+                    p1=Point(\
+                        p1.x+2*radius*np.sign((p1-p0).x),
+                        p1.y)
 
                 p2=Point(p1.x,ur.y+self.trace_width)
                 p3=Point(destination.x,p2.y)
                 p4=Point(destination.x,destination.y)
 
 
-                list_points_lx=[p0(),p1(),p2(),p3(),p4()]
+                list_points_lx=[p0.coord,p1.coord,p2.coord,p3.coord,p4.coord]
 
                 try:
 
@@ -1145,23 +1149,23 @@ class GSProbe(LayoutPart):
         layer=self.layer)
 
         pad_cell.move(origin=(0,0),\
-        destination=o())
+        destination=o.coord)
 
         cell=Device(self.name)
 
         dp=Point(self.pitch,0)
         pad_gnd_sx=cell<<pad_cell
         pad_sig=cell<<pad_cell
-        pad_sig.move(origin=o(),\
-        destination=(o+dp)())
+        pad_sig.move(origin=o.coord,\
+        destination=(o+dp).coord)
 
         cell.add_port(Port(name='gnd_left',\
-        midpoint=(o+Point(pad_x/2+self.pitch,self.size.y))(),\
+        midpoint=(o+Point(pad_x/2+self.pitch,self.size.y)).coord,\
         width=pad_x,\
         orientation=90))
 
         cell.add_port(Port(name='sig',\
-        midpoint=(o+Point(pad_x/2,self.size.y))(),\
+        midpoint=(o+Point(pad_x/2,self.size.y)).coord,\
         width=pad_x,\
         orientation=90))
 
@@ -1212,32 +1216,32 @@ class GSGProbe(LayoutPart):
         layer=self.layer)
 
         pad_cell.move(origin=(0,0),\
-        destination=o())
+        destination=o.coord)
 
         cell=Device(self.name)
 
         dp=Point(self.pitch,0)
         pad_gnd_sx=cell<<pad_cell
         pad_sig=cell<<pad_cell
-        pad_sig.move(origin=o(),\
-        destination=(o+dp)())
+        pad_sig.move(origin=o.coord,\
+        destination=(o+dp).coord)
 
         pad_gnd_dx=cell<<pad_cell
-        pad_gnd_dx.move(origin=o(),\
-        destination=(o+dp*2)())
+        pad_gnd_dx.move(origin=o.coord,\
+        destination=(o+dp*2).coord)
 
         cell.add_port(Port(name='sig',\
-        midpoint=(o+Point(pad_x/2+self.pitch,self.size.y))(),\
+        midpoint=(o+Point(pad_x/2+self.pitch,self.size.y)).coord,\
         width=pad_x,\
         orientation=90))
 
         cell.add_port(Port(name='gnd_left',\
-        midpoint=(o+Point(pad_x/2,self.size.y))(),\
+        midpoint=(o+Point(pad_x/2,self.size.y)).coord,\
         width=pad_x,\
         orientation=90))
 
         cell.add_port(Port(name='gnd_right',\
-        midpoint=(o+Point(pad_x/2+2*self.pitch,self.size.y))(),\
+        midpoint=(o+Point(pad_x/2+2*self.pitch,self.size.y)).coord,\
         width=pad_x,\
         orientation=90))
 

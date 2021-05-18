@@ -24,17 +24,52 @@ class Point:
     y : float.
     '''
 
-    def __init__(self,coord=(0,0)):
+    def __init__(self,*a):
 
-        self.x=coord[0]
+        if len(a)==1:
 
-        self.y=coord[1]
+            if len(a[0])==2:
+
+                self._x=a[0][0]*1.0
+                self._y=a[0][1]*1.0
+
+            else:
+
+                raise ValueError("Bad point assignment")
+
+        elif len(a)==2:
+
+            self._x=a[0]*1.0
+            self._y=a[1]*1.0
+
+        else:
+
+                raise ValueError("Bad point assignment")
 
     @property
     def coord(self):
         ''' returns coordinates in a 2-d tuple'''
 
         return (self.x,self.y)
+
+    @property
+    def x(self):
+
+        return self._x
+
+    @property
+    def y(self):
+        return self._y
+
+    def __setattr__(self,name,value):
+
+        if name in ('_x','_y'):
+
+            super().__setattr__(name,value)
+
+        else:
+
+            raise AttributeError("Point is an immutable read-only")
 
     def __add__(self,p):
 
@@ -45,7 +80,7 @@ class Point:
         x1=self.x+p.x
         y1=self.y+p.y
 
-        return Point((x1,y1))
+        return Point(x1,y1)
 
     def __sub__(self,p):
 
@@ -57,7 +92,7 @@ class Point:
 
         y1=self.y-p.y
 
-        return Point((x1,y1))
+        return Point(x1,y1)
 
     def __truediv__(self,x0):
 
@@ -67,7 +102,7 @@ class Point:
             x1=p.x/x0
             y1=p.y/x0
 
-            return Point((x1,y1))
+            return Point(x1,y1)
 
         else:
 
@@ -86,7 +121,7 @@ class Point:
             x1=self.x*x0
             y1=self.y*x0
 
-            return Point((x1,y1))
+            return Point(x1,y1)
 
         else:
 
@@ -112,12 +147,12 @@ class Point:
 
     def __hash__(self):
 
-        return self.coord
+        return hash(self.coord)
 
 class LayoutDefault:
     '''container of PyResLayout constants.'''
 
-    origin=Point((0,0))
+    origin=Point(0,0)
     layerSi = 0
     layerBottom = 1
     layerTop = 2
@@ -144,8 +179,8 @@ class LayoutDefault:
 
     #Bus
 
-    Bussize=Point((IDTpitch*2*IDTn,IDTpitch*2))
-    Busdistance=Point((0,IDT_y+IDTy_offset))
+    Bussize=Point(IDTpitch*2*IDTn,IDTpitch*2)
+    Busdistance=Point(0,IDT_y+IDTy_offset)
 
     #EtchPit
 
@@ -171,11 +206,11 @@ class LayoutDefault:
     FBEResplatelayer=layerBottom
     #GSProbe
     GSProbepitch = 150.0
-    GSProbepad_size = Point((80,80))
+    GSProbepad_size = Point(80,80)
     GSProberouting_width = 80.0
     GSProbelayer = layerTop
     GSProberouting = True
-    GSProbespacing = Point((20,30))
+    GSProbespacing = Point(20,30)
 
     #Via
 
@@ -187,7 +222,7 @@ class LayoutDefault:
 
     GSGProbelayer=layerTop
     GSGProbepitch=200.0
-    GSGProbesize=Point((100,100))
+    GSGProbesize=Point(100,100)
 
     GSProbelayer=GSGProbelayer
     GSProbepitch=GSGProbepitch
@@ -243,7 +278,7 @@ class LayoutDefault:
 
     arraybusextlength=30.0
 
-class _LayoutParam():
+class _LayoutParam:
 
     def __init__(self,name,value):
 
@@ -347,7 +382,7 @@ class _LayoutParam():
 
     __str__=__repr__
 
-class LayoutParamInterface():
+class LayoutParamInterface:
 
     def __init__(self,*args):
 
@@ -439,7 +474,7 @@ class LayoutPart(ABC) :
 
         self.name=name
 
-        self.origin=copy(LayoutDefault.origin)
+        self.origin=LayoutDefault.origin
 
         for p,cls in self.get_components().items():
 
@@ -570,13 +605,13 @@ class LayoutPart(ABC) :
 
                 old_point=getattr(self,param_key)
 
-                setattr(self,param_key,Point((df[param_label+"X"],old_point.y)))
+                setattr(self,param_key,Point(df[param_label+"X"],old_point.y))
 
             if param_label+'Y' in df.keys():
 
                 old_point=getattr(self,param_key)
 
-                setattr(self,param_key,Point((old_point.x,df[param_label+"Y"])))
+                setattr(self,param_key,Point(old_point.x,df[param_label+"Y"]))
 
         for name in self.get_components().keys():
 
@@ -664,9 +699,7 @@ def draw_array(cell : Device, x : int, y : int, \
 
     new_cell=pg.Device(cell.name+"array")
 
-    cell_size=Point(cell.size)+Point((column_spacing,row_spacing))
-
-    o,_,_,_=get_corners(new_cell)
+    cell_size=Point(cell.size)+Point(column_spacing,row_spacing)
 
     cellmat=[]
 
@@ -678,10 +711,10 @@ def draw_array(cell : Device, x : int, y : int, \
 
         for i in range(x):
 
-            cellvec.append(new_cell<<cell)
+            cellvec.append(new_cell.add_ref(cell,alias=cell.name+str(i)+str(j)))
 
-            cellvec[i].move(origin=o(),
-                destination=(o+Point(cell_size.x*i,cell_size.y*j))())
+            cellvec[i].move(
+                destination=(Point(cell_size.x*i,cell_size.y*j)).coord)
 
             for p in cellvec[i].ports.values():
 
@@ -852,13 +885,7 @@ def cached(cls):
 
                 value=getattr(self,name)
 
-                if isinstance(value,Point):
-
-                    paramlist.update({name:value()})
-                    # TODO: make point hashable
-                else:
-
-                    paramlist.update({name:value})
+                paramlist.update({name:value})
 
             paramlist=tuple(paramlist.items())
 

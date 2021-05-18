@@ -69,17 +69,17 @@ def Scaled(cls):
 
             self.idt.length=self.idt.length/p
 
-            self.bus.size.y=self.bus.size.y/p
+            self.bus.size=Point(self.bus.size.x,self.bus.size.y/p)
 
             self.etchpit.x=self.etchpit.x/active_area_x
 
-            self.anchor.size.x=self.anchor.size.x/active_area_x
+            self.anchor.size=Point(\
+                self.anchor.size.x/active_area_x,\
+                self.anchor.size.y/p)
 
-            self.anchor.size.y=self.anchor.size.y/p
-
-            self.anchor.etch_margin.x=self.anchor.etch_margin.x/anchor_x
-
-            self.anchor.etch_margin.y=self.anchor.etch_margin.y/anchor_y
+            self.anchor.etch_margin=Point(\
+                self.anchor.etch_margin.x/anchor_x,\
+                self.anchor.etch_margin.y/anchor_y)
 
             self._normalized=True
 
@@ -112,19 +112,19 @@ def Scaled(cls):
 
             self.idt.length=self.idt.length*p
 
-            self.bus.size.y=self.bus.size.y*p
+            self.bus.size=Point(self.bus.size.x,self.bus.size.y*p)
 
             active_area_x=self.idt.active_area.x
 
             self.etchpit.x=self.etchpit.x*active_area_x
 
-            self.anchor.size.x=self.anchor.size.x*active_area_x
+            self.anchor.size=Point(\
+                self.anchor.size.x*active_area_x,\
+                self.anchor.size.y*p)
 
-            self.anchor.size.y=self.anchor.size.y*p
-
-            self.anchor.etch_margin.x=self.anchor.etch_margin.x*self.anchor.size.x
-
-            self.anchor.etch_margin.y=self.anchor.etch_margin.y*self.anchor.size.y
+            self.anchor.etch_margin=Point(\
+                self.anchor.etch_margin.x*self.anchor.size.x,\
+                self.anchor.etch_margin.y*self.anchor.size.y)
 
             self._normalized=False
 
@@ -285,9 +285,9 @@ def addVia(cls,side='top',bottom_conn=False):
 
             LayoutPart._bbox_mod(self,bbox)
 
-            ll=Point().from_iter(bbox[0])
+            ll=Point(bbox[0])
 
-            ur=Point().from_iter(bbox[1])
+            ur=Point(bbox[1])
 
             nvias_x,nvias_y=self.get_n_vias()
 
@@ -299,7 +299,7 @@ def addVia(cls,side='top',bottom_conn=False):
 
                 ll=ll+Point(0,float(self.via.size*self.over_via*nvias_y+self.via_distance))
 
-            return (ll(),ur())
+            return (ll.coord,ur.coord)
 
         def _draw_padded_via(self):
 
@@ -681,14 +681,14 @@ def addLargeGnd(probe):
 
                     if 'left' in name:
 
-                        groundref.move(origin=ur(),\
+                        groundref.move(origin=ur.coord,\
                         destination=p.endpoints[1])
 
                         left_port=groundref.ports['N']
 
                     elif 'right' in name:
 
-                        groundref.move(origin=ul(),\
+                        groundref.move(origin=ul.coord,\
                         destination=p.endpoints[0])
 
                         right_port=groundref.ports['N']
@@ -1025,7 +1025,7 @@ class LFERes(LayoutPart):
 
             anchor_top_dev=deepcopy(self.anchor)
 
-            anchor_top_dev.etch_margin.x=0.5*self.idt.pitch
+            anchor_top_dev.etch_margin=Point(0.5*self.idt.pitch,anchor_top_dev.etch_margin.y)
 
             anchor_top=cell<<anchor_top_dev.draw()
 
@@ -1105,7 +1105,10 @@ class LFERes(LayoutPart):
 
         if self.anchor.metalized.x>self.bus.size.x:
 
-            self.anchor.etch_margin.x=(self.bus.size.x-self.anchor.size.x)/2
+            self.anchor.etch_margin=Point(\
+                (self.bus.size.x-self.anchor.size.x)/2,\
+                self.anchor.etch_margin.y)
+
             warnings.warn("Anchor metal is too wide, reduced to match Bus width size")
 
     @property
@@ -1176,11 +1179,13 @@ class FBERes(LFERes):
             transl_rel=Point(self.etchpit.x-4*self.idt.active_area_margin,self.anchor.size.y+2*self.anchor.etch_margin.y+self.bus.size.y\
                 +self.idt.y_offset*3/4)
 
+            # import pdb; pdb.set_trace()
+
             lr_cell=get_corners(cell)[0]
             lr_plate=get_corners(plate_ref)[0]
 
-            plate_ref.move(origin=lr_plate(),\
-            destination=(lr_plate+lr_cell+transl_rel)())
+            plate_ref.move(origin=lr_plate.coord,\
+            destination=(lr_plate+lr_cell+transl_rel).coord)
 
             cell.absorb(plate_ref)
 
@@ -1208,8 +1213,8 @@ class FBERes(LFERes):
             lr_cell=get_corners(cell)[0]
             lr_plate=get_corners(plate_ref)[0]
 
-            plate_ref.move(origin=lr_plate(),\
-            destination=(lr_plate+lr_cell+transl_rel)())
+            plate_ref.move(origin=lr_plate.coord,\
+            destination=(lr_plate+lr_cell+transl_rel).coord)
 
             cell.absorb(plate_ref)
 
@@ -1234,8 +1239,8 @@ class FBERes(LFERes):
             lr_cell=get_corners(cell)[0]
             lr_plate=get_corners(plate_ref)[0]
 
-            plate_ref.move(origin=lr_plate(),\
-            destination=(lr_plate+lr_cell+transl_rel)())
+            plate_ref.move(origin=lr_plate.coord,\
+            destination=(lr_plate+lr_cell+transl_rel).coord)
 
             cell.absorb(plate_ref)
 
@@ -1261,8 +1266,8 @@ class FBERes(LFERes):
             lr_cell=get_corners(cell)[0]
             lr_plate=get_corners(plate_ref)[0]
 
-            plate_ref.move(origin=lr_plate(),\
-            destination=(lr_plate+lr_cell+transl_rel)())
+            plate_ref.move(origin=lr_plate.coord,\
+            destination=(lr_plate+lr_cell+transl_rel).coord)
 
             cell.absorb(plate_ref)
 
@@ -1298,10 +1303,10 @@ class TFERes(LFERes):
 
         p_bott=idt_ref.ports['bottom']
 
-        p_bott_coord=Point().from_iter(p_bott.midpoint)
+        p_bott_coord=Point(p_bott.midpoint)
 
-        idt_ref.mirror(p1=(p_bott_coord-Point(p_bott.width/2,0))(),\
-            p2=(p_bott_coord+Point(p_bott.width/2,0))())
+        idt_ref.mirror(p1=(p_bott_coord-Point(p_bott.width/2,0)).coord,\
+            p2=(p_bott_coord+Point(p_bott.width/2,0)).coord)
 
         idt_ref.move(origin=(idt_ref.xmin,idt_ref.ymax),\
             destination=(idt_ref.xmin,idt_ref.ymax+self.idt.length+self.idt.y_offset))
