@@ -191,7 +191,7 @@ class LayoutDefault:
     #Anchor
     Anchorsize=Point(IDTpitch*IDTn/4,\
         2*Bussize.y)
-    Anchoretch_margin=Point(4,4)
+    Anchor_metalized=Point(Anchorsize.x-4,Anchorsize.y+4)
     Anchoretch_x=EtchPit_x
     Anchorx_offset=0.0
     Anchorlayer=IDTlayer

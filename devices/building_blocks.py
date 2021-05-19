@@ -529,9 +529,8 @@ class Anchor(LayoutPart):
     size : PyResLayout.Point
         length(Y) and size(X) of anchors
 
-    etch_margin : PyResLayout.Point
-        length(Y) and size(X) of margin between
-        etched pattern and metal connection
+    metalized : PyResLayout.Point
+        metal connection
 
     etch_choice: boolean
         to add or not etching patterns
@@ -547,7 +546,7 @@ class Anchor(LayoutPart):
     '''
 
     size=LayoutParamInterface()
-    etch_margin=LayoutParamInterface()
+    metalized=LayoutParamInterface()
     etch_choice=LayoutParamInterface(True,False)
     etch_x=LayoutParamInterface()
     x_offset=LayoutParamInterface()
@@ -559,7 +558,7 @@ class Anchor(LayoutPart):
         super().__init__(*args,**kwargs)
 
         self.size=copy(LayoutDefault.Anchorsize)
-        self.etch_margin=copy(LayoutDefault.Anchoretch_margin)
+        self.metalized=copy(LayoutDefault.Anchor_metalized)
         self.etch_choice=LayoutDefault.Anchoretch_choice
         self.etch_x=LayoutDefault.Anchoretch_x
         self.x_offset=LayoutDefault.Anchorx_offset
@@ -567,6 +566,7 @@ class Anchor(LayoutPart):
         self.layer=LayoutDefault.Anchorlayer
         self.etch_layer=LayoutDefault.Anchoretch_layer
 
+        self._check_anchor()
 
     def draw(self):
         ''' Generates layout cell based on current parameters.
@@ -578,16 +578,7 @@ class Anchor(LayoutPart):
         cell : phidl.Device.
         '''
 
-        if self.size.x<=self.etch_margin.x:
-
-            raise ValueError("""Half Anchor X Margin {} is larger than
-                Anchor X Size {}""".format(self.etch_margin.x,self.size.x))
-
-        if self.size.y<=self.etch_margin.y:
-
-            import pdb; pdb.set_trace()
-            raise ValueError("""Half Anchor Y Margin {} is larger than
-                Anchor Y Size {}""".format(self.etch_margin.y,self.size.y))
+        self._check_anchor()
 
         o=self.origin
 
@@ -650,10 +641,24 @@ class Anchor(LayoutPart):
         return 2*self.metalized.y/self.metalized.x
 
     @property
-    def metalized(self):
+    def etch_margin(self):
 
-        return Point(self.size.x-2*self.etch_margin.x,\
-            self.size.y+2*self.etch_margin.y)
+        return Point((self.size.x-self.metalized.x)/2,\
+            (self.metalized.y-self.size.y)/2)
+
+    def _check_anchor(self):
+
+        if self.metalized.x>=self.size.x:
+
+            self.metalized=Point(self.size.x-2,self.metalized.y)
+            warnings.warn(f"""Metalized X portion of anchor {self.metalized.x} is larger than
+                Anchor X Size {self.size.x}, capped to {self.size.x-2}""")
+
+        if self.metalized.y<=self.size.y:
+
+            self.metalized=Point(self.metalized.x,self.size.y+2)
+            raise ValueError(f"""Metalized Y portion of anchor {self.metalized.y} is smaller than
+                Anchor Y Size {self.size.y}, capped to {self.size.y+2}""")
 
 class Via(LayoutPart):
     ''' Generates via pattern.

@@ -77,10 +77,6 @@ def Scaled(cls):
                 self.anchor.size.x/active_area_x,\
                 self.anchor.size.y/p)
 
-            self.anchor.etch_margin=Point(\
-                self.anchor.etch_margin.x/anchor_x,\
-                self.anchor.etch_margin.y/anchor_y)
-
             self._normalized=True
 
         def _denormalize(self):
@@ -121,10 +117,6 @@ def Scaled(cls):
             self.anchor.size=Point(\
                 self.anchor.size.x*active_area_x,\
                 self.anchor.size.y*p)
-
-            self.anchor.etch_margin=Point(\
-                self.anchor.etch_margin.x*self.anchor.size.x,\
-                self.anchor.etch_margin.y*self.anchor.size.y)
 
             self._normalized=False
 
@@ -1024,7 +1016,7 @@ class LFERes(LayoutPart):
 
             anchor_top_dev=deepcopy(self.anchor)
 
-            anchor_top_dev.etch_margin=Point(0.5*self.idt.pitch,anchor_top_dev.etch_margin.y)
+            anchor_top_dev.metalized=Point(anchor_top_dev.size.x-2,anchor_top_dev.metalized.y)
 
             anchor_top=cell<<anchor_top_dev.draw()
 
@@ -1104,9 +1096,9 @@ class LFERes(LayoutPart):
 
         if self.anchor.metalized.x>self.bus.size.x:
 
-            self.anchor.etch_margin=Point(\
-                (self.bus.size.x-self.anchor.size.x)/2,\
-                self.anchor.etch_margin.y)
+            self.anchor.metalized=Point(\
+                self.bus.size.x,\
+                self.anchor.metalized.y)
 
             warnings.warn("Anchor metal is too wide, reduced to match Bus width size")
 
