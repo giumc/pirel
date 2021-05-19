@@ -580,8 +580,6 @@ class Anchor(LayoutPart):
 
         if self.size.x<=self.etch_margin.x:
 
-            import pdb; pdb.set_trace()
-
             raise ValueError("""Half Anchor X Margin {} is larger than
                 Anchor X Size {}""".format(self.etch_margin.x,self.size.x))
 
@@ -797,7 +795,15 @@ class Routing(LayoutPart):
 
         x.add(layer=self.layer,width=self.trace_width)
 
-        path_cell=x.extrude(path,simplify=1)
+        try:
+
+            path_cell=x.extrude(path,simplify=1)
+
+        except Exception as e:
+
+            print (e)
+
+            import pdb; pdb.set_trace()
 
         return path_cell
 
@@ -1275,7 +1281,7 @@ class Pad(LayoutPart):
     distance=LayoutParamInterface()
 
     layer=LayoutParamInterface()
-    
+
     def __init__(self,*args,**kwargs):
 
         super().__init__(*args,**kwargs)

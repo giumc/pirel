@@ -479,7 +479,7 @@ class LayoutPart(ABC) :
 
             setattr(self,p.lower(),cls(name=self.name+p))
 
-        self.__class__.draw=cached(self.__class__)(self.__class__.draw)
+        # self.__class__.draw=cached(self.__class__)(self.__class__.draw)
 
     def view(self,blocking=True):
         ''' Visualize cell layout with current parameters.
