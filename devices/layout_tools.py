@@ -784,7 +784,7 @@ def get_corners(device : Device) :
 
     return ll,lr,ul,ur
 
-def check_cell(device : Device):
+def check(device : Device):
     ''' Shows the device layout.
 
     Blocks script until window is closed.

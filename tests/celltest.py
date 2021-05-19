@@ -11,8 +11,7 @@ import pandas as pd
 #     addVia(array(Scaled(FBERes),4)),\
 #     addLargeGnd(GSGProbe))(name="DEF")
 #
-d=addProbe(\
-    addVia(array(Scaled(FBERes),3),['top']),\
+d=addProbe(array(calibration(Scaled(FBERes),'short'),3),\
     addLargeGnd(GSGProbe))(name="DEF")
 
 base_params=d.export_params()
@@ -37,13 +36,6 @@ base_params["AnchorEtchMarginX"]=0.2
 base_params["AnchorEtchMarginY"]=0.2
 
 base_params["BusExtLength"]=0.5*7
-
-base_params["ViaSize"]=20
-base_params["ViaDistance"]=20
-base_params["ViaAreaX"]=100
-base_params["ViaAreaY"]=100
-base_params["ViaShape"]='square'
-base_params["Overvia"]=3
 
 d.import_params(base_params)
 

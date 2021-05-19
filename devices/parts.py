@@ -190,9 +190,9 @@ def addVia(cls,side='top',bottom_conn=False):
 
             self.padlayers=[LayoutDefault.layerTop,LayoutDefault.layerBottom]
 
-            self.over_via=2
+            self.over_via=2.0
 
-            self.via_distance=100
+            self.via_distance=100.0
 
             self.via_area=Point(100,100)
 
@@ -877,8 +877,6 @@ def calibration(cls,type='open'):
 
             ports=ref.ports
 
-            cell.flatten()
-
             if type=='open':
 
                 cell.remove_polygons(lambda pts,layer,datatype: not layer== LayoutDefault.layerEtch)
@@ -901,6 +899,7 @@ def calibration(cls,type='open'):
 
                 s_ref.rotate(center=top_port.center,\
                 angle=180)
+
                 cell.absorb(s_ref)
 
             [cell.add_port(port=p,name=n) for n,p in ports.items()]
@@ -915,7 +914,7 @@ def calibration(cls,type='open'):
             if type=='open':
 
                 from numpy import Inf
-                return Inf
+                return 1e9
 
             elif type=='short':
 
@@ -931,7 +930,7 @@ def calibration(cls,type='open'):
 
                 return l/w
 
-    calibration.__name__=f"{type} fixture for {cls.__name__}"
+    calibration.__name__=f" fixture for {cls.__name__}"
 
     return calibration
 
