@@ -1,14 +1,15 @@
 from PyResLayout import *
 
-d=IDT()
-params=d.export_params()
-
-params["ActiveAreaMargin"]=2.0
-params["N"]=4
-
-d.import_params(params)
-print(d)
-exit()
+# d=IDT()
+# params=d.export_params()
+#
+# params["ActiveAreaMargin"]=2.0
+# params["N"]=4
+#
+# d.import_params(params)
+# print(d)
+# d.view()
+# exit()
 
 # q=Bus()
 # print(q)
@@ -55,20 +56,20 @@ exit()
 #     layer=ld.layerTop,threshold=0.3,pixelsize=1,size=4096)
 # d=phidl.geometry.import_gds(str(d.absolute()))
 # check_cell(d)
-# d=FBERes()
-# t=d.export_params()
-# t["IDTLength"]=200
-# t["IDTNFingers"]=10
-# t["AnchorEtchMarginY"]=5
-# t["AnchorEtchMarginX"]=5
-# t["AnchorSizeX"]=40
-# t["AnchorSizeY"]=40
-# t["EtchX"]=160
-# t["PlatePosition"]='out, long'
-# d.import_params(t)
-# print(d)
-# d.view()
-# exit()
+d=LFERes()
+t=d.export_params()
+t["IDTLength"]=200
+t["IDTNFingers"]=10
+t["AnchorEtchMarginY"]=5
+t["AnchorEtchMarginX"]=5
+t["AnchorSizeX"]=40
+t["AnchorSizeY"]=40
+t["EtchX"]=160
+t["PlatePosition"]='out, long'
+d.import_params(t)
+print(d)
+d.view()
+exit()
 # exit()
 # d=TFERes()
 # print(d)

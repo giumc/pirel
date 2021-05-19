@@ -241,6 +241,8 @@ class IDT(LayoutPart) :
 
     active_area_margin=LayoutParamInterface()
 
+    layer=LayoutParamInterface()
+
     def __init__(self,*args,**kwargs):
 
         super().__init__(*args,**kwargs)
@@ -388,6 +390,8 @@ class Bus(LayoutPart) :
 
     distance=LayoutParamInterface()
 
+    layer=LayoutParamInterface()
+
     def __init__(self,*args,**kwargs):
 
         super().__init__(*args,**kwargs)
@@ -458,6 +462,8 @@ class EtchPit(LayoutPart) :
     active_area=LayoutParamInterface()
 
     x=LayoutParamInterface()
+
+    layer=LayoutParamInterface()
 
     def __init__(self,*args,**kwargs):
 
@@ -545,6 +551,8 @@ class Anchor(LayoutPart):
     etch_choice=LayoutParamInterface(True,False)
     etch_x=LayoutParamInterface()
     x_offset=LayoutParamInterface()
+    layer=LayoutParamInterface()
+    etch_layer=LayoutParamInterface()
 
     def __init__(self,*args,**kwargs):
 
@@ -670,6 +678,8 @@ class Via(LayoutPart):
 
     shape=LayoutParamInterface('square','circle')
 
+    layer=LayoutParamInterface()
+
     def __init__(self,*args,**kwargs):
 
         super().__init__(*args,**kwargs)
@@ -749,35 +759,26 @@ class Routing(LayoutPart):
 
     '''
 
+    clearance= LayoutParamInterface()
+
+    side=LayoutParamInterface('left','right','auto')
+
     trace_width=LayoutParamInterface()
+
     ports=LayoutParamInterface()
 
+    layer=LayoutParamInterface()
+
     def __init__(self,side='auto',trace_width=LayoutDefault.Routingtrace_width,\
-        clearance=LayoutDefault.Routingclearance,ports=LayoutDefault.Routingports[0],\
+        clearance=LayoutDefault.Routingclearance,ports=LayoutDefault.Routingports,\
         layer=LayoutDefault.Routinglayer,*args,**kwargs):
 
         super().__init__(*args,**kwargs)
-        self.layer=LayoutDefault.Routinglayer
-        self.trace_width=LayoutDefault.Routingtrace_width
-        self.clearance=LayoutDefault.Routingclearance
-        self.ports=LayoutDefault.Routingports
+        self.layer=layer
+        self.trace_width=trace_width
+        self.clearance=clearance
+        self.ports=ports
         self.side=side
-
-    @property
-    def side(self):
-        return self._side
-
-    @side.setter
-    def side(self,new_side):
-        valid_names={'auto','left','right'}
-        if new_side.lower() in valid_names:
-
-            self._side=new_side.lower()
-
-        else:
-
-            raise ValueError("Routing side can be {}".format(\
-            "or ".join(valid_names)))
 
     def draw_frame(self):
 
@@ -803,8 +804,6 @@ class Routing(LayoutPart):
     def export_params(self):
 
         df=super().export_params()
-
-        df.pop("Ports")
 
         return df
 
@@ -1123,6 +1122,8 @@ class GSProbe(LayoutPart):
     pitch=LayoutParamInterface()
     size=LayoutParamInterface()
 
+    layer=LayoutParamInterface()
+
     def __init__(self,*args,**kwargs):
 
         super().__init__(*args,**kwargs)
@@ -1189,6 +1190,7 @@ class GSGProbe(LayoutPart):
 
     pitch=LayoutParamInterface()
     size=LayoutParamInterface()
+    layer=LayoutParamInterface()
 
     def __init__(self,*args,**kwargs):
 
@@ -1272,6 +1274,8 @@ class Pad(LayoutPart):
 
     distance=LayoutParamInterface()
 
+    layer=LayoutParamInterface()
+    
     def __init__(self,*args,**kwargs):
 
         super().__init__(*args,**kwargs)

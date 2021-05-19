@@ -990,6 +990,8 @@ class LFERes(LayoutPart):
 
         idt_bottom_port=idt_ref.ports['bottom']
 
+        import pdb; pdb.set_trace()
+
         bus_cell = self.bus.draw()
 
         bus_ref= cell<<bus_cell
@@ -1189,7 +1191,6 @@ class FBERes(LFERes):
             cell.absorb(plate_ref)
 
             del plate
-
 
         elif self.plate_position=='in, short':
 

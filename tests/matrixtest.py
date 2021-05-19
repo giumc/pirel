@@ -1,7 +1,7 @@
 from PyResLayout import *
 import numpy as np
 
-dut=array(Scaled(LFERes),3)
+dut=array(calibration(Scaled(LFERes),'open'),3)
 probe=addLargeGnd(GSGProbe)
 device=addProbe(dut,probe)(name="HI")
 
@@ -33,7 +33,8 @@ param["BusExtLength"]=5
 
 param["ProbePitch"]=200
 
-param["ProbeSize"]=100
+param["ProbeSizeX"]=100
+param["ProbeSizeY"]=100
 
 param["GndRoutingWidth"]=150
 
@@ -54,6 +55,8 @@ array.view()
 mat=PMatrix(device,\
 param1.combine(param2),\
 SweepParam({"AnchorSizeX":[0.1, 0.3,0.6]}),name="Hi")
+
+mat.device.fixture_type='short'
 
 mat.x_spacing=200
 

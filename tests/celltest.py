@@ -7,15 +7,11 @@ from phidl import quickplot as qp
 
 import pandas as pd
 
-# d=addProbe(\
-#     addVia(array(Scaled(FBERes),4)),\
-#     addLargeGnd(GSGProbe))(name="DEF")
-#
 d=addProbe(array(calibration(Scaled(FBERes),'short'),3),\
     addLargeGnd(GSGProbe))(name="DEF")
 
 base_params=d.export_params()
-#
+
 base_params["ProbeGroundPadSize"]=400
 base_params["ProbeSizeX"]=100
 base_params["ProbePitch"]=200

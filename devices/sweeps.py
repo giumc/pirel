@@ -422,11 +422,10 @@ class _SweepParamValidator():
 
                 raise ValueError("param needs to be a SweepParam")
 
-            import pdb; pdb.set_trace()
-
             self._set_valid_names([*obj.export_params().keys()])
 
             if not all([names in self._valid_names for names in layout_param.names]):
+
 
                 raise ValueError("At least one param key in {} is invalid".format(','.join([*layout_param.names])))
 
@@ -493,6 +492,14 @@ class PArray(LayoutPart):
 
     def __init__(self,device,x_param,*args,**kwargs):
 
+        if 'name' in kwargs.keys():
+
+            self.name=kwargs['name']
+
+        else:
+
+            self.name='Default'
+
         self.device=device
 
         self.x_param=x_param
@@ -504,14 +511,6 @@ class PArray(LayoutPart):
         self.labels_bottom=LayoutDefault.Arraylabels_bottom
 
         self.text_params=copy(TextParam())
-
-        if 'name' in kwargs.keys():
-
-            self.name=kwargs['name']
-
-        else:
-
-            self.name='Default'
 
     @property
     def device(self):
@@ -531,7 +530,7 @@ class PArray(LayoutPart):
 
             self._device=value
 
-            self._device.name=self.name
+            self.device.name=self.name
 
     def export_params(self):
 

@@ -316,7 +316,7 @@ def chip_frame(name="Default",size=(20e3,20e3),layer=LayoutDefault.layerTop,logo
 
     street_length=size[0]/5
 
-    street_width=300
+    street_width=150
 
     die_cell=pg.basic_die(size=size,\
         die_name="",layer=layer,draw_bbox=False,

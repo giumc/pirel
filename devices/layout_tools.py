@@ -1,4 +1,3 @@
-
 from abc import ABC, abstractmethod
 
 from copy import copy,deepcopy
@@ -414,13 +413,13 @@ class LayoutParamInterface:
 
             setattr(owner,self.private_name,new_param)
 
-            if not hasattr(owner,'_params_dict'):
+            if not hasattr(owner.__class__,'_params_dict'):
 
-                setattr(owner,'_params_dict',{new_param.label:self.private_name})
+                setattr(owner.__class__,'_params_dict',{new_param.label:self.private_name})
 
             else:
 
-                old_list=getattr(owner,'_params_dict')
+                old_list=getattr(owner.__class__,'_params_dict')
 
                 old_list.update({new_param.label:self.private_name})
 
@@ -542,12 +541,11 @@ class LayoutPart(ABC) :
 
             raise ValueError(msgerr)
 
-
         if not all([len(x)==2 for x in bbox]):
 
             raise ValueError(msgerr)
 
-        return bbox
+        return (Point(bbox[0]).coord,Point(bbox[1]).coord)
 
     @abstractmethod
     def draw(self):
@@ -624,6 +622,12 @@ class LayoutPart(ABC) :
         if hasattr(self,'resistance_squares'):
 
             df["Resistance"]=self.resistance_squares
+
+        modkeys=[*df.keys()]
+
+        pop_all_match(modkeys,".*Layer*")
+
+        pop_all_dict(df,[item for item in [*df.keys()] if item not in modkeys])
 
         return df
 
@@ -840,6 +844,14 @@ def pop_all_dict(old_dict : dict ,elems : list):
 
         old_dict.pop(el)
 
+def pop_all_match(l : list , reg : str) -> None:
+
+    from re import compile
+
+    r=compile(reg)
+
+    [l.remove(x) for x in filter(r.match,l)]
+
 def parallel_res(*args) -> float:
 
     sum_y=0
@@ -854,11 +866,9 @@ def get_class_param(cls : LayoutPart.__class__ ) -> list:
 
     out_list=[]
 
-    for p in cls.__dict__.values():
+    for p in cls._params_dict.values():
 
-        if isinstance(p,LayoutParamInterface):
-
-            out_list.append(p.public_name)
+            out_list.append(p.lstrip('_'))
 
     for p,c in cls.get_components().items():
 
@@ -873,9 +883,12 @@ def cached(cls):
         from functools import wraps
 
         @wraps(fun)
+
         def wrapper(self):
 
             params=get_class_param(cls)
+
+            pop_all_match(params,'.*name*')
 
             dict_name="_"+fun.__name__+"_lookup"
 
@@ -885,7 +898,15 @@ def cached(cls):
 
                 value=getattr(self,name)
 
-                paramlist.update({name:value})
+                try:
+
+                    port_list=tuple([(p.name,Point(p.midpoint).coord,p.width,p.orientation) for p in value])
+
+                    paramlist.update({name:port_list})
+
+                except Exception:
+
+                    paramlist.update({name:value})
 
             paramlist=tuple(paramlist.items())
 
@@ -897,12 +918,10 @@ def cached(cls):
 
             if paramlist in dict_lookup.keys():
 
-                # print(f"Retrieving cell for {cls.__name__}...\n")
                 return dict_lookup[paramlist]
 
             else:
 
-                # print(f"Calculating cell for {cls.__name__}...\n")
                 xout=fun(self)
 
                 dict_lookup[paramlist]=xout
