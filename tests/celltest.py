@@ -7,7 +7,7 @@ from phidl import quickplot as qp
 
 import pandas as pd
 
-d=addProbe(array(addVia(FBERes,'top'),3),addLargeGnd(GSGProbe))(name="DEF")
+d=addProbe(array(addVia(FBERes,'top'),4),addLargeGnd(GSGProbe))(name="DEF")
 
 base_params=d.export_params()
 
@@ -24,7 +24,10 @@ base_params["AnchorSizeX"]=20
 base_params["AnchorXOffset"]=0
 base_params["AnchorMetalizedX"]=10
 base_params["AnchorMetalizedY"]=24
-
+base_params["ViaAreaX"]=30
+base_params["ViaAreaY"]=30
+base_params["ViaSize"]=10
+base_params["Overvia"]=2
 d.import_params(base_params)
 
 print(d)

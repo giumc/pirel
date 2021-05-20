@@ -194,7 +194,8 @@ def addVia(cls,side='top',bottom_conn=False):
 
             cell=Device()
             cell.name=self.name
-            resdef=cell.add_ref(cls.draw(self))
+
+            resdef=cell.add(cls.draw(self))
 
             active_width=resdef.xsize
             nvias_x,nvias_y=self.get_n_vias()
@@ -227,12 +228,6 @@ def addVia(cls,side='top',bottom_conn=False):
                         if sides=='bottom':
 
                             self._attach_instance(cell, pad, pad.ports['N'], viacell,p)
-
-            cell.flatten()
-
-            for name,port in resdef.ports.items():
-
-                cell.add_port(port,name)
 
             return cell
 
@@ -514,18 +509,17 @@ def addProbe(cls,probe):
 
                     raise ValueError(f"no bottom port in {cls.__name__} cell")
 
+                bottom_ports=[]
+
                 for port_name in device_ports.keys():
 
                     if re.search('bottom',port_name):
 
-                        dut_port_bottom=device_ports[port_name]
+                        bottom_ports.append(device_ports[port_name])
 
-                        routing=self._route(bbox,\
-                            probe_port_center,\
-                            dut_port_bottom,\
-                            signal_routing_width)
+                sig_routing_cell=self._route_signal(bbox,probe_port_center,bottom_ports)
 
-                        routing_tot.add(pg.boolean(routing_tot,routing.draw(),'or',layer=self.probe.layer))
+                routing_tot.add(pg.boolean(routing_tot,sig_routing_cell,'or',layer=self.probe.layer))
 
             elif isinstance(self.probe,GSProbe):
 
@@ -589,6 +583,93 @@ def addProbe(cls,probe):
             df["ProbeResistance"]=self.probe_resistance_squares
 
             return df
+
+        def _route_signal(self,bbox : tuple, probe_port : Port, dut_ports : list) ->Device :
+
+            numports=len(dut_ports)
+
+            if numports == 1 :
+
+                routing=self._route(bbox,probe_port,dut_ports[0],dut_ports[0].width)
+
+                return routing.draw()
+
+            elif numports == 2 :
+
+                routing_cell=Device()
+
+                for dut_port in dut_ports :
+
+                    routing=self._route(bbox,probe_port,dut_port,dut_port.width)
+
+                    routing_cell.add(routing.draw())
+
+                    del routing
+
+                return join(routing_cell)
+
+            else :
+
+                if numports %2 ==0:
+
+                    midport=int(numports/2)
+
+                    routing_cell=self._route_signal(bbox,probe_port,dut_ports[midport-1:midport+1])
+
+                    patch_width=dut_ports[midport-1].midpoint[0]+dut_ports[midport-1].width/2-\
+                        (dut_ports[0].midpoint[0]-dut_ports[0].width/2)
+
+                    patch_height=dut_ports[0].width
+
+                    patch=Point(patch_width,patch_height)
+
+                    origin=Point(dut_ports[0].midpoint[0]-dut_ports[0].width/2,\
+                        dut_ports[0].midpoint[1]-patch_height)
+
+                    routing_cell.add(\
+                        pg.bbox(\
+                            (origin.coord,(origin+patch).coord),\
+                            layer=self.probe.layer))
+
+                    patch_width=dut_ports[-1].midpoint[0]+dut_ports[-1].width/2-\
+                        (dut_ports[midport].midpoint[0]-dut_ports[midport].width/2)
+
+                    patch_height=dut_ports[midport].width
+
+                    patch=Point(patch_width,patch_height)
+
+                    origin=Point(dut_ports[midport].midpoint[0]-dut_ports[midport].width/2,\
+                        dut_ports[midport].midpoint[1]-patch_height)
+
+                    routing_cell.add(\
+                        pg.bbox(\
+                            (origin.coord,(origin+patch).coord),\
+                            layer=self.probe.layer))
+
+                    return routing_cell
+
+                elif numports%2==1:
+
+                    midport=int((numports-1)/2)
+
+                    routing_cell=self._route_signal(bbox,probe_port,[dut_ports[midport]])
+
+                    patch_width=dut_ports[-1].midpoint[0]+dut_ports[-1].width/2-\
+                        (dut_ports[0].midpoint[0]-dut_ports[0].width/2)
+
+                    patch_height=dut_ports[0].width
+
+                    patch=Point(patch_width,patch_height)
+
+                    origin=Point(dut_ports[0].midpoint[0]-dut_ports[0].width/2,\
+                        dut_ports[0].midpoint[1]-patch_height)
+
+                    routing_cell.add(\
+                        pg.bbox(\
+                            (origin.coord,(origin+patch).coord),\
+                            layer=self.probe.layer))
+
+                    return routing_cell
 
         @property
         def resistance_squares(self):
@@ -949,7 +1030,7 @@ class LFERes(LayoutPart):
 
         cell=Device(self.name)
 
-        idt_ref=cell<<idt_cell
+        idt_ref=cell.add_ref(idt_cell,alias="IDT")
 
         idt_top_port=idt_ref.ports['top']
 
@@ -957,33 +1038,29 @@ class LFERes(LayoutPart):
 
         bus_cell = self.bus.draw()
 
-        bus_ref= cell<<bus_cell
+        bus_ref= cell.add_ref(bus_cell,alias="BUS")
 
         bus_ref.connect(port=bus_cell.ports['conn'],\
         destination=idt_bottom_port)
 
         etch_cell=self.etchpit.draw()
 
-        etch_ref=cell<<etch_cell
-
-        cell.absorb(bus_ref)
+        etch_ref=cell.add_ref(etch_cell,alias='EtchPit')
 
         etch_ref.connect(etch_ref.ports['bottom'],\
         destination=idt_ref.ports['bottom'],\
         overlap=-self.bus.size.y-self.anchor.etch_margin.y)
 
-        cell.absorb(etch_ref)
-
         anchor_cell=self.anchor.draw()
 
-        anchor_bottom=cell<<anchor_cell
+        anchor_bottom=cell.add_ref(anchor_cell,alias='AnchorBottom')
 
         anchor_bottom.connect(anchor_bottom.ports['conn'],
         destination=idt_ref.ports['bottom'],overlap=-self.bus.size.y)
 
         if not self._stretch_top_margin:
 
-            anchor_top=(cell<<anchor_cell)
+            anchor_top=cell.add_ref(anchor_cell,alias='AnchorTop')
 
         else:
 
@@ -991,32 +1068,28 @@ class LFERes(LayoutPart):
 
             anchor_top_dev.metalized=Point(anchor_top_dev.size.x-2,anchor_top_dev.metalized.y)
 
-            anchor_top=cell<<anchor_top_dev.draw()
+            anchor_top=cell.add_ref(anchor_top_dev.draw(),alias='AnchorTop')
 
             del anchor_top_dev
 
         anchor_top.connect(anchor_top.ports['conn'],\
             idt_ref.ports['top'],overlap=-self.bus.size.y)
 
-        cell.absorb(idt_ref)
-
         outport_top=anchor_top.ports['conn']
+
         outport_bottom=anchor_bottom.ports['conn']
+
         outport_top.name='top'
         outport_top.orientation=90
         outport_bottom.name='bottom'
         outport_bottom.orientation=-90
+
         outport_top.midpoint=(\
             outport_top.x,\
             outport_top.y+self.anchor.metalized.y)
         outport_bottom.midpoint=(\
             outport_bottom.x,\
             outport_bottom.y-self.anchor.metalized.y)
-
-        cell.absorb(anchor_top)
-        cell.absorb(anchor_bottom)
-
-        cell.flatten()
 
         cell.add_port(outport_top)
         cell.add_port(outport_bottom)
@@ -1132,14 +1205,14 @@ class FBERes(LFERes):
 
         cell.name=self.name
 
-        lfe_res=cell.add_ref(LFERes.draw(self))
+        lfe_res=cell.add(LFERes.draw(self))
 
         if self.plate_position=='out, short':
 
             plate=pg.rectangle(size=(self.etchpit.active_area.x+8*self.idt.active_area_margin,self.idt.length-self.idt.y_offset/2),\
             layer=self.platelayer)
 
-            plate_ref=cell<<plate
+            plate_ref=cell.add_ref(plate,alias='Plate')
 
             transl_rel=Point(self.etchpit.x-4*self.idt.active_area_margin,self.anchor.size.y+2*self.anchor.etch_margin.y+self.bus.size.y\
                 +self.idt.y_offset*3/4)
@@ -1163,7 +1236,7 @@ class FBERes(LFERes):
                         self.idt.length-self.idt.y_offset/2),\
                 layer=self.platelayer)
 
-            plate_ref=cell<<plate
+            plate_ref=cell.add_ref(plate,alias='Plate')
 
             transl_rel=Point(self.etchpit.x+\
                     self.idt.active_area_margin,\
@@ -1192,7 +1265,7 @@ class FBERes(LFERes):
                         self.idt.y_offset),\
                 layer=self.platelayer)
 
-            plate_ref=cell<<plate
+            plate_ref=cell.add_ref(plate,alias='Plate')
 
             transl_rel=Point(self.etchpit.x-\
                 4*self.idt.active_area_margin,\
@@ -1219,7 +1292,7 @@ class FBERes(LFERes):
                             self.idt.y_offset),
                 layer=self.platelayer)
 
-            plate_ref=cell<<plate
+            plate_ref=cell.add_ref(plate,alias='Plate')
 
             transl_rel=Point(self.etchpit.x+\
                     self.idt.active_area_margin,\
@@ -1234,8 +1307,6 @@ class FBERes(LFERes):
             cell.absorb(plate_ref)
 
             del plate
-
-        cell.absorb(lfe_res)
 
         for name,port in lfe_res.ports.items():
 
