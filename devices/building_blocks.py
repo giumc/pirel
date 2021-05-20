@@ -20,8 +20,6 @@ from copy import copy,deepcopy
 
 import matplotlib.pyplot as plt
 
-import warnings
-
 from layout_tools import *
 
 class TextParam:
@@ -307,6 +305,7 @@ class IDT(LayoutPart) :
         self.length+self.y_offset)
 
         cell=join(cell)
+        cell.name=self.name
         cell.add_port(Port(name='bottom',\
         midpoint=(o+\
         Point(midx,0)).coord,\
@@ -830,7 +829,7 @@ class Routing(LayoutPart):
 
         y_overtravel=ll.y-source.midpoint[1]-self.trace_width
 
-        if destination.y-tol<=ll.y : # destination is below clearance
+        if destination.y<=ll.y+tol : # destination is below clearance
 
             if not(destination.orientation==source.orientation+180 or \
                 destination.orientation==source.orientation-180):

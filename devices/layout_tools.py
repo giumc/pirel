@@ -14,6 +14,8 @@ from phidl import set_quickplot_options
 
 from phidl import quickplot as qp
 
+import warnings
+
 class Point:
     ''' Handles 2-d coordinates.
 
@@ -592,7 +594,7 @@ class LayoutPart(ABC) :
         '''
 
         for param_label,param_key in self._params_dict.items():
-
+            
             param_key=param_key.lstrip("_")
 
             if param_label in df.keys():
@@ -931,3 +933,28 @@ def cached(cls):
         return wrapper
 
     return cache_dec
+
+def attach_taper(cell : Device , port : Port , length : float , \
+    width2 : float, layer=LayoutDefault.layerTop) :
+
+    t=pg.taper(length=length,width1=port.width,width2=width2,layer=layer)
+
+    t_ref=cell.add_ref(t)
+
+    t_ref.connect(1,destination=port)
+
+    new_port=t_ref.ports[2]
+
+    new_port.name=port.name
+
+    cell.absorb(t_ref)
+
+    cell.remove(port)
+    import pdb; pdb.set_trace()
+    cell.add_port(new_port)
+
+def custom_formatwarning(msg, *args, **kwargs):
+    # ignore everything except the message
+    return str(msg) + '\n'
+
+warnings.formatwarning = custom_formatwarning

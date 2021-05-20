@@ -193,12 +193,14 @@ def addVia(cls,side='top',bottom_conn=False):
         def draw(self):
 
             cell=Device()
+
             cell.name=self.name
 
-            resdef=cell.add(cls.draw(self))
+            supercell=cls.draw(self)
 
-            active_width=resdef.xsize
-            nvias_x,nvias_y=self.get_n_vias()
+            cell.add(supercell)
+
+            nvias_x,nvias_y=self.n_vias
 
             unit_cell=self._draw_padded_via()
 
@@ -213,11 +215,11 @@ def addVia(cls,side='top',bottom_conn=False):
 
             for sides in side:
 
-                for p_name in resdef.ports.keys():
+                for p_name in supercell.ports.keys():
 
                     if re.search(sides,p_name):
 
-                        p=resdef.ports[p_name]
+                        p=supercell.ports[p_name]
 
                         pad=pg.compass(size=(p.width,self.via_distance),layer=self.padlayers[0])
 
@@ -228,6 +230,10 @@ def addVia(cls,side='top',bottom_conn=False):
                         if sides=='bottom':
 
                             self._attach_instance(cell, pad, pad.ports['N'], viacell,p)
+
+            for p_name,p_value in supercell.ports.items():
+
+                cell.add_port(p_value)
 
             return cell
 
@@ -248,7 +254,7 @@ def addVia(cls,side='top',bottom_conn=False):
 
             ur=Point(bbox[1])
 
-            nvias_x,nvias_y=self.get_n_vias()
+            nvias_x,nvias_y=self.n_vias
 
             if any([_=='top' for _ in side]):
 
@@ -321,7 +327,8 @@ def addVia(cls,side='top',bottom_conn=False):
 
             return supercomp
 
-        def get_n_vias(self):
+        @property
+        def n_vias(self):
 
             import numpy as np
 
@@ -838,8 +845,6 @@ def array(cls,n):
             cell=draw_array(unit_cell,\
                 self.n_blocks,1)
 
-            cell.flatten()
-
             cell.name=self.name
 
             return cell
@@ -917,24 +922,23 @@ def calibration(cls,type='open'):
 
             cell=Device(name=self.name)
 
-            ref=cell.add_ref(cls.draw(self))
+            supercell=cls.draw(self)
 
-            cell.flatten()
+            cell.add(supercell)
 
             type=self.fixture_type
 
-            ports=ref.ports
+            ports=supercell.ports
 
-            if type=='open':
+            for ref_cell in cell.references:
 
-                cell.remove_polygons(lambda pts,layer,datatype: not layer== LayoutDefault.layerEtch)
+                if re.search('IDT',ref_cell.parent.name):
 
+                    cell.remove(ref_cell)
             if type=='short':
 
-                cell.remove_polygons(lambda pts,layer,datatype: not layer== LayoutDefault.layerEtch)
-
-                top_port=ref.ports['top']
-                bottom_port=ref.ports['bottom']
+                top_port=ports['top']
+                bottom_port=ports['bottom']
 
                 short=pg.taper(length=top_port.y-bottom_port.y,\
                 width1=top_port.width,\
@@ -1205,7 +1209,9 @@ class FBERes(LFERes):
 
         cell.name=self.name
 
-        lfe_res=cell.add(LFERes.draw(self))
+        supercell=LFERes.draw(self)
+
+        cell.add(supercell)
 
         if self.plate_position=='out, short':
 
@@ -1308,7 +1314,7 @@ class FBERes(LFERes):
 
             del plate
 
-        for name,port in lfe_res.ports.items():
+        for name,port in supercell.ports.items():
 
             cell.add_port(port,name)
 
