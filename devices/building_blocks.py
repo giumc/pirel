@@ -433,8 +433,6 @@ class Bus(LayoutPart) :
         width=self.size.x,\
         orientation=90)
 
-
-
         del pad
 
         return cell
@@ -566,8 +564,6 @@ class Anchor(LayoutPart):
         self.layer=LayoutDefault.Anchorlayer
         self.etch_layer=LayoutDefault.Anchoretch_layer
 
-        self._check_anchor()
-
     def draw(self):
         ''' Generates layout cell based on current parameters.
 
@@ -617,7 +613,7 @@ class Anchor(LayoutPart):
 
         cell.add_port(name='conn',\
         midpoint=(anchor_transl+Point(self.size.x/2-self.etch_margin.x,self.size.y+2*self.etch_margin.y)).coord,\
-        width=self.size.x-2*self.etch_margin.x,\
+        width=self.metalized.x,\
         orientation=90)
 
         if self.etch_choice==True:
@@ -650,15 +646,16 @@ class Anchor(LayoutPart):
 
         if self.metalized.x>=self.size.x:
 
-            self.metalized=Point(self.size.x-2,self.metalized.y)
-            warnings.warn(f"""Metalized X portion of anchor {self.metalized.x} is larger than
-                Anchor X Size {self.size.x}, capped to {self.size.x-2}""")
+
+            print(f"""Metalized X portion of anchor {self.metalized.x} is larger than
+            Anchor X Size {self.size.x}, capped to {self.size.x*0.9}\n""")
+            self.metalized=Point(self.size.x*0.9,self.metalized.y)
 
         if self.metalized.y<=self.size.y:
 
-            self.metalized=Point(self.metalized.x,self.size.y+2)
-            raise ValueError(f"""Metalized Y portion of anchor {self.metalized.y} is smaller than
-                Anchor Y Size {self.size.y}, capped to {self.size.y+2}""")
+            print(f"""Metalized Y portion of anchor {self.metalized.y} is smaller than
+                Anchor Y Size {self.size.y}, capped to {self.size.y*1.1}""")
+            self.metalized=Point(self.metalized.x,self.size.y*1.1)
 
 class Via(LayoutPart):
     ''' Generates via pattern.
@@ -802,7 +799,7 @@ class Routing(LayoutPart):
 
         try:
 
-            path_cell=x.extrude(path,simplify=1)
+            path_cell=x.extrude(path,simplify=0.1)
 
         except Exception as e:
 
@@ -812,96 +809,11 @@ class Routing(LayoutPart):
 
         return path_cell
 
-    def export_params(self):
-
-        df=super().export_params()
-
-        return df
-
-    def _add_taper(self,cell,port,len=10):
-
-        if not(port.width==self.trace_width):
-
-            taper=pg.taper(length=len,\
-            width1=port.width,width2=self.trace_width,\
-            layer=self.layer)
-
-            taper_ref=cell<<taper
-
-            taper_port=taper.ports[1]
-
-            taper_port.orientation=taper_port.orientation+180
-            taper_ref.connect(taper_port,
-            port)
-
-            taper_ref.rotate(angle=180,center=port.center)
-
-            port=taper_ref.ports[2]
-
-            cell.absorb(taper_ref)
-
-            del taper
-
-        return port
-
-    def _add_ramp_lx(self,cell,port,len=10):
-
-        if not(port.width==self.trace_width):
-
-            taper=pg.ramp(length=len,\
-            width1=port.width,width2=self.trace_width,\
-            layer=self.layer)
-
-            taper_ref=cell<<taper
-
-            taper_port=taper.ports[1]
-
-            taper_port.orientation=taper_port.orientation+180
-
-            taper_ref.connect(taper_port,
-            port)
-
-            taper_ref.rotate(angle=180,center=port.center)
-
-            port=taper_ref.ports[2]
-
-            cell.absorb(taper_ref)
-
-            del taper
-
-        return port
-
-    def _add_ramp_rx(self,cell,port,len=10):
-
-            if not(port.width==self.trace_width):
-
-                taper=pg.ramp(length=len,\
-                width1=port.width,width2=self.trace_width,\
-                layer=self.layer)
-
-                taper_ref=cell<<taper
-
-                taper_ref.mirror(p1=(0,0),p2=(0,1))
-
-                taper_port=taper.ports[1]
-
-                taper_port.orientation=taper_port.orientation+180
-
-                taper_ref.connect(taper_port,
-                port)
-
-                port=taper_ref.ports[2]
-
-                cell.absorb(taper_ref)
-
-                del taper
-
-            return port
-
     @property
     def path(self):
 
         radius=self.trace_width/3
+        tol=1e-3
 
         bbox=pg.bbox(self.clearance)
 
@@ -918,7 +830,7 @@ class Routing(LayoutPart):
 
         y_overtravel=ll.y-source.midpoint[1]-self.trace_width
 
-        if destination.y<=ll.y : # destination is below clearance
+        if destination.y-tol<=ll.y : # destination is below clearance
 
             if not(destination.orientation==source.orientation+180 or \
                 destination.orientation==source.orientation-180):
@@ -928,21 +840,21 @@ class Routing(LayoutPart):
             distance=Point(destination.midpoint)-\
                 Point(source.midpoint)
 
-            p0=Point(source.midpoint)
+            p1=Point(source.midpoint)
 
-            p1=p0+Point(0,distance.y/3)
+            p2=p1+Point(distance.x,distance.y*(3/4))
 
-            p2=p1+Point(distance.x,distance.y/3)
+            p3=p2+Point(0,distance.y/4)
 
-            p3=p2+Point(0,distance.y/3)
-
-            list_points=np.array([p0.coord,p1.coord,p2.coord,p3.coord])
+            list_points=np.array([p1.coord,p2.coord,p3.coord])
 
             path=pp.smooth(points=list_points,radius=radius/4)
 
         else: #destination is above clearance
 
             if not destination.orientation==90 :
+
+                import pdb; pdb.set_trace()
 
                 raise ValueError("Routing case not covered yet")
 

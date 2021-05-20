@@ -6,6 +6,8 @@ import pandas as pd
 
 import warnings
 
+import re
+
 def Scaled(cls):
 
     ''' Class Decorator that accept normalized parameters for resonator designs.
@@ -192,11 +194,9 @@ def addVia(cls,side='top',bottom_conn=False):
 
             cell=Device()
             cell.name=self.name
-
             resdef=cell.add_ref(cls.draw(self))
 
             active_width=resdef.xsize
-
             nvias_x,nvias_y=self.get_n_vias()
 
             unit_cell=self._draw_padded_via()
@@ -210,51 +210,23 @@ def addVia(cls,side='top',bottom_conn=False):
                 width=viacell.xsize,\
                 orientation=90))
 
-            try:
-
-                top_port=resdef.ports['top']
-
-            except Exception:
-
-                top_port=None
-
-            try:
-
-                bottom_port=resdef.ports['bottom']
-
-            except Exception:
-
-                bottom_port=None
-
             for sides in side:
 
-                if sides=='top':
+                for p_name in resdef.ports.keys():
 
-                    try :
+                    if re.search(sides,p_name):
 
-                        top_port=resdef.ports['top']
+                        p=resdef.ports[p_name]
 
-                    except Exception:
+                        pad=pg.compass(size=(p.width,self.via_distance),layer=self.padlayers[0])
 
-                        raise ValueError ("Cannot add a top via in a cell with no top port")
+                        if sides=='top':
 
-                    pad=pg.compass(size=(top_port.width,self.via_distance),layer=self.padlayers[0])
+                            self._attach_instance(cell, pad, pad.ports['S'], viacell,p)
 
-                    top_port=self._attach_instance(cell, pad, pad.ports['S'], viacell, top_port)
+                        if sides=='bottom':
 
-                if sides=='bottom':
-
-                    try :
-
-                        bottom_port=resdef.ports['bottom']
-
-                    except Exception:
-
-                        raise ValueError ("Cannot add a bottom via in a cell with no bottom port")
-
-                    pad=pg.compass(size=(bottom_port.width,self.via_distance),layer=self.padlayers[0])
-
-                    bottom_port=self._attach_instance(cell, pad, pad.ports['N'], viacell, bottom_port)
+                            self._attach_instance(cell, pad, pad.ports['N'], viacell,p)
 
             cell.flatten()
 
@@ -478,45 +450,82 @@ def addProbe(cls,probe):
 
             cell.add_ref(device_cell, alias=self.name+"Device")
 
-            bbox=cell.bbox
-
             from phidl.device_layout import DeviceReference
 
             probe_ref=DeviceReference(probe_cell)
 
-            probe_ref.connect(probe_cell.ports['sig'],\
-            destination=device_cell.ports['bottom'],overlap=-probe_dut_distance.y)
+            for p_name in device_cell.ports.keys():
 
-            dut_port_bottom=device_cell.ports['bottom']
+                if re.search('bottom',p_name):
 
-            dut_port_top=device_cell.ports['top']
+                    probe_ref.move(origin=(probe_ref.center[0],probe_ref.ymax),\
+                    destination=(\
+                        device_cell.center[0],\
+                        device_cell.ports[p_name].midpoint[1]-probe_dut_distance.y))
 
-            bbox=super()._bbox_mod(bbox)
+                    break
+
+            else:
+
+                raise ValueError(f"no bottom port in {cls.__name__} cell")
+
+            routing_tot=Device(name='Routing')
+
+            bbox=super()._bbox_mod(cell.bbox)
 
             if isinstance(self.probe,GSGProbe):
 
+                #ground routing
+
                 probe_port_lx=probe_ref.ports['gnd_left']
-                probe_port_center=probe_ref.ports['sig']
                 probe_port_rx=probe_ref.ports['gnd_right']
 
-                routing_lx=self._route(bbox,probe_port_lx,dut_port_top)
+                device_ports=device_cell.ports
 
-                r_lx_cell=routing_lx.draw()
+                for port_name in device_ports.keys():
 
-                routing_rx=self._route(bbox,probe_port_rx,dut_port_top)
+                    if re.search('top',port_name):
 
-                r_rx_cell=routing_rx.draw()
+                        dut_port_top=device_ports[port_name]
 
-                routing_gnd=pg.boolean(r_lx_cell,r_rx_cell,'or',layer=self.probe.layer)
+                        routing_lx=self._route(bbox,probe_port_lx,dut_port_top,self.gnd_routing_width)
 
-                routing_c=pg.compass(size=(self.anchor.metalized.x,\
-                    probe_dut_distance.y),layer=self.probe.layer)
+                        r_lx_cell=routing_lx.draw()
 
-                center_routing=DeviceReference(routing_c)
+                        routing_rx=self._route(bbox,probe_port_rx,dut_port_top,self.gnd_routing_width)
 
-                center_routing.connect(center_routing.ports['S'],destination=dut_port_bottom)
+                        r_rx_cell=routing_rx.draw()
 
-                routing_tot=routing_gnd.add(center_routing)
+                        routing_tot.add(pg.boolean(r_lx_cell,r_rx_cell,'or',layer=self.probe.layer))
+
+                #signal routing
+
+                probe_port_center=probe_ref.ports['sig']
+
+                for p_name in device_cell.ports.keys():
+
+                    if re.search('bottom',p_name):
+
+                        signal_routing_width=device_cell.ports[p_name].width
+
+                        break
+
+                else:
+
+                    raise ValueError(f"no bottom port in {cls.__name__} cell")
+
+                for port_name in device_ports.keys():
+
+                    if re.search('bottom',port_name):
+
+                        dut_port_bottom=device_ports[port_name]
+
+                        routing=self._route(bbox,\
+                            probe_port_center,\
+                            dut_port_bottom,\
+                            signal_routing_width)
+
+                        routing_tot.add(pg.boolean(routing_tot,routing.draw(),'or',layer=self.probe.layer))
 
             elif isinstance(self.probe,GSProbe):
 
@@ -545,7 +554,7 @@ def addProbe(cls,probe):
 
             return cell
 
-        def _route(self,bbox,p1,p2):
+        def _route(self,bbox,p1,p2,width):
 
             routing=Routing()
 
@@ -553,7 +562,7 @@ def addProbe(cls,probe):
 
             routing.clearance=bbox
 
-            routing.trace_width=self.gnd_routing_width
+            routing.trace_width=width
 
             routing.ports=tuple(copy(x) for x in [p1,p2])
 
@@ -597,6 +606,8 @@ def addProbe(cls,probe):
 
         @property
         def probe_resistance_squares(self):
+
+            return 0
 
             device_cell=cls.draw(self)
 
@@ -729,15 +740,11 @@ def array(cls,n):
 
     class array(cls):
 
-        bus_ext_length=LayoutParamInterface()
-
         n_blocks=LayoutParamInterface()
 
         def __init__(self,*args,**kwargs):
 
             cls.__init__(self,*args,**kwargs)
-
-            self.bus_ext_length=LayoutDefault.arraybusextlength
 
             self.n_blocks=n
 
@@ -750,43 +757,9 @@ def array(cls,n):
             cell=draw_array(unit_cell,\
                 self.n_blocks,1)
 
-            cell.name=self.name
-
-            lx_bottom=cell.ports[port_names[1]+str(0)]
-            rx_bottom=cell.ports[port_names[1]+str(self.n_blocks-1)]
-
-            xsize_bottom=rx_bottom.midpoint[0]+rx_bottom.width/2-\
-                (lx_bottom.midpoint[0]-lx_bottom.width/2)
-
-            ydist=cell.ysize
-
-            bus_bottom=pg.compass(size=(xsize_bottom,self.bus_ext_length),\
-                layer=self.idt.layer)
-
-            bus_bottom.move(origin=bus_bottom.ports['N'].midpoint,\
-                destination=(cell.center[0],cell.ymin))
-
-            lx_top=cell.ports[port_names[0]+str(0)]
-            rx_top=cell.ports[port_names[0]+str(self.n_blocks-1)]
-
-            xsize_top=rx_top.midpoint[0]+rx_top.width/2-\
-                (lx_top.midpoint[0]-lx_top.width/2)
-
-            bus_top=pg.compass(size=(xsize_top,self.bus_ext_length),\
-                layer=self.idt.layer)
-
-            bus_top.move(origin=bus_top.ports['S'].midpoint,\
-                destination=(cell.center[0],cell.ymax))
-
-            cell<<bus_bottom
-
-            cell<<bus_top
-
             cell.flatten()
 
-            cell.add_port(port=bus_bottom.ports["S"],name="bottom")
-
-            cell.add_port(port=bus_top.ports["N"],name="top")
+            cell.name=self.name
 
             return cell
 
@@ -794,6 +767,8 @@ def array(cls,n):
         def resistance_squares(self):
 
             r=super().resistance_squares
+
+            return r
 
             cell=cls.draw(self)
 
@@ -964,8 +939,6 @@ class LFERes(LayoutPart):
 
         super().__init__(*args,**kwargs)
 
-        self._set_relations()
-
         self._stretch_top_margin=False
 
     def draw(self):
@@ -1096,11 +1069,12 @@ class LFERes(LayoutPart):
 
         if self.anchor.metalized.x>self.bus.size.x:
 
-            self.anchor.metalized=Point(\
-                self.bus.size.x,\
-                self.anchor.metalized.y)
+            warnings.warn(f"Anchor metal is too wide ({self.anchor.metalized.x}), \
+                reduced to {self.bus.size.x*0.9}")
 
-            warnings.warn("Anchor metal is too wide, reduced to match Bus width size")
+            self.anchor.metalized=Point(\
+                self.bus.size.x*0.9,\
+                self.anchor.metalized.y)
 
     @property
     def resistance_squares(self):
@@ -1169,8 +1143,6 @@ class FBERes(LFERes):
 
             transl_rel=Point(self.etchpit.x-4*self.idt.active_area_margin,self.anchor.size.y+2*self.anchor.etch_margin.y+self.bus.size.y\
                 +self.idt.y_offset*3/4)
-
-            # import pdb; pdb.set_trace()
 
             lr_cell=get_corners(cell)[0]
             lr_plate=get_corners(plate_ref)[0]

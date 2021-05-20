@@ -7,37 +7,30 @@ from phidl import quickplot as qp
 
 import pandas as pd
 
-d=addProbe(array(calibration(Scaled(FBERes),'short'),3),\
-    addLargeGnd(GSGProbe))(name="DEF")
+d=addProbe(array(addVia(FBERes,'top'),3),addLargeGnd(GSGProbe))(name="DEF")
 
 base_params=d.export_params()
-
-base_params["ProbeGroundPadSize"]=400
-base_params["ProbeSizeX"]=100
-base_params["ProbePitch"]=200
-base_params["ProbeSizeY"]=100
-base_params["GNDRoutingWidth"]=250
 
 base_params["IDTPitch"]=7
 base_params["IDTN"]=2
 base_params["IDTOffset"]=1
-base_params["IDTLength"]=10
+base_params["IDTLength"]=100
 base_params["IDTCoverage"]=0.5
 base_params["BusSizeY"]=5
-base_params["EtchX"]=0.4
-base_params["AnchorSizeY"]=4
-base_params["AnchorSizeX"]=0.2
+base_params["EtchPitX"]=10
+base_params["IDTActiveAreaMargin"]=1
+base_params["AnchorSizeY"]=20
+base_params["AnchorSizeX"]=20
 base_params["AnchorXOffset"]=0
-base_params["AnchorEtchMarginX"]=0.2
-base_params["AnchorEtchMarginY"]=0.2
-
-base_params["BusExtLength"]=0.5*7
+base_params["AnchorMetalizedX"]=10
+base_params["AnchorMetalizedY"]=24
 
 d.import_params(base_params)
 
 print(d)
 
 d.view()
+
 # d.draw().write_gds("test.gds")
 
 # check_cell(verniers())
