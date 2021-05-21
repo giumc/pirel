@@ -196,7 +196,6 @@ def alignment_marks_4layers(scale=[0.2,0.5,1]):
     g2.align(alignment='y')
 
     align7=verniers(scale,layers=[Zerolayer,VIAlayer],label='VIA',reversed=True)
-    align75=verniers(scale,layers=[Zerolayer,BElayer],label='BE')
     align8=verniers(scale,layers=[Zerolayer,TElayer],label='TE')
     align9=verniers(scale,layers=[Zerolayer,ETCHlayer],label='ETCH')
     align10=verniers(scale,layers=[Zerolayer,PETCHlayer],label='PETCH')
@@ -223,6 +222,7 @@ def alignment_marks_4layers(scale=[0.2,0.5,1]):
         cell.add(c)
     # cell.absorb(cell<<align4)
     # cell.absorb(cell<<align5)
+<<<<<<< HEAD
     # cell.absorb(cell<<align6)
     # cell.absorb(cell<<align65)
     # cell.absorb(cell<<align7)
@@ -230,12 +230,19 @@ def alignment_marks_4layers(scale=[0.2,0.5,1]):
     # cell.absorb(cell<<align8)
     # cell.absorb(cell<<align9)
     # cell.absorb(cell<<align10)
+=======
+    cell.absorb(cell<<align6)
+    cell.absorb(cell<<align7)
+    cell.absorb(cell<<align8)
+    cell.absorb(cell<<align9)
+    cell.absorb(cell<<align10)
+>>>>>>> parent of 1b0b4b2... after dan
 
     return cell
 
 def mask_names(names=("Bottom Electrode","Top Electrode","Via Layer","Etch Layer","Pad Layer"),\
     layers=(LayoutDefault.layerBottom,LayoutDefault.layerTop,LayoutDefault.layerVias,LayoutDefault.layerEtch,LayoutDefault.layerPad),\
-    size=2000):
+    size=250):
     """ Prints array of strings on different layers.
 
         Mostly useful for Layer Sorting on masks.
@@ -326,6 +333,13 @@ def add_utility_cells(cell,align_scale=[0.25,0.5,1],position=['top','left']):
 
     t2=DeviceReference(test_cell)
 
+<<<<<<< HEAD
+=======
+    maskname_cell=mask_names()
+
+    maskname_cell.move(origin=(maskname_cell.xmin,maskname_cell.ymin),\
+        destination=(test_cell.xmin,test_cell.ymax+150))
+>>>>>>> parent of 1b0b4b2... after dan
 
     utility_cell=Device(name="UtilityCell")
 
@@ -339,7 +353,7 @@ def add_utility_cells(cell,align_scale=[0.25,0.5,1],position=['top','left']):
 
     if 'top' in position:
 
-        cell<<(Device().add(align_cell).add(align_via_tot))
+        cell<<utility_cell
 
     if 'left' in position:
 
@@ -426,6 +440,8 @@ def chip_frame(name="Default",size=(20e3,20e3),layer=LayoutDefault.layerTop,logo
     #
     # restest.move(origin=(restest.xmin,restest.ymax),\
     #     destination=(cell.xmin+1.1*street_width,cell.ymax-1.1*street_width))
+
+    # cell.add(restest)
 
     return cell
 

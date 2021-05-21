@@ -662,12 +662,12 @@ class Anchor(LayoutPart):
         if self.metalized.x>=self.size.x:
 
 
-            # print(f"""Metalized X portion of anchor {self.metalized.x} is larger than Anchor X Size {self.size.x}, capped to {self.size.x*0.9}\n""")
+            print(f"""Metalized X portion of anchor {self.metalized.x} is larger than Anchor X Size {self.size.x}, capped to {self.size.x*0.9}\n""")
             self.metalized=Point(self.size.x*0.9,self.metalized.y)
 
         if self.metalized.y<=self.size.y:
 
-            # print(f"""Metalized Y portion of anchor {self.metalized.y} is smaller than Anchor Y Size {self.size.y}, capped to {self.size.y*1.1}""")
+            print(f"""Metalized Y portion of anchor {self.metalized.y} is smaller than Anchor Y Size {self.size.y}, capped to {self.size.y*1.1}""")
             self.metalized=Point(self.metalized.x,self.size.y*1.1)
 
 class Via(LayoutPart):
