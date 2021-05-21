@@ -485,7 +485,7 @@ class LayoutPart(ABC) :
 
             setattr(self,p.lower(),cls(name=self.name+p))
 
-        self.__class__.draw=cached(self.__class__)(self.__class__.draw)
+        # self.__class__.draw=cached(self.__class__)(self.__class__.draw)
 
     def view(self,blocking=True):
         ''' Visualize cell layout with current parameters.
@@ -672,7 +672,7 @@ class LayoutPart(ABC) :
 
         else:
 
-            raise AttributeError
+            raise AttributeError(f"No attribute {name} in {self.__class__.__name__} ")
 
     def __repr__(self):
 
@@ -902,7 +902,6 @@ def get_class_param(cls : LayoutPart.__class__ ) -> list:
 
     return out_list
 
-recursion=0
 def cached(cls):
 
     def cache_dec(fun):
@@ -951,15 +950,9 @@ def cached(cls):
 
             else:
 
-                recursion=recursion+1
-
                 xout=fun(self)
 
                 dict_lookup[paramlist]=xout
-
-                recursion=recursion-1
-
-                print(recursion)
 
                 return xout
 

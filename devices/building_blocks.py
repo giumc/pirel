@@ -662,12 +662,12 @@ class Anchor(LayoutPart):
         if self.metalized.x>=self.size.x:
 
 
-            print(f"""Metalized X portion of anchor {self.metalized.x} is larger than Anchor X Size {self.size.x}, capped to {self.size.x*0.9}\n""")
+            # print(f"""Metalized X portion of anchor {self.metalized.x} is larger than Anchor X Size {self.size.x}, capped to {self.size.x*0.9}\n""")
             self.metalized=Point(self.size.x*0.9,self.metalized.y)
 
         if self.metalized.y<=self.size.y:
 
-            print(f"""Metalized Y portion of anchor {self.metalized.y} is smaller than Anchor Y Size {self.size.y}, capped to {self.size.y*1.1}""")
+            # print(f"""Metalized Y portion of anchor {self.metalized.y} is smaller than Anchor Y Size {self.size.y}, capped to {self.size.y*1.1}""")
             self.metalized=Point(self.metalized.x,self.size.y*1.1)
 
 class Via(LayoutPart):
@@ -825,7 +825,8 @@ class Routing(LayoutPart):
     @property
     def path(self):
 
-        radius=self.trace_width/3
+        radius=1
+
         tol=1e-3
 
         bbox=pg.bbox(self.clearance)
@@ -863,6 +864,7 @@ class Routing(LayoutPart):
 
             path=pp.smooth(points=list_points,radius=radius/4)
 
+
         else: #destination is above clearance
 
             if not destination.orientation==90 :
@@ -870,6 +872,8 @@ class Routing(LayoutPart):
                 import pdb; pdb.set_trace()
 
                 raise ValueError("Routing case not covered yet")
+
+
 
             elif source.orientation==0 : #right path
 
@@ -912,25 +916,30 @@ class Routing(LayoutPart):
                     center_box=Point(bbox.center)
 
                     #left path
-                    p1=p0+Point(0,y_overtravel)
+                    p1=p0-Point(0,source.width/2)
+
                     p2=Point(ll.x-self.trace_width,p1.y)
+
                     p3=Point(p2.x,self.trace_width+destination.y)
+
                     p4=Point(destination.x,p3.y)
+
                     p5=Point(destination.x,destination.y)
 
                     list_points_lx=[p0.coord,p1.coord,p2.coord,p3.coord,p4.coord,p5.coord]
 
                     try:
-                        path_lx=pp.smooth(points=list_points_lx,radius=radius/4)
+
+                        path_lx=pp.smooth(points=list_points_lx,radius=radius)
 
                     except:
 
-                        printf("error in +90 source, lx path")
+                        print("error in +90 source, lx path")
 
                         import pdb; pdb.set_trace()
                     #right path
 
-                    p1=p0+Point(0,y_overtravel)
+                    p1=p0-Point(0,source.width/2)
                     p2=Point(lr.x+self.trace_width,p1.y)
                     p3=Point(p2.x,self.trace_width+destination.y)
                     p4=Point(destination.x,p3.y)
@@ -940,11 +949,11 @@ class Routing(LayoutPart):
 
                     try:
 
-                        path_rx=pp.smooth(points=list_points_rx,radius=radius/4)
+                        path_rx=pp.smooth(points=list_points_rx,radius=radius)
 
                     except:
 
-                        printf("error in +90 source, rx path")
+                        print("error in +90 source, rx path")
 
                         import pdb; pdb.set_trace()
 
@@ -961,17 +970,15 @@ class Routing(LayoutPart):
                     elif self.side=='left':
 
                         path=path_lx
-
                     elif self.side=='right':
 
                         path=path_rx
 
                     else:
 
-                        raise Exception("Invalid option for side :{}".format(self.side))
+                        raise ValueError("Invalid option for side :{}".format(self.side))
 
                 else:   # source is not tucked under the clearance
-
 
                     p0=Point(source.midpoint)
 
@@ -983,7 +990,9 @@ class Routing(LayoutPart):
 
                     #left path
                     p1=Point(p0.x,destination.y+self.trace_width)
+
                     p2=Point(destination.x,p1.y)
+
                     p3=Point(destination.x,destination.y)
 
                     list_points=[p0.coord,p1.coord,p2.coord,p3.coord]
@@ -992,13 +1001,14 @@ class Routing(LayoutPart):
 
                         path=pp.smooth(points=list_points,radius=radius/4)#source tucked inside clearance
 
-                    except:
+                    except Execption:
 
                         import pdb; pdb.set_trace()
 
             elif source.orientation==180 : #left path
 
                 p0=Point(source.midpoint)
+
                 p1=Point(ll.x-self.trace_width,p0.y)
 
                 if abs((p1-p0).x) <= radius:
@@ -1008,9 +1018,10 @@ class Routing(LayoutPart):
                         p1.y)
 
                 p2=Point(p1.x,ur.y+self.trace_width)
-                p3=Point(destination.x,p2.y)
-                p4=Point(destination.x,destination.y)
 
+                p3=Point(destination.x,p2.y)
+
+                p4=Point(destination.x,destination.y)
 
                 list_points_lx=[p0.coord,p1.coord,p2.coord,p3.coord,p4.coord]
 
@@ -1018,7 +1029,7 @@ class Routing(LayoutPart):
 
                     path=pp.smooth(points=list_points_lx,radius=radius/4)
 
-                except:
+                except Exception:
 
                     print("error in +0 source, lx path")
 

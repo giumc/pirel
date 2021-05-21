@@ -185,8 +185,8 @@ def alignment_marks_4layers(scale=[0.2,0.5,1]):
     g.align(alignment='y')
 
     align4=verniers(scale,layers=[TElayer,VIAlayer],label='VIA',reversed=True)
-    align5=verniers(scale,layers=[BElayer,TElayer],label='TE')
-    align55=verniers(scale,layers=[BElayer,TElayer],label='TE')
+    align5=verniers(scale,layers=[BElayer,TElayer],label='TE') #only for space
+    align55=verniers(scale,layers=[BElayer,TElayer],label='TE')#only for space
     align6=verniers(scale,layers=[TElayer,ETCHlayer],label='ETCH')
     align60=verniers(scale,layers=[TElayer,PETCHlayer],label='PETCH')
     t2=text_aligner(size=300,label='Align to TE',\
@@ -196,6 +196,7 @@ def alignment_marks_4layers(scale=[0.2,0.5,1]):
     g2.align(alignment='y')
 
     align7=verniers(scale,layers=[Zerolayer,VIAlayer],label='VIA',reversed=True)
+    align75=verniers(scale,layers=[Zerolayer,BElayer],label='BE')
     align8=verniers(scale,layers=[Zerolayer,TElayer],label='TE')
     align9=verniers(scale,layers=[Zerolayer,ETCHlayer],label='ETCH')
     align10=verniers(scale,layers=[Zerolayer,PETCHlayer],label='PETCH')
@@ -215,28 +216,11 @@ def alignment_marks_4layers(scale=[0.2,0.5,1]):
 
         cell.add(c)
 
-    for c in [align4,align6,align60,t2]:
+    for c in [align4,align5,align6,align60,t2]:
         cell.add(c)
 
     for c in [align7,align75,align8,align9,align10,t3]:
         cell.add(c)
-    # cell.absorb(cell<<align4)
-    # cell.absorb(cell<<align5)
-<<<<<<< HEAD
-    # cell.absorb(cell<<align6)
-    # cell.absorb(cell<<align65)
-    # cell.absorb(cell<<align7)
-    # cell.absorb(cell<<align75)
-    # cell.absorb(cell<<align8)
-    # cell.absorb(cell<<align9)
-    # cell.absorb(cell<<align10)
-=======
-    cell.absorb(cell<<align6)
-    cell.absorb(cell<<align7)
-    cell.absorb(cell<<align8)
-    cell.absorb(cell<<align9)
-    cell.absorb(cell<<align10)
->>>>>>> parent of 1b0b4b2... after dan
 
     return cell
 
@@ -333,13 +317,10 @@ def add_utility_cells(cell,align_scale=[0.25,0.5,1],position=['top','left']):
 
     t2=DeviceReference(test_cell)
 
-<<<<<<< HEAD
-=======
     maskname_cell=mask_names()
 
     maskname_cell.move(origin=(maskname_cell.xmin,maskname_cell.ymin),\
         destination=(test_cell.xmin,test_cell.ymax+150))
->>>>>>> parent of 1b0b4b2... after dan
 
     utility_cell=Device(name="UtilityCell")
 

@@ -34,11 +34,14 @@ param["BusExtLength"]=5
 param["ProbePitch"]=200
 
 param["ProbeSizeX"]=100
+
 param["ProbeSizeY"]=100
 
 param["GndRoutingWidth"]=150
 
 device.import_params(param)
+
+device.probe._pad_position='top'
 
 param1=SweepParam({"IDTCoverage":[0.3,0.5,0.7]})
 
