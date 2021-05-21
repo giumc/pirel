@@ -176,7 +176,7 @@ def alignment_marks_4layers(scale=[0.2,0.5,1]):
     align1=verniers(scale,layers=[BElayer,VIAlayer],label='VIA',reversed=True)
     align2=verniers(scale,layers=[BElayer,TElayer],label='TE')
     align3=verniers(scale,layers=[BElayer,ETCHlayer],label='ETCH')
-    align30=verniers(scale,layers=[TElayer,PEtchlayer],label='PETCH')
+    align30=verniers(scale,layers=[BElayer,PEtchlayer],label='PETCH')
 
     g=Group([align1,align2,align3,align30])
     g.distribute(direction='x',spacing=150)
@@ -185,17 +185,19 @@ def alignment_marks_4layers(scale=[0.2,0.5,1]):
     align4=verniers(scale,layers=[TElayer,VIAlayer],label='VIA',reversed=True)
     align5=verniers(scale,layers=[BElayer,TElayer],label='TE')
     align6=verniers(scale,layers=[TElayer,ETCHlayer],label='ETCH')
+    align65=verniers(scale,layers=[TElayer,PEtchlayer],label='PETCH')
 
-    g2=Group([align4,align5,align6])
+    g2=Group([align4,align5,align6,align65])
     g2.distribute(direction='x',spacing=150)
     g2.align(alignment='y')
 
     align7=verniers(scale,layers=[Zerolayer,VIAlayer],label='VIA',reversed=True)
+    align75=verniers(scale,layers=[Zerolayer,BElayer],label='BE')
     align8=verniers(scale,layers=[Zerolayer,TElayer],label='TE')
     align9=verniers(scale,layers=[Zerolayer,ETCHlayer],label='ETCH')
     align10=verniers(scale,layers=[Zerolayer,PEtchlayer],label='PETCH')
 
-    g3=Group([align7,align8,align9,align10])
+    g3=Group([align7,align75,align8,align9,align10])
     g3.distribute(direction='x',spacing=150)
     g3.align(alignment='y')
 
@@ -211,7 +213,9 @@ def alignment_marks_4layers(scale=[0.2,0.5,1]):
     cell.absorb(cell<<align4)
     # cell.absorb(cell<<align5)
     cell.absorb(cell<<align6)
+    cell.absorb(cell<<align65)
     cell.absorb(cell<<align7)
+    cell.absorb(cell<<align75)
     cell.absorb(cell<<align8)
     cell.absorb(cell<<align9)
     cell.absorb(cell<<align10)
@@ -220,7 +224,7 @@ def alignment_marks_4layers(scale=[0.2,0.5,1]):
 
 def mask_names(names=("Bottom Electrode","Top Electrode","Via Layer","Etch Layer","Pad Layer"),\
     layers=(LayoutDefault.layerBottom,LayoutDefault.layerTop,LayoutDefault.layerVias,LayoutDefault.layerEtch,LayoutDefault.layerPad),\
-    size=250):
+    size=2000):
     """ Prints array of strings on different layers.
 
         Mostly useful for Layer Sorting on masks.
@@ -286,11 +290,7 @@ def add_utility_cells(cell,align_scale=[0.25,0.5,1],position=['top','left']):
             cell.ymax-300))
 
     t2=DeviceReference(test_cell)
-
-    maskname_cell=mask_names()
-
-    maskname_cell.move(origin=(maskname_cell.xmin,maskname_cell.ymin),\
-        destination=(test_cell.xmin,test_cell.ymax+150))
+    
 
     utility_cell=Device(name="UtilityCell")
 
@@ -304,7 +304,7 @@ def add_utility_cells(cell,align_scale=[0.25,0.5,1],position=['top','left']):
 
     if 'top' in position:
 
-        cell<<utility_cell
+        cell<<(Device().add(align_cell).add(align_via_tot))
 
     if 'left' in position:
 
@@ -391,8 +391,6 @@ def chip_frame(name="Default",size=(20e3,20e3),layer=LayoutDefault.layerTop,logo
     #
     # restest.move(origin=(restest.xmin,restest.ymax),\
     #     destination=(cell.xmin+1.1*street_width,cell.ymax-1.1*street_width))
-
-    # cell.add(restest)
 
     return cell
 

@@ -1142,7 +1142,7 @@ class LFERes(LayoutPart):
 
         if self.anchor.metalized.x>self.bus.size.x:
 
-            warnings.warn(f"Anchor metal is too wide ({self.anchor.metalized.x}), reduced to {self.bus.size.x*0.9}")
+            # warnings.warn(f"Anchor metal is too wide ({self.anchor.metalized.x}), reduced to {self.bus.size.x*0.9}")
 
             self.anchor.metalized=Point(\
                 self.bus.size.x*0.9,\
