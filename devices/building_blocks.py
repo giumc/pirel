@@ -273,7 +273,23 @@ class IDT(LayoutPart) :
         unitcell=Device()
 
         r1=unitcell << rect
+
         unitcell.absorb(r1)
+
+        rect_partialetch=pg.rectangle(\
+            size=(\
+                (1-self.coverage)*self.pitch,self.length-self.y_offset),\
+            layer=LayoutDefault.layerPartialEtch)
+
+        rect_partialetch.move(origin=o.coord,\
+            destination=(self.pitch*self.coverage,self.y_offset))
+
+        rp1=unitcell<<rect_partialetch
+
+        rp2=unitcell<<rect_partialetch
+
+        rp2.move(destination=(self.pitch,0))
+
         r2 = unitcell << rect
 
         r2.move(origin=o.coord,\

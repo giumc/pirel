@@ -170,13 +170,15 @@ def alignment_marks_4layers(scale=[0.2,0.5,1]):
     TElayer=LayoutDefault.layerTop
     VIAlayer=LayoutDefault.layerVias
     ETCHlayer=LayoutDefault.layerEtch
+    PEtchlayer=LayoutDefault.layerPartialEtch
     Zerolayer=LayoutDefault.layerPad
 
     align1=verniers(scale,layers=[BElayer,VIAlayer],label='VIA',reversed=True)
     align2=verniers(scale,layers=[BElayer,TElayer],label='TE')
     align3=verniers(scale,layers=[BElayer,ETCHlayer],label='ETCH')
+    align30=verniers(scale,layers=[TElayer,PEtchlayer],label='PETCH')
 
-    g=Group([align1,align2,align3])
+    g=Group([align1,align2,align3,align30])
     g.distribute(direction='x',spacing=150)
     g.align(alignment='y')
 
@@ -191,8 +193,9 @@ def alignment_marks_4layers(scale=[0.2,0.5,1]):
     align7=verniers(scale,layers=[Zerolayer,VIAlayer],label='VIA',reversed=True)
     align8=verniers(scale,layers=[Zerolayer,TElayer],label='TE')
     align9=verniers(scale,layers=[Zerolayer,ETCHlayer],label='ETCH')
+    align10=verniers(scale,layers=[Zerolayer,PEtchlayer],label='PETCH')
 
-    g3=Group([align7,align8,align9])
+    g3=Group([align7,align8,align9,align10])
     g3.distribute(direction='x',spacing=150)
     g3.align(alignment='y')
 
@@ -204,12 +207,14 @@ def alignment_marks_4layers(scale=[0.2,0.5,1]):
     cell.absorb(cell<<align1)
     cell.absorb(cell<<align2)
     cell.absorb(cell<<align3)
+    cell.absorb(cell<<align30)
     cell.absorb(cell<<align4)
     # cell.absorb(cell<<align5)
     cell.absorb(cell<<align6)
     cell.absorb(cell<<align7)
     cell.absorb(cell<<align8)
     cell.absorb(cell<<align9)
+    cell.absorb(cell<<align10)
 
     return cell
 
