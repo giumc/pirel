@@ -67,7 +67,7 @@ def Scaled(cls):
 
             self.idt.y_offset=self.idt.y_offset/p
 
-            self.idt.length=self.idt.length/p
+            # self.idt.length=self.idt.length/p
 
             self.bus.size=Point(self.bus.size.x,self.bus.size.y/p)
 
@@ -106,7 +106,7 @@ def Scaled(cls):
 
             self.idt.y_offset=self.idt.y_offset*p
 
-            self.idt.length=self.idt.length*p
+            # self.idt.length=self.idt.length*p
 
             self.bus.size=Point(self.bus.size.x,self.bus.size.y*p)
 

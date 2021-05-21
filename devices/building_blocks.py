@@ -884,7 +884,7 @@ class Routing(LayoutPart):
                     if abs((p1-p0).x)<=radius:
 
                         p1=Point(\
-                            p1.x+2*radius*np.sign((p1-p0).x),
+                            p1.x+radius*np.sign((p1-p0).x),
                             p1.y)
 
                     p2=Point(p1.x,ur.y+self.trace_width)
@@ -1004,7 +1004,7 @@ class Routing(LayoutPart):
                 if abs((p1-p0).x) <= radius:
 
                     p1=Point(\
-                        p1.x+2*radius*np.sign((p1-p0).x),
+                        p1.x+radius*np.sign((p1-p0).x),
                         p1.y)
 
                 p2=Point(p1.x,ur.y+self.trace_width)
