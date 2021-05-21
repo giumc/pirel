@@ -204,7 +204,7 @@ def addVia(cls,side='top',bottom_conn=False):
 
             viacell=join(CellArray(unit_cell,\
                 columns=nvias_x,rows=nvias_y,\
-                spacing=(unit_cell.xsize,unit_cell.ysize))).flatten()
+                spacing=(unit_cell.xsize,unit_cell.ysize)))
 
             viacell.add_port(Port(name='conn',\
                 midpoint=(viacell.x,viacell.ymax),\
@@ -478,6 +478,7 @@ def addProbe(cls,probe):
                 #ground routing
 
                 probe_port_lx=probe_ref.ports['gnd_left']
+
                 probe_port_rx=probe_ref.ports['gnd_right']
 
                 device_ports=device_cell.ports
@@ -490,9 +491,13 @@ def addProbe(cls,probe):
 
                         routing_lx=self._route(bbox,probe_port_lx,dut_port_top,self.gnd_routing_width)
 
+                        self._ground_paths=[routing_lx.path]
+
                         r_lx_cell=routing_lx.draw()
 
                         routing_rx=self._route(bbox,probe_port_rx,dut_port_top,self.gnd_routing_width)
+
+                        self._ground_paths.append(routing_rx.path)
 
                         r_rx_cell=routing_rx.draw()
 
@@ -506,7 +511,7 @@ def addProbe(cls,probe):
 
                     if re.search('bottom',p_name):
 
-                        signal_routing_width=device_cell.ports[p_name].width
+                        self._signal_routing_width=device_cell.ports[p_name].width
 
                         break
 
@@ -521,6 +526,8 @@ def addProbe(cls,probe):
                     if re.search('bottom',port_name):
 
                         bottom_ports.append(device_ports[port_name])
+
+                self._signal_paths=[]
 
                 sig_routing_cell=self._route_signal(bbox,probe_port_center,bottom_ports)
 
@@ -547,7 +554,7 @@ def addProbe(cls,probe):
 
                     routing_tot.add(patch_top)
 
-            routing_tot=join(routing_tot.add(probe_ref)).flatten()
+            routing_tot=join(routing_tot.add(probe_ref))
 
             cell.add_ref(routing_tot,alias=self.name+'Probe')
 
@@ -597,6 +604,10 @@ def addProbe(cls,probe):
 
                 routing=self._route(bbox,probe_port,dut_ports[0],dut_ports[0].width)
 
+                self._signal_paths.append(routing.path)
+
+                del routing
+
                 return routing.draw()
 
             elif numports == 2 :
@@ -606,6 +617,8 @@ def addProbe(cls,probe):
                 for dut_port in dut_ports :
 
                     routing=self._route(bbox,probe_port,dut_port,dut_port.width)
+
+                    self._signal_paths.append(routing.path)
 
                     routing_cell.add(routing.draw())
 
@@ -624,6 +637,8 @@ def addProbe(cls,probe):
                     patch_width=dut_ports[midport-1].midpoint[0]+dut_ports[midport-1].width/2-\
                         (dut_ports[0].midpoint[0]-dut_ports[0].width/2)
 
+                    self._signal_paths.append(pp.Path().append(pp.straight(length=patch_width)))
+
                     patch_height=dut_ports[0].width
 
                     patch=Point(patch_width,patch_height)
@@ -638,6 +653,8 @@ def addProbe(cls,probe):
 
                     patch_width=dut_ports[-1].midpoint[0]+dut_ports[-1].width/2-\
                         (dut_ports[midport].midpoint[0]-dut_ports[midport].width/2)
+
+                    self._signal_paths.append(pp.Path().append(pp.straight(length=patch_width)))
 
                     patch_height=dut_ports[midport].width
 
@@ -662,6 +679,8 @@ def addProbe(cls,probe):
                     patch_width=dut_ports[-1].midpoint[0]+dut_ports[-1].width/2-\
                         (dut_ports[0].midpoint[0]-dut_ports[0].width/2)
 
+                    self._signal_paths.append(pp.Path().append(pp.straight(length=patch_width)))
+
                     patch_height=dut_ports[0].width
 
                     patch=Point(patch_width,patch_height)
@@ -679,8 +698,43 @@ def addProbe(cls,probe):
         @property
         def resistance_squares(self):
 
-            return super().resistance_squares+self.probe_resistance_squares
+            def gnd_resistance():
 
+                probe_length_inv=0
+
+                for probe_paths in self._ground_paths:
+
+                    probe_length_inv+=1/probe_path.length()
+
+                probe_length=1/probe_length_inv
+
+                signal_length=self._signal_paths[0].length()
+
+                return probe_length/self.gnd_routing_width
+
+            def single_dev_resistance():
+
+                gnd_resistance()+signal_length/self._signal_routing_width
+
+            r=super().resistance_squares
+
+            self.draw()
+
+            if hasattr(self,'n_blocks'):
+
+                n_blocks=self.n_blocks
+
+                if n_blocks==1:
+
+                    self._probe_resistance_squares=single_dev_resistance()
+
+                    return r+self._probe_resistance_squares
+
+                else:
+
+                    if n_blocks==2:
+
+                        # TODO: 
         @staticmethod
         def get_components():
 

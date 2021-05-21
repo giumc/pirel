@@ -13,7 +13,7 @@ param["IDTN"]=4
 
 param["IDTYOffset"]=1
 
-param["IDTLength"]=150/7
+param["IDTLength"]=150
 
 param["IDTCoverage"]=0.5
 

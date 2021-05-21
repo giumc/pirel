@@ -595,7 +595,13 @@ class PArray(LayoutPart):
 
         param=self.x_param
 
-        df=copy(df_original)
+        df={}
+
+        for key,val in df_original.items():
+
+            if callable(val):
+
+                df[key]=val
 
         for index in range(len(param)):
 
@@ -605,7 +611,7 @@ class PArray(LayoutPart):
 
             device.import_params(df)
 
-            print("drawing device {} of {}".format(index+1,len(param)),end="\r")
+            # print("drawing device {} of {}".format(index+1,len(param)),end="\r")
 
             new_cell=Device(name=self.name+'_'+str(index)).add(join(device.draw()))
 
@@ -823,7 +829,7 @@ class PMatrix(PArray):
 
             device.import_params(df)
 
-            print("drawing array {} of {}".format(index+1,len(y_param)))
+            # print("drawing array {} of {}".format(index+1,len(y_param)))
 
             if top_label_matrix is not None:
 
@@ -894,7 +900,7 @@ class PMatrix(PArray):
 
         import itertools
 
-        top_label=[[top_label+x+"\n"+y for x in x_label] for y in y_label]
+        top_label=[[top_label+x+y for x in x_label] for y in y_label]
 
         if top==True:
 
