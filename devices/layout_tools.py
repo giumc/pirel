@@ -16,6 +16,10 @@ from phidl import quickplot as qp
 
 import warnings
 
+import re
+
+import gdspy
+
 class Point:
     ''' Handles 2-d coordinates.
 
@@ -593,29 +597,49 @@ class LayoutPart(ABC) :
         df : dict.
         '''
 
+        for name in self.get_components().keys():
+
+            if_match_import(getattr(self,name.lower()),df,name)
+
         for param_label,param_key in self._params_dict.items():
-            
+
             param_key=param_key.lstrip("_")
 
             if param_label in df.keys():
 
-                setattr(self,param_key,df[param_label])
+                if callable(df[param_label]):
+
+                    import pdb; pdb.set_trace()
+
+                    setattr(self,param_key,df[param_label]())
+
+                else :
+
+                     setattr(self,param_key,df[param_label])
 
             if param_label+'X' in df.keys():
 
                 old_point=getattr(self,param_key)
 
-                setattr(self,param_key,Point(df[param_label+"X"],old_point.y))
+                if callable(df[param_label+"X"]):
+
+                    setattr(self,param_key,Point(df[param_label+"X"](),old_point.y))
+
+                else:
+
+                    setattr(self,param_key,Point(df[param_label+"X"],old_point.y))
 
             if param_label+'Y' in df.keys():
 
                 old_point=getattr(self,param_key)
 
-                setattr(self,param_key,Point(old_point.x,df[param_label+"Y"]))
+                if callable(df[param_label+"Y"]):
 
-        for name in self.get_components().keys():
+                    setattr(self,param_key,Point(old_point.x,df[param_label+"Y"]()))
 
-            if_match_import(getattr(self,name.lower()),df,name)
+                else:
+
+                    setattr(self,param_key,Point(old_point.x,df[param_label+"Y"]))
 
     def export_all(self):
 
@@ -950,7 +974,7 @@ def attach_taper(cell : Device , port : Port , length : float , \
     cell.absorb(t_ref)
 
     cell.remove(port)
-    import pdb; pdb.set_trace()
+
     cell.add_port(new_port)
 
 def custom_formatwarning(msg, *args, **kwargs):

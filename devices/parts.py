@@ -6,8 +6,6 @@ import pandas as pd
 
 import warnings
 
-import re
-
 def Scaled(cls):
 
     ''' Class Decorator that accept normalized parameters for resonator designs.
@@ -854,8 +852,6 @@ def array(cls,n):
 
             r=super().resistance_squares
 
-            return r
-
             cell=cls.draw(self)
 
             for p in cell.get_ports():
@@ -868,7 +864,7 @@ def array(cls,n):
 
             w=p_bot.width
 
-            l=self.bus_ext_length
+            l=w
 
             n_blocks=self.n_blocks
 
@@ -1146,8 +1142,7 @@ class LFERes(LayoutPart):
 
         if self.anchor.metalized.x>self.bus.size.x:
 
-            warnings.warn(f"Anchor metal is too wide ({self.anchor.metalized.x}), \
-                reduced to {self.bus.size.x*0.9}")
+            warnings.warn(f"Anchor metal is too wide ({self.anchor.metalized.x}), reduced to {self.bus.size.x*0.9}")
 
             self.anchor.metalized=Point(\
                 self.bus.size.x*0.9,\
