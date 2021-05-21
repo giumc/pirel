@@ -154,6 +154,10 @@ class Point:
 
         return hash(self.coord)
 
+    def __abs___(self):
+
+        return sqrt(self.x^2+self.y^2)
+
 class LayoutDefault:
     '''container of PyResLayout constants.'''
 
@@ -571,6 +575,7 @@ class LayoutPart(ABC) :
 
         out_dict={}
 
+
         for p,c in self.get_components().items():
 
             component_params=getattr(self,p.lower()).export_params()
@@ -912,8 +917,6 @@ def cached(cls):
 
         def wrapper(self):
 
-            global recursion
-
             params=get_class_param(cls)
 
             pop_all_match(params,'.*name*')
@@ -951,6 +954,8 @@ def cached(cls):
             else:
 
                 xout=fun(self)
+
+                # if len(dict_lookup)<1000:
 
                 dict_lookup[paramlist]=xout
 

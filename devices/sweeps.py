@@ -611,9 +611,13 @@ class PArray(LayoutPart):
 
             device.import_params(df)
 
-            # print("drawing device {} of {}".format(index+1,len(param)),end="\r")
+            print("drawing device {} of {}".format(index+1,len(param)),end="\r")
 
-            new_cell=Device(name=self.name+'_'+str(index)).add(join(device.draw()))
+            new_cell=Device()
+            new_cell.absorb(new_cell<<device.draw())
+            new_cell=join(new_cell)
+
+            new_cell.name=self.name+"_"+str(index+1)
 
             if self.labels_top is not None:
 
@@ -819,7 +823,13 @@ class PMatrix(PArray):
 
         x_param=self.x_param
 
-        df=copy(df_original)
+        df={}
+
+        for key in df_original.keys():
+
+            if callable(df_original[key]):
+
+                df.update({key:df_original[key]})
 
         for index in range(len(y_param)):
 
@@ -829,7 +839,7 @@ class PMatrix(PArray):
 
             device.import_params(df)
 
-            # print("drawing array {} of {}".format(index+1,len(y_param)))
+            print("drawing array {} of {}".format(index+1,len(y_param)),end='\r')
 
             if top_label_matrix is not None:
 
@@ -866,7 +876,7 @@ class PMatrix(PArray):
             self.name=master_name+"Arr"+str(index+1)
 
             new_cell=PArray.draw(self)
-            # sys.stdout.flush()
+
             print("\033[K",end='')
 
             master_cell<<new_cell
@@ -877,7 +887,7 @@ class PMatrix(PArray):
 
         g.distribute(direction='y',spacing=self.y_spacing)
 
-        g.align(alignment='xmin')
+        g.align(alignment='x')
 
         device.import_params(df_original)
 

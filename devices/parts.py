@@ -190,13 +190,9 @@ def addVia(cls,side='top',bottom_conn=False):
 
         def draw(self):
 
-            cell=Device()
+            cell=Device(name=self.name)
 
-            cell.name=self.name
-
-            supercell=cls.draw(self)
-
-            cell.add(supercell)
+            super_ref=cell.add_ref(cls.draw(self))
 
             nvias_x,nvias_y=self.n_vias
 
@@ -213,11 +209,11 @@ def addVia(cls,side='top',bottom_conn=False):
 
             for sides in side:
 
-                for p_name in supercell.ports.keys():
+                for p_name in super_ref.ports.keys():
 
                     if re.search(sides,p_name):
 
-                        p=supercell.ports[p_name]
+                        p=super_ref.ports[p_name]
 
                         pad=pg.compass(size=(p.width,self.via_distance),layer=self.padlayers[0])
 
@@ -229,7 +225,7 @@ def addVia(cls,side='top',bottom_conn=False):
 
                             self._attach_instance(cell, pad, pad.ports['N'], viacell,p)
 
-            for p_name,p_value in supercell.ports.items():
+            for p_name,p_value in super_ref.ports.items():
 
                 cell.add_port(p_value)
 
@@ -935,24 +931,24 @@ def calibration(cls,type='open'):
 
         def draw(self):
 
-            cell=Device(name=self.name)
-
             supercell=cls.draw(self)
 
-            cell.add(supercell)
+            cell=pg.deepcopy(supercell)
 
             type=self.fixture_type
 
             ports=supercell.ports
 
-            for ref_cell in cell.references:
+            for subcell in cell.get_dependencies(recursive=True):
 
-                if re.search('IDT',ref_cell.parent.name):
+                if 'IDT' in subcell.aliases:
 
-                    cell.remove(ref_cell)
+                    subcell.remove(subcell['IDT'])
+
             if type=='short':
 
                 top_port=ports['top']
+
                 bottom_port=ports['bottom']
 
                 short=pg.taper(length=top_port.y-bottom_port.y,\
@@ -968,8 +964,6 @@ def calibration(cls,type='open'):
                 angle=180)
 
                 cell.absorb(s_ref)
-
-            [cell.add_port(port=p,name=n) for n,p in ports.items()]
 
             return cell
 
@@ -1225,7 +1219,7 @@ class FBERes(LFERes):
 
         supercell=LFERes.draw(self)
 
-        cell.add(supercell)
+        super_ref=cell.add_ref(supercell)
 
         if self.plate_position=='out, short':
 
@@ -1246,6 +1240,7 @@ class FBERes(LFERes):
             cell.absorb(plate_ref)
 
             del plate
+
 
         elif self.plate_position=='in, short':
 

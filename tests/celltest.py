@@ -7,11 +7,10 @@ from phidl import quickplot as qp
 
 import pandas as pd
 
-check(alignment_marks_4layers())
-exit()
-d=addProbe(array(addVia(FBERes,'top'),4),addLargeGnd(GSGProbe))(name="DEF")
 
-# d=addProbe(array(calibration(FBERes,'open'),4),addLargeGnd(GSGProbe))(name="DEF")
+# d=addProbe(array(addVia(FBERes,'top'),4),addLargeGnd(GSGProbe))(name="DEF")
+
+d=addProbe(array(calibration(FBERes,'open'),4),addLargeGnd(GSGProbe))(name="DEF")
 base_params=d.export_params()
 
 

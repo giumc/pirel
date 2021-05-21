@@ -162,7 +162,6 @@ def verniers(scale=[1, 0.5, 0.1],layers=[1,2],label='TE',text_size=20,reversed=F
     cell=join(cell)
 
     return cell
-        # del xvern, xvern_y
 
 def alignment_marks_4layers(scale=[0.2,0.5,1]):
 
@@ -324,28 +323,26 @@ def add_utility_cells(cell,align_scale=[0.25,0.5,1],position=['top','left']):
 
     utility_cell=Device(name="UtilityCell")
 
-    utility_cell.add(align_via_tot)
-    utility_cell.add(align_cell)
-    utility_cell.add(test_cell)
-
     if isinstance(position,str):
 
         position=[position]
 
     if 'top' in position:
 
-        cell<<utility_cell
+        cell<<align_cell
+        cell<<align_via_tot
+        cell<<test_cell
 
     if 'left' in position:
 
-        t2=DeviceReference(utility_cell)
+        t2=cell<<align_cell
+        t3=cell<<align_via_tot
+        g=Group(t2,t3)
 
-        t2.rotate(angle=90,center=(t2.xmin,t2.ymin))
+        g.rotate(angle=90,center=(t2.xmin,t2.ymin))
 
-        t2.move(origin=(t2.xmin,t2.center[1]),\
+        g.move(origin=(t2.xmin,t2.center[1]),\
             destination=(cell.xmin+300,cell.center[1]))
-
-        cell.add(t2)
 
 def chip_frame(name="Default",size=(20e3,20e3),layer=LayoutDefault.layerTop,logos=None):
 

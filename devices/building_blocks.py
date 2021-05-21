@@ -321,7 +321,9 @@ class IDT(LayoutPart) :
         self.length+self.y_offset)
 
         cell=join(cell)
+
         cell.name=self.name
+
         cell.add_port(Port(name='bottom',\
         midpoint=(o+\
         Point(midx,0)).coord,\
@@ -334,7 +336,7 @@ class IDT(LayoutPart) :
         width=totx,
         orientation=90))
 
-        del unitcell,rect
+        del unitcell,rect,rect_partialetch
 
         return cell
 
@@ -825,7 +827,49 @@ class Routing(LayoutPart):
     @property
     def path(self):
 
-        radius=1
+        def check_points(*points):
+
+            for i,p in enumerate(points):
+
+                if not isinstance(p,Point):
+
+                    raise ValueError("wrong input")
+
+                if i==0:
+
+                    pass
+
+                else:
+
+                    p_ref=points[i-1]
+
+                    dist=p-points[i-1]
+
+                    if abs(dist)<self.trace_width/10:
+
+                        p_new=p_ref+p*(self.trace_width/abs(p))
+
+                        if not i==len(points)-1:
+
+                            if points[i+1].x==p:
+
+                                points[i+1]=Point(p_new.x,points[i+1].y)
+
+                            elif points[i+1].y==p:
+
+                                points[i+1]=Point(points[i+1].x,p_new.x)
+
+                        points[i]=p_new
+
+                out_list=[]
+
+                for p in points:
+
+                    out_list.append(p.coord)
+
+                return out_list
+
+        radius=0.5
 
         tol=1e-3
 
@@ -860,9 +904,18 @@ class Routing(LayoutPart):
 
             p3=p2+Point(0,distance.y/4)
 
-            list_points=np.array([p1.coord,p2.coord,p3.coord])
+            list_points=check_points(p1,p2,p3)
 
-            path=pp.smooth(points=list_points,radius=radius/4)
+            try:
+
+                path=pp.smooth(points=list_points,radius=radius)
+
+            except Exception:
+
+                print("error in +0 source, rx path")
+
+                import pdb; pdb.set_trace()
+
 
 
         else: #destination is above clearance
@@ -885,23 +938,17 @@ class Routing(LayoutPart):
 
                     p1=Point(ur.x+self.trace_width,p0.y)
 
-                    if abs((p1-p0).x)<=radius:
-
-                        p1=Point(\
-                            p1.x+radius*np.sign((p1-p0).x),
-                            p1.y)
-
                     p2=Point(p1.x,ur.y+self.trace_width)
                     p3=Point(destination.x,p2.y)
                     p4=Point(destination.x,destination.y)
 
-                    list_points_rx=[p0.coord,p1.coord,p2.coord,p3.coord,p4.coord]
+                    list_points_rx=check_points(p0,p1,p2,p3,p4)
 
                     try:
 
-                        path=pp.smooth(points=list_points_rx,radius=radius/4)
+                        path=pp.smooth(points=list_points_rx,radius=radius)
 
-                    except :
+                    except Exception :
 
                         print("error in +0 source, rx path")
 
@@ -926,7 +973,7 @@ class Routing(LayoutPart):
 
                     p5=Point(destination.x,destination.y)
 
-                    list_points_lx=[p0.coord,p1.coord,p2.coord,p3.coord,p4.coord,p5.coord]
+                    list_points_lx=check_points(p0,p1,p2,p3,p4,p5)
 
                     try:
 
@@ -945,7 +992,7 @@ class Routing(LayoutPart):
                     p4=Point(destination.x,p3.y)
                     p5=Point(destination.x,destination.y)
 
-                    list_points_rx=[p0.coord,p1.coord,p2.coord,p3.coord,p4.coord,p5.coord]
+                    list_points_rx=check_points(p0,p1,p2,p3,p4,p5)
 
                     try:
 
@@ -984,8 +1031,6 @@ class Routing(LayoutPart):
 
                     ll,lr,ul,ur=get_corners(bbox)
 
-                    y_overtravel=ll.y-p0.y
-
                     center_box=Point(bbox.center)
 
                     #left path
@@ -995,11 +1040,11 @@ class Routing(LayoutPart):
 
                     p3=Point(destination.x,destination.y)
 
-                    list_points=[p0.coord,p1.coord,p2.coord,p3.coord]
+                    list_points=check_points(p0,p1,p2,p3)
 
                     try:
 
-                        path=pp.smooth(points=list_points,radius=radius/4)#source tucked inside clearance
+                        path=pp.smooth(points=list_points,radius=radius)#source tucked inside clearance
 
                     except Execption:
 
@@ -1023,7 +1068,7 @@ class Routing(LayoutPart):
 
                 p4=Point(destination.x,destination.y)
 
-                list_points_lx=[p0.coord,p1.coord,p2.coord,p3.coord,p4.coord]
+                list_points_lx=check_points(p0,p1,p2,p3,p4)
 
                 try:
 
