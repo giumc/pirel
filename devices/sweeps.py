@@ -451,29 +451,6 @@ class _SweepParamValidator():
 
         self._valid_names=opts
 
-class _SweepArrayValidator(_SweepParamValidator):
-
-    def __set__(self,owner,layout_params):
-
-        if not isinstance(layout_params,list):
-
-            if not isinstance(layout_params,SweepParam):
-
-                raise ValueError("a SweepParam instance needs to be passed here")
-
-            else:
-
-                layout_params=[layout_params]
-
-        sweep_row=list()
-
-        for par in layout_params:
-
-            _SweepParamValidator.__set__(self,owner,par)
-            sweep_row.append(getattr(owner,self.private_name))
-
-        setattr(owner,self.private_name,sweep_row)
-
 class PArray(LayoutPart):
 
     """ Class used to create a parametric array of cells.
@@ -611,11 +588,13 @@ class PArray(LayoutPart):
 
             device.import_params(df)
 
-            print("drawing device {} of {}".format(index+1,len(param)),end="\r")
+            # print("drawing device {} of {}".format(index+1,len(param)),end="\r")
 
             new_cell=Device()
             new_cell.absorb(new_cell<<device.draw())
             new_cell=join(new_cell)
+
+            master_cell<<new_cell
 
             new_cell.name=self.name+"_"+str(index+1)
 
@@ -630,8 +609,6 @@ class PArray(LayoutPart):
                 self.text_params.set('location','bottom')
 
                 self.text_params.add_text(new_cell,self.labels_bottom[index])
-
-            master_cell<<new_cell
 
             cells.append(new_cell)
 
@@ -1032,68 +1009,3 @@ class PMatrix(PArray):
         self.import_params(df_original)
 
         return fig
-#
-# class PArraySeries(PArray):
-#
-#     x_param=_SweepArrayValidator(LayoutDefault.Arrayx_param)
-#
-#     def __init__(self,device,*a,**k):
-#
-#         PArray.__init__(self,device,*a,*k)
-#
-#         self.y_spacing = 100
-#
-#     def draw(self):
-#
-#         cellparts=list()
-#
-#         device=self.device
-#
-#         df_original=device.export_params()
-#
-#         df=copy(df_original)
-#
-#         p=PArray(device,self.x_param)
-#
-#         for i,par in enumerate(self.x_param):
-#
-#             p.x_spacing=self.x_spacing
-#
-#             p.x_param=par
-#
-#             p.auto_labels(row_index=1,col_index=0)
-#
-#             cellparts.append(p.draw())
-#
-#         g=Group(cellparts)
-#
-#         g.distribute(direction='y',spacing=self.y_spacing)
-#
-#         g.align(alignment='xmin')
-#
-#         cell=Device(self.name)
-#
-#         [cell<<x for x in cellparts]
-#
-#         device.import_params(df_original)
-#
-#         return cell
-#
-#     @property
-#     def table(self):
-#
-#         x_param=self.x_param
-#
-#         data_tot=DataFrame()
-#
-#         for p in x_param:
-#
-#             device=deepcopy(self.device)
-#
-#             parr=PArray(device)
-#
-#             parr.x_param=p
-#
-#             data_tot.append(parr.table)
-#
-#         return data_tot

@@ -251,7 +251,6 @@ class IDT(LayoutPart) :
         self.n=LayoutDefault.IDTn
         self.layer=LayoutDefault.IDTlayer
         self.active_area_margin=LayoutDefault.LFEResactive_area_margin
-        # IDT.draw=cached(IDT)(IDT.draw)
 
     def draw(self):
         ''' Generates layout cell based on current parameters.
@@ -389,6 +388,8 @@ class IDT(LayoutPart) :
 
         return 1/2/pi/f/c0_dens/z0/n
 
+# IDT.draw=cached(IDT)(IDT.draw)
+
 class Bus(LayoutPart) :
     ''' Generates pair of bus structure.
 
@@ -458,6 +459,8 @@ class Bus(LayoutPart) :
     def resistance_squares(self):
 
         return self.size.x/self.size.y/2
+
+# Bus.draw=cached(Bus)(Bus.draw)
 
 class EtchPit(LayoutPart) :
     ''' Generates pair of etching trenches.
@@ -533,6 +536,8 @@ class EtchPit(LayoutPart) :
         del main_etch
 
         return etch
+
+# EtchPit.draw=cached(EtchPit)(EtchPit.draw)
 
 class Anchor(LayoutPart):
     ''' Generates anchor structure.
@@ -672,6 +677,8 @@ class Anchor(LayoutPart):
             # print(f"""Metalized Y portion of anchor {self.metalized.y} is smaller than Anchor Y Size {self.size.y}, capped to {self.size.y*1.1}""")
             self.metalized=Point(self.metalized.x,self.size.y*1.1)
 
+# Anchor.draw=cached(Anchor)(Anchor.draw)
+
 class Via(LayoutPart):
     ''' Generates via pattern.
 
@@ -728,6 +735,8 @@ class Via(LayoutPart):
         orientation=90))
 
         return cell
+
+# Via.draw=cached(Via)(Via.draw)
 
 class Routing(LayoutPart):
     ''' Generate automatic routing connection
@@ -869,7 +878,7 @@ class Routing(LayoutPart):
 
                 return out_list
 
-        radius=0.5
+        radius=0.1
 
         tol=1e-3
 
@@ -885,8 +894,6 @@ class Routing(LayoutPart):
 
             source=self.ports[1]
             destination=self.ports[0]
-
-        y_overtravel=ll.y-source.midpoint[1]-self.trace_width
 
         if destination.y<=ll.y+tol : # destination is below clearance
 
@@ -908,15 +915,13 @@ class Routing(LayoutPart):
 
             try:
 
-                path=pp.smooth(points=list_points,radius=radius)
+                path=pp.smooth(points=list_points,radius=radius,num_pts=30)
 
             except Exception:
 
-                print("error in +0 source, rx path")
+                print("error for non-hindered path ")
 
                 import pdb; pdb.set_trace()
-
-
 
         else: #destination is above clearance
 
@@ -925,8 +930,6 @@ class Routing(LayoutPart):
                 import pdb; pdb.set_trace()
 
                 raise ValueError("Routing case not covered yet")
-
-
 
             elif source.orientation==0 : #right path
 
@@ -946,7 +949,7 @@ class Routing(LayoutPart):
 
                     try:
 
-                        path=pp.smooth(points=list_points_rx,radius=radius)
+                        path=pp.smooth(points=list_points_rx,radius=radius,num_pts=30)
 
                     except Exception :
 
@@ -977,11 +980,11 @@ class Routing(LayoutPart):
 
                     try:
 
-                        path_lx=pp.smooth(points=list_points_lx,radius=radius)
+                        path_lx=pp.smooth(points=list_points_lx,radius=radius,num_pts=30)
 
                     except:
 
-                        print("error in +90 source, lx path")
+                        print("error in +90 hindered tucked path, lx path")
 
                         import pdb; pdb.set_trace()
                     #right path
@@ -996,7 +999,7 @@ class Routing(LayoutPart):
 
                     try:
 
-                        path_rx=pp.smooth(points=list_points_rx,radius=radius)
+                        path_rx=pp.smooth(points=list_points_rx,radius=radius,num_pts=30)
 
                     except:
 
@@ -1044,10 +1047,11 @@ class Routing(LayoutPart):
 
                     try:
 
-                        path=pp.smooth(points=list_points,radius=radius)#source tucked inside clearance
+                        path=pp.smooth(points=list_points,radius=radius,num_pts=30)#source tucked inside clearance
 
-                    except Execption:
+                    except Exception:
 
+                        print("error for non-tucked hindered path ,90 deg")
                         import pdb; pdb.set_trace()
 
             elif source.orientation==180 : #left path
@@ -1055,12 +1059,6 @@ class Routing(LayoutPart):
                 p0=Point(source.midpoint)
 
                 p1=Point(ll.x-self.trace_width,p0.y)
-
-                if abs((p1-p0).x) <= radius:
-
-                    p1=Point(\
-                        p1.x+radius*np.sign((p1-p0).x),
-                        p1.y)
 
                 p2=Point(p1.x,ur.y+self.trace_width)
 
@@ -1072,11 +1070,11 @@ class Routing(LayoutPart):
 
                 try:
 
-                    path=pp.smooth(points=list_points_lx,radius=radius/4)
+                    path=pp.smooth(points=list_points_lx,radius=radius,num_pts=30)
 
                 except Exception:
 
-                    print("error in +0 source, lx path")
+                    print("error in +180 source, lx path")
 
                     import pdb; pdb.set_trace()
 
@@ -1164,6 +1162,8 @@ class GSProbe(LayoutPart):
 
         return cell
 
+# GSProbe.draw=cached(GSProbe)(GSProbe.draw)
+
 class GSGProbe(LayoutPart):
     ''' Generates GSG pattern.
 
@@ -1192,6 +1192,7 @@ class GSGProbe(LayoutPart):
         self.pitch=LayoutDefault.GSGProbepitch
         self.size=copy(LayoutDefault.GSGProbesize)
 
+        self.__class__.draw=cached(self.__class__)(self.__class__.draw)
     def draw(self):
 
         name=self.name
@@ -1240,6 +1241,8 @@ class GSGProbe(LayoutPart):
         orientation=90))
 
         return cell
+
+# GSGProbe.draw=cached(GSGProbe)(GSGProbe.draw)
 
 class Pad(LayoutPart):
     ''' Generates Pad geometry.
@@ -1304,3 +1307,5 @@ class Pad(LayoutPart):
     def resistance_squares(self):
 
         return 1+self.distance/self.port.width
+
+# Pad.draw=cached(Pad)(Pad.draw)

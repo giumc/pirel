@@ -429,9 +429,11 @@ class LayoutParamInterface:
 
             else:
 
-                old_list=getattr(owner.__class__,'_params_dict')
+                old_dict=getattr(owner.__class__,'_params_dict')
 
-                old_list.update({new_param.label:self.private_name})
+                if not new_param.label in old_dict:
+
+                    old_dict.update({new_param.label:self.private_name})
 
         else:
 
@@ -468,7 +470,6 @@ class LayoutPart(ABC) :
             see help
 
     '''
-
     name=LayoutParamInterface()
 
     def __init__(self,name='default',*args,**kwargs):
@@ -477,9 +478,11 @@ class LayoutPart(ABC) :
         Parameters
         ----------
 
-        name : str
+        label : str
             optional,default is 'default'.
         '''
+
+        self.__class__._params_dict={}
 
         self.name=name
 
@@ -489,7 +492,7 @@ class LayoutPart(ABC) :
 
             setattr(self,p.lower(),cls(name=self.name+p))
 
-        # self.__class__.draw=cached(self.__class__)(self.__class__.draw)
+        # self.__class__.draw=cached(self.__class__.draw)
 
     def view(self,blocking=True):
         ''' Visualize cell layout with current parameters.
@@ -575,7 +578,6 @@ class LayoutPart(ABC) :
 
         out_dict={}
 
-
         for p,c in self.get_components().items():
 
             component_params=getattr(self,p.lower()).export_params()
@@ -588,7 +590,15 @@ class LayoutPart(ABC) :
 
         for param_name in param_dict.values():
 
-            out_dict.update(getattr(self,param_name).param)
+            if not hasattr(self,param_name):
+
+                import pdb; pdb.set_trace()
+
+                raise AttributeError(f" no {param_name} in {self.__class__.__name__}")
+
+            else:
+
+                out_dict.update(getattr(self,param_name).param)
 
         out_dict.update({"Type":self.__class__.__name__})
 
@@ -613,8 +623,6 @@ class LayoutPart(ABC) :
             if param_label in df.keys():
 
                 if callable(df[param_label]):
-
-                    import pdb; pdb.set_trace()
 
                     setattr(self,param_key,df[param_label]())
 
@@ -897,15 +905,20 @@ def get_class_param(cls : LayoutPart.__class__ ) -> list:
 
     out_list=[]
 
-    for p in cls._params_dict.values():
+    if hasattr(cls,'_params_dict'):
 
-            out_list.append(p.lstrip('_'))
+        for p in cls._params_dict.values():
+
+                out_list.append(p.lstrip('_'))
 
     for p,c in cls.get_components().items():
 
         [out_list.append(p+x) for x in get_class_param(c)]
 
     return out_list
+
+global recursion
+recursion=0
 
 def cached(cls):
 
@@ -916,6 +929,8 @@ def cached(cls):
         @wraps(fun)
 
         def wrapper(self):
+
+            global recursion
 
             params=get_class_param(cls)
 
@@ -948,16 +963,24 @@ def cached(cls):
             dict_lookup=getattr(cls,dict_name)
 
             if paramlist in dict_lookup.keys():
-
+                print(f"Found cell for {cls.__name__}!")
                 return dict_lookup[paramlist]
 
             else:
 
+                recursion+=1
+
+                if recursion==10:
+
+                    import pdb; pdb.set_trace()
+
                 xout=fun(self)
 
-                # if len(dict_lookup)<1000:
+                recursion-=1
 
                 dict_lookup[paramlist]=xout
+
+                # print(f"Retrieved cell of {cls.__name__} from a {len(dict_lookup)} dict")
 
                 return xout
 

@@ -124,6 +124,8 @@ def Scaled(cls):
 
     Scaled.__name__=" ".join(["Scaled",cls.__name__])
 
+    # Scaled.draw=cached(Scaled)(Scaled.draw)
+
     return Scaled
 
 def addVia(cls,side='top',bottom_conn=False):
@@ -332,6 +334,8 @@ def addVia(cls,side='top',bottom_conn=False):
             return nvias_x,nvias_y
 
     addVia.__name__=" ".join([cls.__name__,"w Via"])
+
+    # addVia.draw=cached(addVia)(addVia.draw)
 
     return addVia
 
@@ -943,13 +947,25 @@ def calibration(cls,type='open'):
 
                 if 'IDT' in subcell.aliases:
 
-                    subcell.remove(subcell['IDT'])
+                    idt_parent=subcell
+                    idt_cell=subcell['IDT']
+
+            for alias in cell.aliases.keys():
+
+                if 'IDT' in alias:
+
+                    idt_parent=cell
+                    idt_cell=cell['IDT']
+
+            if type=='open':
+
+                idt_parent.remove(idt_cell)
 
             if type=='short':
 
-                top_port=ports['top']
+                top_port=idt_cell.ports['top']
 
-                bottom_port=ports['bottom']
+                bottom_port=idt_cell.ports['bottom']
 
                 short=pg.taper(length=top_port.y-bottom_port.y,\
                 width1=top_port.width,\
@@ -1198,6 +1214,7 @@ class LFERes(LayoutPart):
 
         return {'IDT':IDT,"Bus":Bus,"EtchPit":EtchPit,"Anchor":Anchor}
 
+# LFERes.draw=cached(LFERes)(LFERes.draw)
 class FBERes(LFERes):
 
     plate_position=LayoutParamInterface(\
