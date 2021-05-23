@@ -339,10 +339,14 @@ def import_gds(path,cellname=None,flatten=True,**kwargs):
 
         path=pathlib.Path(path)
 
-    cell=Device(name=path.stem).add(pg.import_gds(str(path.absolute())))
+    cell=pg.import_gds(str(path.absolute()))
 
     if flatten==True:
 
         cell.flatten()
 
+    if cellname is not None:
+
+        cell.name=cellname
+        
     return cell
