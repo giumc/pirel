@@ -12,6 +12,8 @@ import numpy as np
 
 plt.style.use(os.path.dirname(__file__)+os.path.sep+'pltstl.mplstyle')
 
+from math import ceil,floor
+
 import sys
 
 class SweepParam():
@@ -360,28 +362,31 @@ class SweepParam():
 
         if n>=len(self):
 
-            raise ValueError(f"""subset returns a smaller number of arrays
-                than the original subset\n, input less than {n}""")
+            warning.warn(f""" SweepParam.subset : {n} larger than SweepParam length ({len(self)})""")
+
+            return self
 
         from numpy import ceil
 
         if len(self)%2==1:
 
-            spacing=int(ceil((len(self)+1)/n))
+            spacing=int(floor((len(self)+1)/n))
 
         else:
 
-            spacing=int(ceil(len(self)/n))
+            spacing=int(floor(len(self)/n))
 
         new_dict={}
 
         for name in self.names:
 
             old_values=self._dict[name]
-            new_values=[old_values[x] for x in range(0,len(self),spacing)]
+
+            new_values=[old_values[x] for x in range(0,len(self)-1,spacing)]
 
             if not len(new_values)==n:
 
+                import pdb; pdb.set_trace()
                 raise ValueError("bug in subset creation, wrong length")
 
             else:

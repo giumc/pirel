@@ -1192,7 +1192,7 @@ class GSGProbe(LayoutPart):
         self.pitch=LayoutDefault.GSGProbepitch
         self.size=copy(LayoutDefault.GSGProbesize)
 
-        self.__class__.draw=cached(self.__class__)(self.__class__.draw)
+        # self.__class__.draw=cached(self.__class__)(self.__class__.draw)
     def draw(self):
 
         name=self.name
