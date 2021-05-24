@@ -18,8 +18,6 @@ import warnings
 
 import re
 
-import gdspy
-
 class Point:
     ''' Handles 2-d coordinates.
 
@@ -508,16 +506,6 @@ class LayoutPart(ABC) :
         qp(self.draw())
         return
 
-    def view_gds(self):
-        ''' Visualize gds cell layout with current parameters.
-
-        Blocks scripts excecution until figure is closed
-
-        '''
-        lib=gdspy.GdsLibrary('test')
-        lib.add(self.draw())
-        gdspy.LayoutViewer(lib)
-
     def _bbox_mod(self,bbox):
         ''' Default method that returns bbox for the class .
 
@@ -917,9 +905,6 @@ def get_class_param(cls : LayoutPart.__class__ ) -> list:
 
     return out_list
 
-global recursion
-recursion=0
-
 def cached(cls):
 
     def cache_dec(fun):
@@ -968,15 +953,7 @@ def cached(cls):
 
             else:
 
-                recursion+=1
-
-                if recursion==10:
-
-                    import pdb; pdb.set_trace()
-
                 xout=fun(self)
-
-                recursion-=1
 
                 dict_lookup[paramlist]=xout
 

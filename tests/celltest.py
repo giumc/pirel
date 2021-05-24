@@ -1,60 +1,91 @@
-from tools import *
-from devices import *
+import pirel.pcells as pc
+import pirel.tools as pt
+import pirel.modifiers as pm
 
-from phidl import quickplot as qp
+from phidl.device_layout import Device,Group
+import phidl
+from unittest import TestCase
 
-# from phidl import export_gds
+import unittest
 
-import pandas as pd
+tobetested=[pc.Anchor()]
+
+class pCellTest(TestCase):
+
+    def setUp(self):
+
+        phidl.reset()
+
+        self.tobetested=tobetested
+
+    def test_class_params(self):
+
+        for laycell in self.tobetested:
+
+            cls_param=pt.get_class_param(laycell)
+            # print(f"Params in {laycell.__class__.__name__}: ")
+            # print("\n".join(cls_param))
+            # print("\n")
 
 
-# d=addProbe(array(addVia(FBERes,'top'),4),addLargeGnd(GSGProbe))(name="DEF")
+    def test_draw(self):
 
-d=addProbe(array(calibration(FBERes,'open'),4),addLargeGnd(GSGProbe))(name="DEF")
-base_params=d.export_params()
+        d=Device()
+        ref=[]
+        for laycell in self.tobetested:
+
+            laycell.draw()
+
+    def test_draw_lookup(self):
+
+        cells=[]
+
+        for laycell in self.tobetested:
+
+            cells.append(laycell.draw())
+
+            map=pt.get_class_param(laycell)
+
+            cmpdict={}
+
+            for m in map:
+
+                cmpdict.update({m:getattr(laycell,m)})
+
+            cmpdict.pop('name')
+
+            if not tuple(cmpdict) in laycell._draw_lookup:
+
+                print("bu")
+if __name__=='__main__':
+    unittest.main()
 
 
-
-base_params["IDTPitch"]=7
-base_params["IDTN"]=2
-base_params["IDTOffset"]=1
-base_params["IDTLength"]=100
-base_params["IDTCoverage"]=0.5
-base_params["BusSizeY"]=5
-base_params["EtchPitX"]=10
-base_params["IDTActiveAreaMargin"]=1
-base_params["AnchorSizeY"]=20
-base_params["AnchorSizeX"]=20
-base_params["AnchorXOffset"]=0
-base_params["AnchorMetalizedX"]=10
-base_params["AnchorMetalizedY"]=24
-base_params["ViaSize"]=10
-base_params["Overvia"]=2
-base_params["ViaAreaY"]=30
-base_params["ViaAreaX"]= lambda : 3*d.idt.n*d.idt.pitch
-d.import_params(base_params)
-
-print(d)
-
-import pathlib
-
-d.draw().write_gds(str(pathlib.Path(__file__).stem))
-
-# d.draw().write_gds("test.gds")
-
-# check_cell(verniers())
-# check_cell(alignment_marks_4layers())
-# check_cell(resistivity_test_cell())
-# check_cell(chip_frame())
-# print(d.resistance())
-# p=PArraySeries(d)
-# v=check_cell(verniers([0.25,0.5,1 ]))
-# p.x_param=[\
-# SweepParam({'IDTN_fingers':[5,10,15,20]}),\
-# SweepParam({'IDTLength':[20,40,60]})]
-# SweepParam({'ViaSize':[10,20,50]})]
-
-# p.view()
-# rpq=1
-
-# print(d.resistance(res_per_square=rpq))
+# d=addProbe(array(calibration(FBERes,'open'),4),addLargeGnd(GSGProbe))(name="DEF")
+# base_params=d.export_params()
+#
+#
+# base_params["IDTPitch"]=7
+# base_params["IDTN"]=2
+# base_params["IDTOffset"]=1
+# base_params["IDTLength"]=100
+# base_params["IDTCoverage"]=0.5
+# base_params["BusSizeY"]=5
+# base_params["EtchPitX"]=10
+# base_params["IDTActiveAreaMargin"]=1
+# base_params["AnchorSizeY"]=20
+# base_params["AnchorSizeX"]=20
+# base_params["AnchorXOffset"]=0
+# base_params["AnchorMetalizedX"]=10
+# base_params["AnchorMetalizedY"]=24
+# base_params["ViaSize"]=10
+# base_params["Overvia"]=2
+# base_params["ViaAreaY"]=30
+# base_params["ViaAreaX"]= lambda : 3*d.idt.n*d.idt.pitch
+# d.import_params(base_params)
+#
+# print(d)
+#
+# import pathlib
+#
+# d.draw().write_gds(str(path

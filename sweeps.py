@@ -1,4 +1,4 @@
-from building_blocks import *
+from pirel.tools import *
 
 import matplotlib.pyplot as plt
 
@@ -10,13 +10,15 @@ from matplotlib.ticker import LinearLocator
 
 import numpy as np
 
-plt.style.use(os.path.dirname(__file__)+os.path.sep+'pltstl.mplstyle')
+import pathlib
+
+plt.style.use(str((pathlib.Path(__file__).parent/'addOns'/'pltstl.mplstyle').absolute()))
 
 from math import ceil,floor
 
 import sys
 
-class SweepParam():
+class SweepParam:
 
     """ Class used to generate and combine sweep parameters in PArray/PMatrix.
 
@@ -395,7 +397,7 @@ class SweepParam():
 
         return SweepParam(new_dict)
 
-class _SweepParamValidator():
+class _SweepParamValidator:
 
     def __init__(self,def_param=LayoutDefault.Arrayx_param):
 

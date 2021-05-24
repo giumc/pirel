@@ -1,3 +1,5 @@
+from pirel.tools import *
+
 from phidl.device_layout import Device, Port, DeviceReference, Group
 
 import phidl.geometry as pg
@@ -19,8 +21,6 @@ import numpy as np
 from copy import copy,deepcopy
 
 import matplotlib.pyplot as plt
-
-from layout_tools import *
 
 class TextParam:
     ''' Class to store text data and to add it in cells.
@@ -262,46 +262,7 @@ class IDT(LayoutPart) :
         cell : phidl.Device.
         '''
 
-        o=self.origin
-
-        rect=pg.rectangle(size=(self.coverage*self.pitch,self.length),\
-            layer=self.layer)
-
-        rect.move(origin=(0,0),destination=o.coord)
-
-        unitcell=Device()
-
-        r1=unitcell << rect
-
-        unitcell.absorb(r1)
-
-        rect_partialetch=pg.rectangle(\
-            size=(\
-                (1-self.coverage)*self.pitch,self.length-self.y_offset),\
-            layer=LayoutDefault.layerPartialEtch)
-
-        rect_partialetch.move(origin=o.coord,\
-            destination=(self.pitch*self.coverage,self.y_offset))
-
-        rp1=unitcell<<rect_partialetch
-
-        rp2=unitcell<<rect_partialetch
-
-        rp2.move(destination=(self.pitch,0))
-
-        r2 = unitcell << rect
-
-        r2.move(origin=o.coord,\
-        destination=(o+Point(self.pitch,self.y_offset)).coord)
-
-        r3= unitcell<< rect
-
-        r3.move(origin=o.coord,\
-            destination=(o+Point(2*self.pitch,0)).coord)
-
-        unitcell.absorb(r2)
-
-        unitcell.absorb(r3)
+        unitcell=self._draw_unit_cell()
 
         cell=Device(self.name)
 
@@ -324,18 +285,18 @@ class IDT(LayoutPart) :
         cell.name=self.name
 
         cell.add_port(Port(name='bottom',\
-        midpoint=(o+\
+        midpoint=(self.origin+\
         Point(midx,0)).coord,\
         width=totx,
         orientation=-90))
 
         cell.add_port(Port(name='top',\
-        midpoint=(o+\
+        midpoint=(self.origin+\
         Point(midx,self.length+self.y_offset)).coord,\
         width=totx,
         orientation=90))
 
-        del unitcell,rect,rect_partialetch
+        del unitcell
 
         return cell
 
@@ -388,7 +349,91 @@ class IDT(LayoutPart) :
 
         return 1/2/pi/f/c0_dens/z0/n
 
-# IDT.draw=cached(IDT)(IDT.draw)
+    def _draw_unit_cell(self):
+
+        o=self.origin
+
+        rect=pg.rectangle(size=(self.coverage*self.pitch,self.length),\
+            layer=self.layer)
+
+        rect.move(origin=(0,0),destination=o.coord)
+
+        unitcell=Device()
+
+        r1=unitcell << rect
+
+        unitcell.absorb(r1)
+
+        r2 = unitcell << rect
+
+        r2.move(origin=o.coord,\
+        destination=(o+Point(self.pitch,self.y_offset)).coord)
+
+        r3= unitcell<< rect
+
+        r3.move(origin=o.coord,\
+            destination=(o+Point(2*self.pitch,0)).coord)
+
+        unitcell.absorb(r2)
+
+        unitcell.absorb(r3)
+
+        unitcell.name="UnitCell"
+
+        del rect
+
+        return unitcell
+
+class PEtchIDT(IDT):
+
+    def _draw_unit_cell(self):
+
+        o=self.origin
+
+        rect=pg.rectangle(size=(self.coverage*self.pitch,self.length),\
+            layer=self.layer)
+
+        rect.move(origin=(0,0),destination=o.coord)
+
+        unitcell=Device()
+
+        r1=unitcell << rect
+
+        unitcell.absorb(r1)
+
+        rect_partialetch=pg.rectangle(\
+            size=(\
+                (1-self.coverage)*self.pitch,self.length-self.y_offset),\
+            layer=LayoutDefault.layerPartialEtch)
+
+        rect_partialetch.move(origin=o.coord,\
+            destination=(self.pitch*self.coverage,self.y_offset))
+
+        rp1=unitcell<<rect_partialetch
+
+        rp2=unitcell<<rect_partialetch
+
+        rp2.move(destination=(self.pitch,0))
+
+        r2 = unitcell << rect
+
+        r2.move(origin=o.coord,\
+        destination=(o+Point(self.pitch,self.y_offset)).coord)
+
+        r3= unitcell<< rect
+
+        r3.move(origin=o.coord,\
+            destination=(o+Point(2*self.pitch,0)).coord)
+
+        unitcell.absorb(r2)
+
+        unitcell.absorb(r3)
+
+        unitcell.name="UnitCell"
+
+        del rect,rect_partialetch
+
+        return unitcell
 
 class Bus(LayoutPart) :
     ''' Generates pair of bus structure.
@@ -459,8 +504,6 @@ class Bus(LayoutPart) :
     def resistance_squares(self):
 
         return self.size.x/self.size.y/2
-
-# Bus.draw=cached(Bus)(Bus.draw)
 
 class EtchPit(LayoutPart) :
     ''' Generates pair of etching trenches.
@@ -536,8 +579,6 @@ class EtchPit(LayoutPart) :
         del main_etch
 
         return etch
-
-# EtchPit.draw=cached(EtchPit)(EtchPit.draw)
 
 class Anchor(LayoutPart):
     ''' Generates anchor structure.
@@ -677,8 +718,6 @@ class Anchor(LayoutPart):
             # print(f"""Metalized Y portion of anchor {self.metalized.y} is smaller than Anchor Y Size {self.size.y}, capped to {self.size.y*1.1}""")
             self.metalized=Point(self.metalized.x,self.size.y*1.1)
 
-# Anchor.draw=cached(Anchor)(Anchor.draw)
-
 class Via(LayoutPart):
     ''' Generates via pattern.
 
@@ -735,8 +774,6 @@ class Via(LayoutPart):
         orientation=90))
 
         return cell
-
-# Via.draw=cached(Via)(Via.draw)
 
 class Routing(LayoutPart):
     ''' Generate automatic routing connection
@@ -1162,8 +1199,6 @@ class GSProbe(LayoutPart):
 
         return cell
 
-# GSProbe.draw=cached(GSProbe)(GSProbe.draw)
-
 class GSGProbe(LayoutPart):
     ''' Generates GSG pattern.
 
@@ -1242,8 +1277,6 @@ class GSGProbe(LayoutPart):
 
         return cell
 
-# GSGProbe.draw=cached(GSGProbe)(GSGProbe.draw)
-
 class Pad(LayoutPart):
     ''' Generates Pad geometry.
 
@@ -1308,4 +1341,380 @@ class Pad(LayoutPart):
 
         return 1+self.distance/self.port.width
 
-# Pad.draw=cached(Pad)(Pad.draw)
+class LFERes(LayoutPart):
+
+    def __init__(self,*args,**kwargs):
+
+        super().__init__(*args,**kwargs)
+
+        self._stretch_top_margin=False
+
+    def draw(self):
+
+        self._set_relations()
+
+        idt_cell=self.idt.draw()
+
+        cell=Device(self.name)
+
+        idt_ref=cell.add_ref(idt_cell,alias="IDT")
+
+        idt_top_port=idt_ref.ports['top']
+
+        idt_bottom_port=idt_ref.ports['bottom']
+
+        bus_cell = self.bus.draw()
+
+        bus_ref= cell.add_ref(bus_cell,alias="BUS")
+
+        bus_ref.connect(port=bus_cell.ports['conn'],\
+        destination=idt_bottom_port)
+
+        etch_cell=self.etchpit.draw()
+
+        etch_ref=cell.add_ref(etch_cell,alias='EtchPit')
+
+        etch_ref.connect(etch_ref.ports['bottom'],\
+        destination=idt_ref.ports['bottom'],\
+        overlap=-self.bus.size.y-self.anchor.etch_margin.y)
+
+        anchor_cell=self.anchor.draw()
+
+        anchor_bottom=cell.add_ref(anchor_cell,alias='AnchorBottom')
+
+        anchor_bottom.connect(anchor_bottom.ports['conn'],
+        destination=idt_ref.ports['bottom'],overlap=-self.bus.size.y)
+
+        if not self._stretch_top_margin:
+
+            anchor_top=cell.add_ref(anchor_cell,alias='AnchorTop')
+
+        else:
+
+            anchor_top_dev=deepcopy(self.anchor)
+
+            anchor_top_dev.metalized=Point(anchor_top_dev.size.x-2,anchor_top_dev.metalized.y)
+
+            anchor_top=cell.add_ref(anchor_top_dev.draw(),alias='AnchorTop')
+
+            del anchor_top_dev
+
+        anchor_top.connect(anchor_top.ports['conn'],\
+            idt_ref.ports['top'],overlap=-self.bus.size.y)
+
+        outport_top=anchor_top.ports['conn']
+
+        outport_bottom=anchor_bottom.ports['conn']
+
+        outport_top.name='top'
+        outport_top.orientation=90
+        outport_bottom.name='bottom'
+        outport_bottom.orientation=-90
+
+        outport_top.midpoint=(\
+            outport_top.x,\
+            outport_top.y+self.anchor.metalized.y)
+        outport_bottom.midpoint=(\
+            outport_bottom.x,\
+            outport_bottom.y-self.anchor.metalized.y)
+
+        cell.add_port(outport_top)
+        cell.add_port(outport_bottom)
+
+        del idt_cell,bus_cell,etch_cell,anchor_cell
+
+        return cell
+
+    def export_params(self):
+
+        self._set_relations()
+
+        t=super().export_params()
+
+        pop_all_dict(t,["IDT"+x for x in ["Name"]])
+
+        pop_all_dict(t, ["Bus"+x for x in ['Name','DistanceX','DistanceY','SizeX']])
+
+        pop_all_dict(t,["EtchPit"+x for x in['Name','ActiveAreaX','ActiveAreaY']])
+
+        pop_all_dict(t,["Anchor"+x for x in ['Name','EtchX','XOffset','EtchChoice']])
+
+        return t
+
+    def import_params(self,df):
+
+        super().import_params(df)
+
+        self._set_relations()
+
+    def _set_relations(self):
+
+        self.bus.size=Point(\
+            self.idt.active_area.x-\
+            2*self.idt.active_area_margin-\
+            self.idt.pitch*(1-self.idt.coverage),\
+            self.bus.size.y)
+
+        self.bus.distance=Point(\
+            0,self.idt.active_area.y+self.bus.size.y)
+
+        self.bus.layer=self.idt.layer
+
+        self.etchpit.active_area=Point(self.idt.active_area.x,\
+            self.idt.active_area.y+2*self.bus.size.y+self.anchor.etch_margin.y*2)
+
+        self.anchor.etch_x=self.etchpit.x*2+self.etchpit.active_area.x
+
+        self.anchor.layer=self.idt.layer
+
+        if self.anchor.metalized.x>self.bus.size.x:
+
+            # warnings.warn(f"Anchor metal is too wide ({self.anchor.metalized.x}), reduced to {self.bus.size.x*0.9}")
+
+            self.anchor.metalized=Point(\
+                self.bus.size.x*0.9,\
+                self.anchor.metalized.y)
+
+    @property
+    def resistance_squares(self):
+
+        self._set_relations()
+
+        ridt=self.idt.resistance_squares
+        rbus=self.bus.resistance_squares
+        ranchor=self.anchor.resistance_squares
+
+        return ridt+rbus+ranchor
+
+    def export_all(self):
+
+        df=super().export_all()
+
+        df["IDTResistance"]=self.idt.resistance_squares
+        df["AnchorResistance"]=self.anchor.resistance_squares
+        df["BusResistance"]=self.idt.resistance_squares
+
+        return df
+
+    @property
+    def area_aspect_ratio(self):
+
+        self._set_relations()
+
+        width=cell.xsize-2*self.etchpit.x
+
+        height=cell.ysize-self.anchor.etch_margin.y-2*self.anchor.size.y
+
+        return height/width
+
+    @staticmethod
+    def get_components():
+
+        return {'IDT':IDT,"Bus":Bus,"EtchPit":EtchPit,"Anchor":Anchor}
+
+class FBERes(LFERes):
+
+    plate_position=LayoutParamInterface(\
+        'in, short','out, short','in, long','out, long')
+
+    def __init__(self,*args,**kwargs):
+
+        super().__init__(*args,**kwargs)
+
+        self.plate_position='out, short'
+
+        self.platelayer=LayoutDefault.FBEResplatelayer
+
+    def draw(self):
+
+        cell=Device()
+
+        cell.name=self.name
+
+        supercell=LFERes.draw(self)
+
+        super_ref=cell.add_ref(supercell)
+
+        if self.plate_position=='out, short':
+
+            plate=pg.rectangle(size=(self.etchpit.active_area.x+8*self.idt.active_area_margin,self.idt.length-self.idt.y_offset/2),\
+            layer=self.platelayer)
+
+            plate_ref=cell.add_ref(plate,alias='Plate')
+
+            transl_rel=Point(self.etchpit.x-4*self.idt.active_area_margin,self.anchor.size.y+2*self.anchor.etch_margin.y+self.bus.size.y\
+                +self.idt.y_offset*3/4)
+
+            lr_cell=get_corners(cell)[0]
+            lr_plate=get_corners(plate_ref)[0]
+
+            plate_ref.move(origin=lr_plate.coord,\
+            destination=(lr_plate+lr_cell+transl_rel).coord)
+
+            cell.absorb(plate_ref)
+
+            del plate
+
+
+        elif self.plate_position=='in, short':
+
+            plate=pg.rectangle(\
+                size=(\
+                    self.etchpit.active_area.x-\
+                        2*self.idt.active_area_margin,\
+                        self.idt.length-self.idt.y_offset/2),\
+                layer=self.platelayer)
+
+            plate_ref=cell.add_ref(plate,alias='Plate')
+
+            transl_rel=Point(self.etchpit.x+\
+                    self.idt.active_area_margin,\
+                self.anchor.size.y+\
+                2*self.anchor.etch_margin.y+\
+                self.bus.size.y+\
+                self.idt.y_offset*3/4)
+
+            lr_cell=get_corners(cell)[0]
+            lr_plate=get_corners(plate_ref)[0]
+
+            plate_ref.move(origin=lr_plate.coord,\
+            destination=(lr_plate+lr_cell+transl_rel).coord)
+
+            cell.absorb(plate_ref)
+
+            del plate
+
+        elif self.plate_position=='out, long':
+
+            plate=pg.rectangle(\
+                size=(self.etchpit.active_area.x+\
+                        8*self.idt.active_area_margin,\
+                    self.idt.length+\
+                        2*self.bus.size.y+\
+                        self.idt.y_offset),\
+                layer=self.platelayer)
+
+            plate_ref=cell.add_ref(plate,alias='Plate')
+
+            transl_rel=Point(self.etchpit.x-\
+                4*self.idt.active_area_margin,\
+                    self.anchor.size.y+2*self.anchor.etch_margin.y)
+
+            lr_cell=get_corners(cell)[0]
+            lr_plate=get_corners(plate_ref)[0]
+
+            plate_ref.move(origin=lr_plate.coord,\
+            destination=(lr_plate+lr_cell+transl_rel).coord)
+
+            cell.absorb(plate_ref)
+
+            del plate
+
+        elif self.plate_position=='in, long':
+
+            plate=pg.rectangle(\
+                size=(\
+                    self.etchpit.active_area.x-\
+                        2*self.idt.active_area_margin,\
+                        self.idt.length+\
+                            2*self.bus.size.y+\
+                            self.idt.y_offset),
+                layer=self.platelayer)
+
+            plate_ref=cell.add_ref(plate,alias='Plate')
+
+            transl_rel=Point(self.etchpit.x+\
+                    self.idt.active_area_margin,\
+                        self.anchor.size.y+2*self.anchor.etch_margin.y)
+
+            lr_cell=get_corners(cell)[0]
+            lr_plate=get_corners(plate_ref)[0]
+
+            plate_ref.move(origin=lr_plate.coord,\
+            destination=(lr_plate+lr_cell+transl_rel).coord)
+
+            cell.absorb(plate_ref)
+
+            del plate
+
+        for name,port in supercell.ports.items():
+
+            cell.add_port(port,name)
+
+        return cell
+
+class TFERes(LFERes):
+
+    def __init__(self,*args,**kwargs):
+
+        super().__init__(*args,**kwargs)
+
+        self.bottomlayer=LayoutDefault.TFEResbottomlayer
+
+    def draw(self):
+
+        cell=Device(name=self.name)
+
+        cell.add_ref(LFERes.draw(self))
+
+        idt_bottom=copy(self.idt)
+
+        idt_bottom.layer=self.bottomlayer
+
+        idt_ref=cell<<idt_bottom.draw()
+
+        p_bott=idt_ref.ports['bottom']
+
+        p_bott_coord=Point(p_bott.midpoint)
+
+        idt_ref.mirror(p1=(p_bott_coord-Point(p_bott.width/2,0)).coord,\
+            p2=(p_bott_coord+Point(p_bott.width/2,0)).coord)
+
+        idt_ref.move(origin=(idt_ref.xmin,idt_ref.ymax),\
+            destination=(idt_ref.xmin,idt_ref.ymax+self.idt.length+self.idt.y_offset))
+
+        bus_bottom=copy(self.bus)
+
+        bus_bottom.layer=self.bottomlayer
+
+        bus_ref=cell<<bus_bottom.draw()
+
+        bus_ref.move(origin=(0,0),\
+        destination=(0,-self.bus.size.y))
+
+        cell.absorb(bus_ref)
+
+        anchor_bottom=copy(self.anchor)
+
+        anchor_bottom.layer=self.bottomlayer
+        anchor_bottom.etch_choice=False
+
+        anchor_ref=cell<<anchor_bottom.draw()
+
+        anchor_ref.connect(anchor_ref.ports['conn'],\
+            destination=idt_ref.ports['top'],\
+            overlap=-self.bus.size.y)
+
+        cell.absorb(anchor_ref)
+
+        anchor_ref_2=cell<<anchor_bottom.draw()
+
+        anchor_ref_2.connect(anchor_ref_2.ports['conn'],\
+            destination=idt_ref.ports['bottom'],\
+            overlap=-self.bus.size.y)
+
+        cell.absorb(anchor_ref_2)
+
+        cell.absorb(idt_ref)
+
+        out_ports=cell.get_ports()
+
+        for p in out_ports:
+
+            cell.add_port(p)
+
+        return cell
+
+for cls in [IDT,Bus,EtchPit,Anchor,Via,Routing,GSProbe,GSGProbe,Pad,LFERes,FBERes,TFERes]:
+
+    cls.draw=cached(cls)(cls.draw)
