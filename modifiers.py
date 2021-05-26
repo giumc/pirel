@@ -516,31 +516,17 @@ def addProbe(cls,probe):
 
                 #ground routing
 
-                probe_port_lx=probe_ref.ports['gnd_left']
+                probe_ports=(probe_ref.ports['gnd_left'],probe_ref.ports['gnd_right'])
 
-                probe_port_rx=probe_ref.ports['gnd_right']
+                top_ports=tuple([p for n,p in device_cell.ports.items() if re.search('top',n)])
 
-                device_ports=device_cell.ports
+                multiroute=MultiRouting()
+                multiroute.clearance=bbox
+                multiroute.sources=probe_ports
+                multiroute.destination=top_ports
+                multiroute.trace_width=self.gnd_routing_width
 
-                for port_name in device_ports.keys():
-
-                    if re.search('top',port_name):
-
-                        dut_port_top=device_ports[port_name]
-
-                        routing_lx=self._route(bbox,probe_port_lx,dut_port_top,self.gnd_routing_width)
-
-                        # self._ground_paths=[routing_lx.path]
-
-                        r_lx_cell=routing_lx.draw()
-
-                        routing_rx=self._route(bbox,probe_port_rx,dut_port_top,self.gnd_routing_width)
-
-                        # self._ground_paths.append(routing_rx.path)
-
-                        r_rx_cell=routing_rx.draw()
-
-                        routing_tot.add(pg.boolean(r_lx_cell,r_rx_cell,'or',layer=self.probe.layer))
+                routing_tot=multiroute.draw()
 
                 #signal routing
 
@@ -559,6 +545,8 @@ def addProbe(cls,probe):
                     raise ValueError(f"no bottom port in {cls.__name__} cell")
 
                 bottom_ports=[]
+
+                device_ports=device_cell.ports
 
                 for port_name in device_ports.keys():
 
@@ -599,20 +587,6 @@ def addProbe(cls,probe):
 
             return cell
 
-        def _route(self,bbox,p1,p2,width):
-
-            routing=Routing()
-
-            routing.layer=self.probe.layer
-
-            routing.clearance=bbox
-
-            routing.trace_width=width
-
-            routing.ports=tuple(copy(x) for x in [p1,p2])
-
-            return routing
-
         def export_params(self):
 
             t=cls.export_params(self)
@@ -634,107 +608,6 @@ def addProbe(cls,probe):
             df["ProbeResistance"]=self.probe_resistance_squares
 
             return df
-
-        def _route_signal(self,bbox : tuple, probe_port : Port, dut_ports : list) ->Device :
-
-            numports=len(dut_ports)
-
-            if numports == 1 :
-
-                routing=self._route(bbox,probe_port,dut_ports[0],dut_ports[0].width)
-
-                # self._signal_paths.append(routing.path)
-
-                c=routing.draw()
-
-                # del routing
-
-                return c
-
-            elif numports == 2 :
-
-                routing_cell=Device()
-
-                for dut_port in dut_ports :
-
-                    routing=self._route(bbox,probe_port,dut_port,dut_port.width)
-
-                    # self._signal_paths.append(routing.path)
-
-                    routing_cell.add(routing.draw())
-
-                    # del routing
-
-                return join(routing_cell)
-
-            else :
-
-                if numports %2 ==0:
-
-                    midport=int(numports/2)
-
-                    routing_cell=self._route_signal(bbox,probe_port,dut_ports[midport-1:midport+1])
-
-                    patch_width=dut_ports[midport-1].midpoint[0]+dut_ports[midport-1].width/2-\
-                        (dut_ports[0].midpoint[0]-dut_ports[0].width/2)
-
-                    # self._signal_paths.append(pp.Path().append(pp.straight(length=patch_width)))
-
-                    patch_height=dut_ports[0].width
-
-                    patch=Point(patch_width,patch_height)
-
-                    origin=Point(dut_ports[0].midpoint[0]-dut_ports[0].width/2,\
-                        dut_ports[0].midpoint[1]-patch_height)
-
-                    routing_cell.add(\
-                        pg.bbox(\
-                            (origin.coord,(origin+patch).coord),\
-                            layer=self.probe.layer))
-
-                    patch_width=dut_ports[-1].midpoint[0]+dut_ports[-1].width/2-\
-                        (dut_ports[midport].midpoint[0]-dut_ports[midport].width/2)
-
-                    # self._signal_paths.append(pp.Path().append(pp.straight(length=patch_width)))
-
-                    patch_height=dut_ports[midport].width
-
-                    patch=Point(patch_width,patch_height)
-
-                    origin=Point(dut_ports[midport].midpoint[0]-dut_ports[midport].width/2,\
-                        dut_ports[midport].midpoint[1]-patch_height)
-
-                    routing_cell.add(\
-                        pg.bbox(\
-                            (origin.coord,(origin+patch).coord),\
-                            layer=self.probe.layer))
-
-                    return routing_cell
-
-                elif numports%2==1:
-
-                    midport=int((numports-1)/2)
-
-                    routing_cell=self._route_signal(bbox,probe_port,[dut_ports[midport]])
-
-                    patch_width=dut_ports[-1].midpoint[0]+dut_ports[-1].width/2-\
-                        (dut_ports[0].midpoint[0]-dut_ports[0].width/2)
-
-                    # self._signal_paths.append(pp.Path().append(pp.straight(length=patch_width)))
-
-                    patch_height=dut_ports[0].width
-
-                    patch=Point(patch_width,patch_height)
-
-                    origin=Point(dut_ports[0].midpoint[0]-dut_ports[0].width/2,\
-                        dut_ports[0].midpoint[1]-patch_height)
-
-                    routing_cell.add(\
-                        pg.bbox(\
-                            (origin.coord,(origin+patch).coord),\
-                            layer=self.probe.layer))
-
-                    return routing_cell
 
         @property
         def resistance_squares(self):
@@ -771,13 +644,15 @@ def addLargeGnd(probe):
 
         ground_size=LayoutParamInterface()
 
+        ground_port_side=LayoutParamInterface('top','side')
+
         def __init__(self,*args,**kwargs):
 
             probe.__init__(self,*args,**kwargs)
 
             self.ground_size=LayoutDefault.GSGProbe_LargePadground_size
 
-            self._pad_position='side'
+            self.ground_port_side='side'
 
         def draw(self):
 
@@ -826,7 +701,7 @@ def addLargeGnd(probe):
 
                     if 'left' in name:
 
-                        if self._pad_position=='side':
+                        if self.ground_pad_side=='side':
 
                             left_port=Port(name=name,\
                                 midpoint=(left_port.midpoint[0]+self.ground_size/2,\
@@ -834,7 +709,7 @@ def addLargeGnd(probe):
                                 orientation=180,\
                                 width=self.ground_size)
 
-                        elif self._pad_position=='top':
+                        elif self.ground_pad_side=='top':
 
                             left_port=Port(name=name,\
                                 midpoint=(left_port.midpoint[0],\
@@ -844,13 +719,13 @@ def addLargeGnd(probe):
 
                         else :
 
-                            raise ValueError(f"New pad position is {self._pad_position} : not acceptable")
+                            raise ValueError(f"New pad position is {self.ground_pad_side} : not acceptable")
 
                         cell.add_port(left_port)
 
                     elif 'right' in name:
 
-                        if self._pad_position=='side':
+                        if self.ground_pad_side=='side':
 
                             right_port=Port(name=name,\
                             midpoint=(right_port.midpoint[0]-self.ground_size/2,\
@@ -858,7 +733,7 @@ def addLargeGnd(probe):
                             orientation=0,\
                             width=self.ground_size)
 
-                        elif self._pad_position=='top':
+                        elif self.ground_pad_side=='top':
 
                             right_port=Port(name=name,\
                             midpoint=(right_port.midpoint[0],\
@@ -868,7 +743,7 @@ def addLargeGnd(probe):
 
                         else :
 
-                            raise ValueError(f"New pad position is {self._pad_position} : not acceptable")
+                            raise ValueError(f"New pad position is {self.ground_pad_side} : not acceptable")
 
                         cell.add_port(right_port)
 

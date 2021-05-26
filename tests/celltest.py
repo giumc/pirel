@@ -8,14 +8,13 @@ from unittest import TestCase
 
 import unittest
 
-
 class pCellTest(TestCase):
 
     def setUp(self):
 
         phidl.reset()
 
-    def test_class_list(self):
+    def test_allclasses(self):
 
         for layclass in pc._allclasses:
 
@@ -23,7 +22,7 @@ class pCellTest(TestCase):
 
             self._check_lookup(layobj)
 
-            layobj.draw()
+            self._recheck_lookup(layobj)
 
     def _check_lookup(self,obj):
 
@@ -37,7 +36,11 @@ class pCellTest(TestCase):
 
             try:
 
-                self.assertTrue(cmpdict in obj._draw_lookup)
+                if cmpdict in obj._draw_lookup:
+
+                    print(f"After first call, found cell for {obj.__class__.__name__}!")
+
+                    self.assertTrue(cmpdict in obj._draw_lookup)
 
             except Exception:
 
@@ -53,11 +56,15 @@ class pCellTest(TestCase):
 
         cell=obj.draw()
 
-        map=pt.pop_all_match(pt.get_class_param(obj.__class),'.*name*')
+        map=pt.pop_all_match(pt.get_class_param(obj.__class__),'.*name*')
 
         try:
 
-            self.assertTrue(obj._draw_lookup[pt._get_hashable_params(obj,map)]==cell)
+            if pt._get_hashable_params(obj,map) in obj._draw_lookup:
+
+                print(f"Found again cell for {obj.__class__.__name__}!")
+
+                self.assertTrue(obj._draw_lookup[pt._get_hashable_params(obj,map)]==cell)
 
         except Exception:
 
@@ -65,6 +72,165 @@ class pCellTest(TestCase):
             {pt._get_hashable_params(obj,map)} should be in lookup""")
 
             self.assertTrue(obj._draw_lookup[pt._get_hashable_params(obj,map)]==cell)
+
+class RoutingTest(TestCase):
+
+    def test_routing(self):
+
+        r=pc.Routing()
+
+        from pirel.tools import Point
+
+        ll=Point(500,500)
+        ur=Point(1000,1000)
+
+        r.clearance=(ll.coord,ur.coord)
+
+        r.trace_width=50
+
+        dx_increment=200
+        dy_increment=50
+
+        s0=Point(750,0)
+
+        d0=Point(0,100)
+
+        cells=[]
+
+        gtot=[]
+
+        master_cell=Device()
+
+        for n in range(10):
+
+            d0=d0+Point(dx_increment,0)
+
+            cells.append([])
+
+            for n in range(10):
+
+                d0=d0+Point(0,dy_increment)
+
+                angle=-90
+
+                if d0.y>ll.y:
+
+                    dt=d0+Point(0,ur.y-ll.y+10)
+
+                    angle=90
+
+                else:
+
+                    dt=d0
+
+                r.ports=(pt.Port(name='1',midpoint=s0.coord,width=r.trace_width,orientation=90),\
+                        pt.Port(name='2',midpoint=dt.coord,width=r.trace_width,orientation=angle))
+
+                try:
+
+                    new_cell=master_cell<<r._draw_with_frame()
+
+                except Exception as e:
+
+                    print(e)
+
+                    pt.check(r._draw_with_frame())
+
+                    self.assertTrue(1==0)
+
+                cells[-1].append(new_cell)
+
+            g=Group(cells[-1])
+
+            g.distribute(direction='x')
+
+            gtot.append(g)
+
+        g=Group(gtot)
+
+        g.distribute(direction='y')
+
+        pt.check(master_cell)
+
+        self.assertTrue(1)
+
+class MultiRoutingTest(TestCase):
+
+    def test_routing(self):
+
+        r=pc.MultiRouting()
+
+        from pirel.tools import Point
+
+        ll=Point(500,500)
+        ur=Point(1000,1000)
+
+        r.clearance=(ll.coord,ur.coord)
+
+        r.trace_width=50
+
+        dx_increment=200
+        dy_increment=50
+
+        s0=Point(750,0)
+
+        d0=Point(0,100)
+
+        cells=[]
+
+        master_cell=Device()
+
+        for n in range(10):
+
+            d0=d0+Point(dx_increment,0)
+
+            dest=[]
+
+            for n in range(10):
+
+                d0=d0+Point(0,dy_increment)
+
+                angle=-90
+
+                if d0.y>ll.y:
+
+                    dt=d0+Point(0,ur.y-ll.y+10)
+
+                    angle=90
+
+                else:
+
+                    dt=d0
+
+                if dt.in_box(r.clearance):
+
+                    dt=dt+Point(300,300)
+
+                dest.append(pt.Port(name=str(n),midpoint=dt.coord,width=r.trace_width,orientation=angle))
+
+            r.sources=(pt.Port(name='-1',midpoint=s0.coord,width=r.trace_width,orientation=90),)
+
+            r.destinations=tuple(dest)
+
+            try:
+
+                new_cell=master_cell<<r.draw()
+                cells.append(new_cell)
+
+            except Exception as e:
+
+                print(e)
+
+                self.assertTrue(1==0)
+                # import pdb; pdb.set_trace()
+
+        g=Group(cells)
+
+        g.distribute(direction='x')
+
+        pt.check(master_cell)
+
+        self.assertTrue(1)
 
 if __name__=='__main__':
     unittest.main()
@@ -95,6 +261,8 @@ if __name__=='__main__':
 #
 # print(d)
 #
-# import pathlib
+# import
+
+
 #
 # d.draw().write_gds(str(path

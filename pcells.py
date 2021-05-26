@@ -2,6 +2,8 @@ from pirel.tools import *
 
 from phidl.device_layout import Device, Port, DeviceReference, Group
 
+import pathlib
+
 import phidl.geometry as pg
 
 import phidl.path as pp
@@ -192,7 +194,7 @@ class TextParam:
 
             text_opts[name]=self.get(name)
 
-        package_directory = os.path.dirname(os.path.abspath(__file__))
+        package_directory = str(pathlib.path(__file__).parent/'addOns')
 
         font=os.path.join(package_directory,text_opts['font'])
 
@@ -780,21 +782,6 @@ class Routing(LayoutPart):
 
     Derived from LayoutPart.
 
-    Parameters
-    ---------
-    side : str (optional)
-        decides where to go if there is an obstacle in the routing,
-        only 'auto','left','right'
-
-    trace_width : float (optional)
-
-    clearance : 2 len iterable of 2 len iterables
-
-    ports : iterable of phidl.Port
-
-    layer : float
-
-
     Attributes
     ----------
     clearance : iterable of two coordinates
@@ -816,7 +803,8 @@ class Routing(LayoutPart):
     side : str (can be "auto","left","right")
 
         where to go if there is an obstacle.
-        if "auto", will select minimum length path.
+        decides where to go if there is an obstacle in the routing,
+        only 'auto','left','right'
 
     '''
 
@@ -830,18 +818,16 @@ class Routing(LayoutPart):
 
     layer=LayoutParamInterface()
 
-    def __init__(self,side='auto',trace_width=LayoutDefault.Routingtrace_width,\
-        clearance=LayoutDefault.Routingclearance,ports=LayoutDefault.Routingports,\
-        layer=LayoutDefault.Routinglayer,*args,**kwargs):
+    def __init__(self,*args,**kwargs):
 
         super().__init__(*args,**kwargs)
-        self.layer=layer
-        self.trace_width=trace_width
-        self.clearance=clearance
-        self.ports=ports
-        self.side=side
+        self.clearance=LayoutDefault.Routingclearance
+        self.side=LayoutDefault.Routingside
+        self.trace_width=LayoutDefault.Routingtrace_width
+        self.ports=LayoutDefault.Routingports
+        self.layer=LayoutDefault.Routinglayer
 
-    def draw_frame(self):
+    def _draw_frame(self):
 
         rect=pg.bbox(self.clearance,layer=self.layer)
         rect.add_port(self.ports[0])
@@ -852,7 +838,7 @@ class Routing(LayoutPart):
 
     def draw(self):
 
-        path=self.path
+        p=self.path
 
         x=CrossSection()
 
@@ -860,13 +846,12 @@ class Routing(LayoutPart):
 
         try:
 
-            path_cell=x.extrude(path,simplify=0.1)
+            path_cell=join(x.extrude(p,simplify=0.1))
+            path_cell.name=self.name
 
         except Exception as e:
 
             print (e)
-
-            import pdb; pdb.set_trace()
 
         return path_cell
 
@@ -932,7 +917,15 @@ class Routing(LayoutPart):
             source=self.ports[1]
             destination=self.ports[0]
 
-        if destination.y<=ll.y+tol : # destination is below clearance
+        if Point(source.midpoint).in_box(bbox.bbox) :
+
+            raise ValueError(f" Source of routing {source.midport} is in clearance area {bbox.bbox}")
+
+        if Point(destination.midpoint).in_box(bbox.bbox):
+
+            raise ValueError(f" Destination of routing{destination.midpoint} is in clearance area{bbox.bbox}")
+
+        if destination.y<=ll.y+tol  : # destination is below clearance
 
             if not(destination.orientation==source.orientation+180 or \
                 destination.orientation==source.orientation-180):
@@ -952,23 +945,19 @@ class Routing(LayoutPart):
 
             try:
 
-                path=pp.smooth(points=list_points,radius=radius,num_pts=30)
+                p=pp.smooth(points=list_points,radius=radius,num_pts=30)
 
             except Exception:
 
-                print("error for non-hindered path ")
-
-                import pdb; pdb.set_trace()
+                raise ValueError("error for non-hindered path ")
 
         else: #destination is above clearance
 
             if not destination.orientation==90 :
 
-                import pdb; pdb.set_trace()
-
                 raise ValueError("Routing case not covered yet")
 
-            elif source.orientation==0 : #right path
+            elif source.orientation==0 : #right ground_pad_side
 
                     source.name='source'
 
@@ -979,20 +968,20 @@ class Routing(LayoutPart):
                     p1=Point(ur.x+self.trace_width,p0.y)
 
                     p2=Point(p1.x,ur.y+self.trace_width)
+
                     p3=Point(destination.x,p2.y)
+
                     p4=Point(destination.x,destination.y)
 
                     list_points_rx=check_points(p0,p1,p2,p3,p4)
 
                     try:
 
-                        path=pp.smooth(points=list_points_rx,radius=radius,num_pts=30)
+                        p=pp.smooth(points=list_points_rx,radius=radius,num_pts=30)
 
                     except Exception :
 
-                        print("error in +0 source, rx path")
-
-                        import pdb; pdb.set_trace()
+                        raise ValueError("error in +0 source, rx path")
 
             if source.orientation==90 :
 
@@ -1017,13 +1006,12 @@ class Routing(LayoutPart):
 
                     try:
 
-                        path_lx=pp.smooth(points=list_points_lx,radius=radius,num_pts=30)
+                        p_lx=pp.smooth(points=list_points_lx,radius=radius,num_pts=30)
 
                     except:
 
-                        print("error in +90 hindered tucked path, lx path")
+                        raise ValueError("error in +90 hindered tucked path, lx path")
 
-                        import pdb; pdb.set_trace()
                     #right path
 
                     p1=p0-Point(0,source.width/2)
@@ -1036,30 +1024,29 @@ class Routing(LayoutPart):
 
                     try:
 
-                        path_rx=pp.smooth(points=list_points_rx,radius=radius,num_pts=30)
+                        p_rx=pp.smooth(points=list_points_rx,radius=radius,num_pts=30)
 
                     except:
 
-                        print("error in +90 source, rx path")
-
-                        import pdb; pdb.set_trace()
+                        raise ValueError("error in +90 source, rx path")
 
                     if self.side=='auto':
 
-                        if path_lx.length()<path_rx.length():
+                        if p_lx.length()<p_rx.length():
 
-                            path=path_lx
+                            p=p_lx
 
                         else:
 
-                            path=path_rx
+                            p=p_rx
 
                     elif self.side=='left':
 
-                        path=path_lx
+                        p=p_lx
+
                     elif self.side=='right':
 
-                        path=path_rx
+                        p=p_rx
 
                     else:
 
@@ -1084,12 +1071,11 @@ class Routing(LayoutPart):
 
                     try:
 
-                        path=pp.smooth(points=list_points,radius=radius,num_pts=30)#source tucked inside clearance
+                        p=pp.smooth(points=list_points,radius=radius,num_pts=30)#source tucked inside clearance
 
                     except Exception:
 
-                        print("error for non-tucked hindered path ,90 deg")
-                        import pdb; pdb.set_trace()
+                        raise ValueError("error for non-tucked hindered p ,90 deg")
 
             elif source.orientation==180 : #left path
 
@@ -1107,21 +1093,19 @@ class Routing(LayoutPart):
 
                 try:
 
-                    path=pp.smooth(points=list_points_lx,radius=radius,num_pts=30)
+                    p=pp.smooth(points=list_points_lx,radius=radius,num_pts=30)
 
                 except Exception:
 
-                    print("error in +180 source, lx path")
+                    raise ValueError("error in +180 source, lx path")
 
-                    import pdb; pdb.set_trace()
+        return p
 
-        return path
+    def _draw_with_frame(self):
 
-    def draw_with_frame(self):
+        cell_frame=self._draw_frame()
 
-        cell_frame=self.draw_frame()
-
-        cell_frame.add(self.draw())
+        cell_frame.absorb(cell_frame<<self.draw())
 
         return cell_frame
 
@@ -1717,7 +1701,81 @@ class TFERes(LFERes):
 
         return cell
 
-_allclasses=(IDT,Bus,EtchPit,Anchor,Via,Routing,GSProbe,GSGProbe,Pad,LFERes,FBERes,TFERes)
+class MultiRouting(LayoutPart):
+
+    sources=LayoutParamInterface()
+
+    destinations=LayoutParamInterface()
+
+    clearance=LayoutParamInterface()
+
+    trace_width=LayoutParamInterface()
+
+    layer=LayoutParamInterface()
+
+    def __init__(self,*a,**k):
+
+        super().__init__(*a,**k)
+
+        self.sources=LayoutDefault.MultiRoutingsources
+        self.destinations=LayoutDefault.MultiRoutingdestinations
+        self.clearance=LayoutDefault.Routingclearance
+        self.trace_width=LayoutDefault.Routingtrace_width
+        self.layer=LayoutDefault.Routinglayer
+
+    @property
+    def paths(self):
+
+        p=[]
+
+        for s in self.sources:
+
+            for d in self.destinations:
+
+                r=self._create_routing(s,d)
+
+                p.append(r.path)
+
+        return p
+
+    def _create_routing(self,s,d):
+
+        r=Routing()
+
+        r.trace_width=self.trace_width
+
+        r.layer=self.layer
+
+        r.side='auto'
+
+        r.clearance=self.clearance
+
+        if not all([isinstance(p, Port) for p in (s,d)]):
+
+            raise TypeError(f"{p} is not a phidl Port")
+
+        else:
+
+            r.ports=(s,d,)
+
+        return r
+
+    def draw(self):
+
+        c=Device(name=self.name)
+
+        for s in self.sources:
+
+            for d in self.destinations:
+
+                r=self._create_routing(s,d)
+
+                c<<r.draw()
+
+        return c
+
+_allclasses=(IDT,Bus,EtchPit,Anchor,Via,Routing,GSProbe,GSGProbe,Pad,MultiRouting,\
+LFERes,FBERes,TFERes)
 
 for cls in _allclasses:
 

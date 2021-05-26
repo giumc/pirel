@@ -64,6 +64,24 @@ class Point:
     def y(self):
         return self._y
 
+    def in_box(self,bbox):
+
+        tol=0
+        ll=Point(bbox[0])
+        ur=Point(bbox[1])
+
+        if  self.x>ll.x-tol and\
+            self.x<ur.x+tol and\
+            self.y>ll.y+tol and\
+            self.y<ur.y-tol:
+
+                return True
+
+        else:
+
+            return False
+
+
     def __setattr__(self,name,value):
 
         if name in ('_x','_y'):
@@ -157,7 +175,7 @@ class Point:
         return sqrt(self.x^2+self.y^2)
 
 class LayoutDefault:
-    '''container of PyResLayout constants.'''
+    '''container of pirel constants.'''
 
     origin=Point(0,0)
     layerSi = 0
@@ -241,17 +259,26 @@ class LayoutDefault:
 
     #Routing
 
-    Routingtrace_width=80.
+    Routingtrace_width=80.0
+
     Routingclearance=((0,250),(300,550))
+
     Routinglayer=layerTop
+
     Routingports=(Port(name='1',midpoint=(450,0),\
         width=50,orientation=90),\
             Port(name='2',midpoint=(100,550),\
-            width=50,orientation=90))
+            width=50,orientation=90),)
 
-    #DUT
-    DUTrouting_width=Routingtrace_width
+    Routingside='auto'
 
+    #MultiRouting
+
+    MultiRoutingsources=(Routingports[0],)
+    MultiRoutingdestinations=(Port(name='2',midpoint=(100,550),\
+        width=50,orientation=90),\
+            Port(name='3',midpoint=(200,80),\
+            width=50,orientation=-90))
     #GSGProbe_LargePad
     GSGProbe_LargePadground_size=200.0
 
@@ -871,13 +898,15 @@ def pop_all_dict(old_dict : dict ,elems : list):
 
         old_dict.pop(el)
 
-def pop_all_match(l : list , reg : str) -> None:
+def pop_all_match(l : list , reg : str) -> list:
 
     from re import compile
 
     r=compile(reg)
 
     [l.remove(x) for x in filter(r.match,l)]
+
+    return l
 
 def parallel_res(*args) -> float:
 
@@ -930,8 +959,6 @@ def cached(cls):
             dict_lookup=getattr(cls,dict_name)
 
             if paramhash in dict_lookup.keys():
-
-                print(f"Found cell for {cls.__name__}!")
 
                 return dict_lookup[paramhash]
 
