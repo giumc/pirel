@@ -8,7 +8,6 @@ from unittest import TestCase
 
 import unittest
 
-tobetested=[pc.Anchor()]
 
 class pCellTest(TestCase):
 
@@ -16,47 +15,57 @@ class pCellTest(TestCase):
 
         phidl.reset()
 
-        self.tobetested=tobetested
+    def test_class_list(self):
 
-    def test_class_params(self):
+        for layclass in pc._allclasses:
 
-        for laycell in self.tobetested:
+            layobj=layclass()
 
-            cls_param=pt.get_class_param(laycell)
-            # print(f"Params in {laycell.__class__.__name__}: ")
-            # print("\n".join(cls_param))
-            # print("\n")
+            self._check_lookup(layobj)
 
+            layobj.draw()
 
-    def test_draw(self):
+    def _check_lookup(self,obj):
 
-        d=Device()
-        ref=[]
-        for laycell in self.tobetested:
+            obj.draw()
 
-            laycell.draw()
+            map=pt.get_class_param(obj.__class__)
 
-    def test_draw_lookup(self):
+            pt.pop_all_match(map,".*name*")
 
-        cells=[]
+            cmpdict=pt._get_hashable_params(obj,map)
 
-        for laycell in self.tobetested:
+            try:
 
-            cells.append(laycell.draw())
+                self.assertTrue(cmpdict in obj._draw_lookup)
 
-            map=pt.get_class_param(laycell)
+            except Exception:
 
-            cmpdict={}
+                print(f"Error in {obj.__class__.__name__}!")
 
-            for m in map:
+                print(cmpdict)
 
-                cmpdict.update({m:getattr(laycell,m)})
+                print( obj._draw_lookup)
 
-            cmpdict.pop('name')
+                self.assertTrue(cmpdict in obj._draw_lookup)
 
-            if not tuple(cmpdict) in laycell._draw_lookup:
+    def _recheck_lookup(self,obj):
 
-                print("bu")
+        cell=obj.draw()
+
+        map=pt.pop_all_match(pt.get_class_param(obj.__class),'.*name*')
+
+        try:
+
+            self.assertTrue(obj._draw_lookup[pt._get_hashable_params(obj,map)]==cell)
+
+        except Exception:
+
+            print(f"""Device for {obj.__class__.__name__} with params
+            {pt._get_hashable_params(obj,map)} should be in lookup""")
+
+            self.assertTrue(obj._draw_lookup[pt._get_hashable_params(obj,map)]==cell)
+
 if __name__=='__main__':
     unittest.main()
 

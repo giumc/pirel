@@ -1349,6 +1349,8 @@ class LFERes(LayoutPart):
 
         self._stretch_top_margin=False
 
+        self._set_relations()
+
     def draw(self):
 
         self._set_relations()
@@ -1715,6 +1717,8 @@ class TFERes(LFERes):
 
         return cell
 
-for cls in [IDT,Bus,EtchPit,Anchor,Via,Routing,GSProbe,GSGProbe,Pad,LFERes,FBERes,TFERes]:
+_allclasses=(IDT,Bus,EtchPit,Anchor,Via,Routing,GSProbe,GSGProbe,Pad,LFERes,FBERes,TFERes)
+
+for cls in _allclasses:
 
     cls.draw=cached(cls)(cls.draw)

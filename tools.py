@@ -915,31 +915,13 @@ def cached(cls):
 
         def wrapper(self):
 
-            global recursion
-
             params=get_class_param(cls)
 
             pop_all_match(params,'.*name*')
 
             dict_name="_"+fun.__name__+"_lookup"
 
-            paramlist={}
-
-            for name in params:
-
-                value=getattr(self,name)
-
-                try:
-
-                    port_list=tuple([(p.name,Point(p.midpoint).coord,p.width,p.orientation) for p in value])
-
-                    paramlist.update({name:port_list})
-
-                except Exception:
-
-                    paramlist.update({name:value})
-
-            paramlist=tuple(paramlist.items())
+            paramhash=_get_hashable_params(self,params)
 
             if not hasattr(cls,dict_name):
 
@@ -947,17 +929,17 @@ def cached(cls):
 
             dict_lookup=getattr(cls,dict_name)
 
-            if paramlist in dict_lookup.keys():
+            if paramhash in dict_lookup.keys():
+
                 print(f"Found cell for {cls.__name__}!")
-                return dict_lookup[paramlist]
+
+                return dict_lookup[paramhash]
 
             else:
 
                 xout=fun(self)
 
-                dict_lookup[paramlist]=xout
-
-                # print(f"Retrieved cell of {cls.__name__} from a {len(dict_lookup)} dict")
+                dict_lookup[paramhash]=xout
 
                 return xout
 
@@ -987,5 +969,25 @@ def attach_taper(cell : Device , port : Port , length : float , \
 def custom_formatwarning(msg, *args, **kwargs):
     # ignore everything except the message
     return str(msg) + '\n'
+
+def _get_hashable_params( obj : LayoutPart , params : list) ->tuple:
+
+    paramdict={}
+
+    for name in params:
+
+        value=getattr(obj,name)
+
+        try:
+
+            port_list=tuple([(p.name,Point(p.midpoint).coord,p.width,p.orientation) for p in value])
+
+            paramdict.update({name:port_list})
+
+        except Exception:
+
+            paramdict.update({name:value})
+
+    return tuple(paramdict.items())
 
 warnings.formatwarning = custom_formatwarning

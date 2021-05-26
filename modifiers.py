@@ -2,7 +2,11 @@ import pirel.pcells as pc
 
 import pirel.tools as pt
 
-from pirel.tools import LayoutParamInterface,LayoutDefault
+import phidl.geometry as pg
+
+from phidl.device_layout import Port,CellArray,Device
+
+from pirel.tools import LayoutParamInterface,LayoutDefault,get_corners
 
 import pandas as pd
 
@@ -339,7 +343,7 @@ def addVia(cls,side='top',bottom_conn=False):
 
     addVia.__name__=" ".join([cls.__name__,"w Via"])
 
-    # addVia.draw=cached(addVia)(addVia.draw)
+    addVia.draw=cached(addVia)(addVia.draw)
 
     return addVia
 
@@ -426,6 +430,8 @@ def addPad(cls):
 
             return r0
 
+    addPad.draw=cached(addPad)(addPad.draw)
+
     addPad.__name__=" ".join([cls.__name__,"w Pad"])
 
     return addPad
@@ -454,6 +460,10 @@ def addPEtch(cls):
             return original_comp
 
     return addPEtch
+
+    addPEtch.draw=cached(addPEtch)(addPEtch.draw)
+
+    adddPEtch.__name__=cls.__name__+' w PEtching'
 
 def addProbe(cls,probe):
 
@@ -751,6 +761,8 @@ def addProbe(cls,probe):
 
     addProbe.__name__=" ".join([cls.__name__,"w Probe"])
 
+    addProbe.draw=cached(addProbe)(addProbe.draw)
+
     return addProbe
 
 def addLargeGnd(probe):
@@ -769,7 +781,7 @@ def addLargeGnd(probe):
 
         def draw(self):
 
-            cell=Device(name=self.name)
+            cell=pt.Device(name=self.name)
 
             oldprobe=cell<<probe.draw(self)
 
@@ -861,6 +873,8 @@ def addLargeGnd(probe):
                         cell.add_port(right_port)
 
             return cell
+
+    addLargeGnd.draw=pt.cached(addLargeGnd)(addLargeGnd.draw)
 
     addLargeGnd.__name__=" ".join([probe.__name__,"w Large Ground"])
 
@@ -1071,3 +1085,5 @@ def bondstack(cls,n,sharedpad=False):
     bondstack.__name__=" ".join([f"Bondstack of {n}",padded_cls.__name__])
 
     return bondstack
+
+_allmodifiers=(Scaled,addVia,addPad,addPEtch,addProbe,addLargeGnd,array,calibration,bondstack)
