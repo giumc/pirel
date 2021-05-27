@@ -232,6 +232,22 @@ class MultiRoutingTest(TestCase):
 
         self.assertTrue(1)
 
+class ModifiersTest(TestCase):
+
+    def test_modifiers_on_LFEREs(self):
+
+        cls=pc.LFERes
+
+        for x in pm._allmodifiers :
+
+            if not x==pm.addLargeGnd :
+
+                obj=x(cls)()
+
+                print(obj.__class__.__name__)
+
+                pt.check(obj.draw())
+
 if __name__=='__main__':
     unittest.main()
 

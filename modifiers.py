@@ -4,9 +4,9 @@ import pirel.tools as pt
 
 import phidl.geometry as pg
 
-from phidl.device_layout import Port,CellArray,Device
+from phidl.device_layout import Port,CellArray,Device,DeviceReference
 
-from pirel.tools import LayoutParamInterface,LayoutDefault,get_corners
+from pirel.tools import *
 
 import pandas as pd
 
@@ -465,7 +465,7 @@ def addPEtch(cls):
 
     adddPEtch.__name__=cls.__name__+' w PEtching'
 
-def addProbe(cls,probe):
+def addProbe(cls,probe=pc.GSGProbe):
 
     class addProbe(cls):
 
@@ -475,7 +475,7 @@ def addProbe(cls,probe):
 
             cls.__init__(self,*args,**kwargs)
 
-            self.gnd_routing_width=LayoutDefault.DUTrouting_width
+            self.gnd_routing_width=100.0
 
         def draw(self):
 
@@ -512,22 +512,31 @@ def addProbe(cls,probe):
 
             bbox=super()._bbox_mod(cell.bbox)
 
-            if isinstance(self.probe,GSGProbe):
+            groundroute=pc.MultiRouting()
+            groundroute.layer=self.probe.layer
+            groundroute.clearance=bbox
+            groundroute.trace_width=self.gnd_routing_width
+
+            if isinstance(self.probe,pc.GSGProbe):
 
                 #ground routing
 
-                probe_ports=(probe_ref.ports['gnd_left'],probe_ref.ports['gnd_right'])
+                probe_ports=(probe_ref.ports['gnd_left'],probe_ref.ports['gnd_right'],)
 
-                top_ports=tuple([p for n,p in device_cell.ports.items() if re.search('top',n)])
+                device_ports=device_cell.ports
 
-                multiroute=MultiRouting()
-                multiroute.clearance=bbox
-                multiroute.sources=probe_ports
-                multiroute.destination=top_ports
-                multiroute.trace_width=self.gnd_routing_width
+                dut_port_top=[]
 
-                routing_tot=multiroute.draw()
+                for port_name in device_ports.keys():
 
+                    if re.search('top',port_name):
+
+                        dut_port_top.append(device_ports[port_name])
+
+                groundroute.sources=probe_ports
+                groundroute.destinations=tuple(dut_port_top)
+
+                routing_tot=groundroute.draw()
                 #signal routing
 
                 probe_port_center=probe_ref.ports['sig']
@@ -546,8 +555,6 @@ def addProbe(cls,probe):
 
                 bottom_ports=[]
 
-                device_ports=device_cell.ports
-
                 for port_name in device_ports.keys():
 
                     if re.search('bottom',port_name):
@@ -560,7 +567,7 @@ def addProbe(cls,probe):
 
                 routing_tot.add(pg.boolean(routing_tot,sig_routing_cell,'or',layer=self.probe.layer))
 
-            elif isinstance(self.probe,GSProbe):
+            elif isinstance(self.probe,pc.GSProbe):
 
                 raise ValueError("DUT with GSprobe to be implemented ")
 
@@ -587,6 +594,20 @@ def addProbe(cls,probe):
 
             return cell
 
+        def _route(self,bbox,p1,p2,width):
+
+            routing=pc.Routing()
+
+            routing.layer=self.probe.layer
+
+            routing.clearance=bbox
+
+            routing.trace_width=width
+
+            routing.ports=tuple(copy(x) for x in [p1,p2])
+
+            return routing
+
         def export_params(self):
 
             t=cls.export_params(self)
@@ -608,6 +629,107 @@ def addProbe(cls,probe):
             df["ProbeResistance"]=self.probe_resistance_squares
 
             return df
+
+        def _route_signal(self,bbox : tuple, probe_port : Port, dut_ports : list) ->Device :
+
+            numports=len(dut_ports)
+
+            if numports == 1 :
+
+                routing=self._route(bbox,probe_port,dut_ports[0],dut_ports[0].width)
+
+                # self._signal_paths.append(routing.path)
+
+                c=routing.draw()
+
+                # del routing
+
+                return c
+
+            elif numports == 2 :
+
+                routing_cell=Device()
+
+                for dut_port in dut_ports :
+
+                    routing=self._route(bbox,probe_port,dut_port,dut_port.width)
+
+                    # self._signal_paths.append(routing.path)
+
+                    routing_cell.add(routing.draw())
+
+                    # del routing
+
+                return join(routing_cell)
+
+            else :
+
+                if numports %2 ==0:
+
+                    midport=int(numports/2)
+
+                    routing_cell=self._route_signal(bbox,probe_port,dut_ports[midport-1:midport+1])
+
+                    patch_width=dut_ports[midport-1].midpoint[0]+dut_ports[midport-1].width/2-\
+                        (dut_ports[0].midpoint[0]-dut_ports[0].width/2)
+
+                    # self._signal_paths.append(pp.Path().append(pp.straight(length=patch_width)))
+
+                    patch_height=dut_ports[0].width
+
+                    patch=Point(patch_width,patch_height)
+
+                    origin=Point(dut_ports[0].midpoint[0]-dut_ports[0].width/2,\
+                        dut_ports[0].midpoint[1]-patch_height)
+
+                    routing_cell.add(\
+                        pg.bbox(\
+                            (origin.coord,(origin+patch).coord),\
+                            layer=self.probe.layer))
+
+                    patch_width=dut_ports[-1].midpoint[0]+dut_ports[-1].width/2-\
+                        (dut_ports[midport].midpoint[0]-dut_ports[midport].width/2)
+
+                    # self._signal_paths.append(pp.Path().append(pp.straight(length=patch_width)))
+
+                    patch_height=dut_ports[midport].width
+
+                    patch=Point(patch_width,patch_height)
+
+                    origin=Point(dut_ports[midport].midpoint[0]-dut_ports[midport].width/2,\
+                        dut_ports[midport].midpoint[1]-patch_height)
+
+                    routing_cell.add(\
+                        pg.bbox(\
+                            (origin.coord,(origin+patch).coord),\
+                            layer=self.probe.layer))
+
+                    return routing_cell
+
+                elif numports%2==1:
+
+                    midport=int((numports-1)/2)
+
+                    routing_cell=self._route_signal(bbox,probe_port,[dut_ports[midport]])
+
+                    patch_width=dut_ports[-1].midpoint[0]+dut_ports[-1].width/2-\
+                        (dut_ports[0].midpoint[0]-dut_ports[0].width/2)
+
+                    # self._signal_paths.append(pp.Path().append(pp.straight(length=patch_width)))
+
+                    patch_height=dut_ports[0].width
+
+                    patch=Point(patch_width,patch_height)
+
+                    origin=Point(dut_ports[0].midpoint[0]-dut_ports[0].width/2,\
+                        dut_ports[0].midpoint[1]-patch_height)
+
+                    routing_cell.add(\
+                        pg.bbox(\
+                            (origin.coord,(origin+patch).coord),\
+                            layer=self.probe.layer))
+
+                    return routing_cell
 
         @property
         def resistance_squares(self):
@@ -644,7 +766,7 @@ def addLargeGnd(probe):
 
         ground_size=LayoutParamInterface()
 
-        ground_port_side=LayoutParamInterface('top','side')
+        pad_position=LayoutParamInterface('top','side')
 
         def __init__(self,*args,**kwargs):
 
@@ -652,7 +774,7 @@ def addLargeGnd(probe):
 
             self.ground_size=LayoutDefault.GSGProbe_LargePadground_size
 
-            self.ground_port_side='side'
+            self.pad_position='side'
 
         def draw(self):
 
@@ -661,6 +783,8 @@ def addLargeGnd(probe):
             oldprobe=cell<<probe.draw(self)
 
             cell.absorb(oldprobe)
+
+            import pdb; pdb.set_trace()
 
             groundpad=pg.compass(size=(self.ground_size,self.ground_size),\
             layer=self.layer)
@@ -701,7 +825,7 @@ def addLargeGnd(probe):
 
                     if 'left' in name:
 
-                        if self.ground_pad_side=='side':
+                        if self._pad_position=='side':
 
                             left_port=Port(name=name,\
                                 midpoint=(left_port.midpoint[0]+self.ground_size/2,\
@@ -709,7 +833,7 @@ def addLargeGnd(probe):
                                 orientation=180,\
                                 width=self.ground_size)
 
-                        elif self.ground_pad_side=='top':
+                        elif self._pad_position=='top':
 
                             left_port=Port(name=name,\
                                 midpoint=(left_port.midpoint[0],\
@@ -719,13 +843,13 @@ def addLargeGnd(probe):
 
                         else :
 
-                            raise ValueError(f"New pad position is {self.ground_pad_side} : not acceptable")
+                            raise ValueError(f"New pad position is {self._pad_position} : not acceptable")
 
                         cell.add_port(left_port)
 
                     elif 'right' in name:
 
-                        if self.ground_pad_side=='side':
+                        if self._pad_position=='side':
 
                             right_port=Port(name=name,\
                             midpoint=(right_port.midpoint[0]-self.ground_size/2,\
@@ -733,7 +857,7 @@ def addLargeGnd(probe):
                             orientation=0,\
                             width=self.ground_size)
 
-                        elif self.ground_pad_side=='top':
+                        elif self._pad_position=='top':
 
                             right_port=Port(name=name,\
                             midpoint=(right_port.midpoint[0],\
@@ -743,7 +867,7 @@ def addLargeGnd(probe):
 
                         else :
 
-                            raise ValueError(f"New pad position is {self.ground_pad_side} : not acceptable")
+                            raise ValueError(f"New pad position is {self._pad_position} : not acceptable")
 
                         cell.add_port(right_port)
 
@@ -755,7 +879,7 @@ def addLargeGnd(probe):
 
     return addLargeGnd
 
-def array(cls,n):
+def array(cls,n=2):
 
     if not isinstance(n,int):
 
@@ -929,7 +1053,7 @@ def calibration(cls,type='open'):
 
     return calibration
 
-def bondstack(cls,n,sharedpad=False):
+def bondstack(cls,n=4,sharedpad=False):
 
     if not isinstance(n,int):
 
@@ -953,7 +1077,7 @@ def bondstack(cls,n,sharedpad=False):
 
             cell=padded_cls.draw(self)
 
-            import pdb; pdb.set_trace()
+
 
             return cell
 

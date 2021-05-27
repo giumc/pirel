@@ -232,7 +232,7 @@ class LayoutDefault:
     #GSProbe
     GSProbepitch = 150.0
     GSProbepad_size = Point(80,80)
-    GSProberouting_width = 80.0
+
     GSProbelayer = layerTop
     GSProberouting = True
     GSProbespacing = Point(20,30)
@@ -252,7 +252,7 @@ class LayoutDefault:
     GSProbelayer=GSGProbelayer
     GSProbepitch=GSGProbepitch
     GSProbesize=GSGProbesize
-
+    
     #TFERes
 
     TFEResbottomlayer=layerBottom
