@@ -252,7 +252,7 @@ class LayoutDefault:
     GSProbelayer=GSGProbelayer
     GSProbepitch=GSGProbepitch
     GSProbesize=GSGProbesize
-    
+
     #TFERes
 
     TFEResbottomlayer=layerBottom
@@ -732,26 +732,29 @@ def add_compass(device : Device) -> Device:
 
     return device
 
-def draw_array(cell : Device, x : int, y : int, \
-    row_spacing : float = 0 , column_spacing : float = 0 ) -> Device:
-    ''' returns a spaced matrix of identical cells.
+def draw_array(
+    cell : Device, x : int, y : int,
+    row_spacing : float = 0 ,
+    column_spacing : float = 0 ) -> Device:
 
-        draw_array() preserves ports in the original cells
+    ''' returns a spaced matrix of identical cells, copying ports in the original cells.
+
     Parameters
     ----------
     cell : phidl.Device
 
     x : int
         columns of copies
+
     y : int
         rows of copies
 
     row_spacing: float
+
     column_spacing: float
 
     Returns
     -------
-
     cell : phidl.Device.
     '''
 
@@ -1016,5 +1019,47 @@ def _get_hashable_params( obj : LayoutPart , params : list) ->tuple:
             paramdict.update({name:value})
 
     return tuple(paramdict.items())
+
+def _check_points_path(*points,trace_width=100):
+
+    for i,p in enumerate(points):
+
+        if not isinstance(p,Point):
+
+            raise ValueError("wrong input")
+
+        if i==0:
+
+            pass
+
+        else:
+
+            p_ref=points[i-1]
+
+            dist=p-points[i-1]
+
+            if abs(dist)<trace_width/10:
+
+                p_new=p_ref+p*(trace_width/abs(p))
+
+                if not i==len(points)-1:
+
+                    if points[i+1].x==p:
+
+                        points[i+1]=Point(p_new.x,points[i+1].y)
+
+                    elif points[i+1].y==p:
+
+                        points[i+1]=Point(points[i+1].x,p_new.x)
+
+                points[i]=p_new
+
+        out_list=[]
+
+        for p in points:
+
+            out_list.append(p.coord)
+
+        return out_list
 
 warnings.formatwarning = custom_formatwarning

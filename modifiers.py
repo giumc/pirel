@@ -383,14 +383,12 @@ def addPad(cls):
 
                 pad_ref=cell.add_ref(self.pad.draw())
 
-                pad_ref.connect(pad_ref.ports['conn'],\
+                pad_ref.connect(pad_ref.ports['conn'],
                     destination=port)
 
                 cell.absorb(pad_ref)
 
                 cell.add_port(port,name)
-
-            cell.absorb(d_ref)
 
             return cell
 
@@ -959,21 +957,21 @@ def array(cls,n=2):
 
             return df
 
-    array.__name__= " ".join([f"{n} array of ",cls.__name__])
+    array.__name__= " ".join([f"{n} array of",cls.__name__])
 
     return array
 
-def calibration(cls,type='open'):
+def fixture(cls,type='open'):
 
-    class calibration(cls):
+    class fixture(cls):
 
-        fixture_type=LayoutParamInterface('short','open')
+        type=LayoutParamInterface('short','open')
 
         def __init__(self,*a,**k):
 
             super().__init__(*a,**k)
 
-            self.fixture_type=type
+            self.type=type
 
         def draw(self):
 
@@ -981,7 +979,7 @@ def calibration(cls,type='open'):
 
             cell=pg.deepcopy(supercell)
 
-            type=self.fixture_type
+            type=self.type
 
             ports=supercell.ports
 
@@ -1028,7 +1026,7 @@ def calibration(cls,type='open'):
         @property
         def resistance_squares(self):
 
-            type=self.fixture_type
+            type=self.type
 
             if type=='open':
 
@@ -1049,9 +1047,9 @@ def calibration(cls,type='open'):
 
                 return l/w
 
-    calibration.__name__=f" fixture for {cls.__name__}"
+    fixture.__name__=f"fixture for {cls.__name__}"
 
-    return calibration
+    return fixture
 
 def bondstack(cls,n=4,sharedpad=False):
 
@@ -1067,20 +1065,23 @@ def bondstack(cls,n=4,sharedpad=False):
 
         sharedpad=LayoutParamInterface(True,False)
 
+        pitch=LayoutParamInterface()
+
         def __init__(self,*a,**k):
 
             padded_cls.__init__(self,*a,**k)
             self.n_copies=n
             self.sharedpad=sharedpad
+            self.pitch=150.0
 
         def draw(self):
 
             cell=padded_cls.draw(self)
 
-            return cell
+            return pt.draw_array(cell,n,1,0.0,self.pitch)
 
     bondstack.__name__=" ".join([f"Bondstack of {n}",padded_cls.__name__])
 
     return bondstack
 
-_allmodifiers=(Scaled,addVia,addPad,addPEtch,addProbe,addLargeGnd,array,calibration,bondstack)
+_allmodifiers=(Scaled,addVia,addPad,addPEtch,addProbe,addLargeGnd,array,fixture,bondstack)

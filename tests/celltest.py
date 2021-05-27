@@ -24,6 +24,17 @@ class pCellTest(TestCase):
 
             self._recheck_lookup(layobj)
 
+        base_dev=pc.LFERes
+
+        for mods in pm._allmodifiers:
+
+            if not mods==pm.addLargeGnd:
+
+                cell=mods(base_dev)()
+
+                self._check_lookup(cell)
+                self._recheck_lookup(cell)
+
     def _check_lookup(self,obj):
 
             obj.draw()
@@ -246,7 +257,21 @@ class ModifiersTest(TestCase):
 
                 print(obj.__class__.__name__)
 
-                pt.check(obj.draw())
+                obj.draw()
+
+
+
+
+
+class PEtchTest(TestCase):
+
+    def test_draw(self):
+
+        cell=pm.addPEtch(pc.FBERes)()
+
+        pt.check(cell.draw())
+
+        self.assertTrue(1)
 
 if __name__=='__main__':
     unittest.main()

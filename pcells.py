@@ -1,5 +1,7 @@
 from pirel.tools import *
 
+from pirel.tools import _check_points_path
+
 from phidl.device_layout import Device, Port, DeviceReference, Group
 
 import pathlib
@@ -858,48 +860,6 @@ class Routing(LayoutPart):
     @property
     def path(self):
 
-        def check_points(*points):
-
-            for i,p in enumerate(points):
-
-                if not isinstance(p,Point):
-
-                    raise ValueError("wrong input")
-
-                if i==0:
-
-                    pass
-
-                else:
-
-                    p_ref=points[i-1]
-
-                    dist=p-points[i-1]
-
-                    if abs(dist)<self.trace_width/10:
-
-                        p_new=p_ref+p*(self.trace_width/abs(p))
-
-                        if not i==len(points)-1:
-
-                            if points[i+1].x==p:
-
-                                points[i+1]=Point(p_new.x,points[i+1].y)
-
-                            elif points[i+1].y==p:
-
-                                points[i+1]=Point(points[i+1].x,p_new.x)
-
-                        points[i]=p_new
-
-                out_list=[]
-
-                for p in points:
-
-                    out_list.append(p.coord)
-
-                return out_list
-
         radius=0.1
 
         tol=1e-3
@@ -941,7 +901,7 @@ class Routing(LayoutPart):
 
             p3=p2+Point(0,distance.y/4)
 
-            list_points=check_points(p1,p2,p3)
+            list_points=_check_points_path(p1,p2,p3,trace_width=self.trace_width)
 
             try:
 
@@ -973,7 +933,7 @@ class Routing(LayoutPart):
 
                     p4=Point(destination.x,destination.y)
 
-                    list_points_rx=check_points(p0,p1,p2,p3,p4)
+                    list_points_rx=_check_points_path(p0,p1,p2,p3,p4,trace_width=self.trace_width)
 
                     try:
 
@@ -1002,7 +962,7 @@ class Routing(LayoutPart):
 
                     p5=Point(destination.x,destination.y)
 
-                    list_points_lx=check_points(p0,p1,p2,p3,p4,p5)
+                    list_points_lx=_check_points_path(p0,p1,p2,p3,p4,p5,trace_width=self.trace_width)
 
                     try:
 
@@ -1020,7 +980,7 @@ class Routing(LayoutPart):
                     p4=Point(destination.x,p3.y)
                     p5=Point(destination.x,destination.y)
 
-                    list_points_rx=check_points(p0,p1,p2,p3,p4,p5)
+                    list_points_rx=_check_points_path(p0,p1,p2,p3,p4,p5,trace_width=self.trace_width)
 
                     try:
 
@@ -1067,7 +1027,7 @@ class Routing(LayoutPart):
 
                     p3=Point(destination.x,destination.y)
 
-                    list_points=check_points(p0,p1,p2,p3)
+                    list_points=_check_points_path(p0,p1,p2,p3,trace_width=self.trace_width)
 
                     try:
 
@@ -1089,7 +1049,7 @@ class Routing(LayoutPart):
 
                 p4=Point(destination.x,destination.y)
 
-                list_points_lx=check_points(p0,p1,p2,p3,p4)
+                list_points_lx=_check_points_path(p0,p1,p2,p3,p4,trace_width=self.trace_width)
 
                 try:
 
@@ -1774,6 +1734,126 @@ class MultiRouting(LayoutPart):
                 c<<r.draw()
 
         return c
+
+    @property
+    def resistance_squares(self):
+
+        resistance=[]
+
+        for p in self.paths:
+
+            resistance.append(p.length()/self.trace_width)
+
+        return res
+
+class ParasiticAwareMultiRouting(MultiRouting):
+
+    @property
+    def paths(self):
+
+        numports=len(self.destinations)
+
+        if numports == 1 or numports == 2 :
+
+            return super().paths
+
+        else :
+
+            p=[]
+
+            from itertools import izip
+
+            def pairwise(iterable):
+
+                a=iter(iterable)
+
+                return izip(a,a)
+
+            if numports %2 ==0:
+
+                midport=int(numports/2)
+
+                base_routing=deepcopy(self)
+
+                base_routing.destinations=self.destinations[midport-1:midport+1]
+
+                for dest,nextdest in pairwise(self.destinations):
+
+                    if dest in base_routing.destinations or nextdest in base_routing.destinations:
+                        continue
+
+                    else:
+
+                        Yovertravel=(dest.midpoint.y-self.sources[0].midpoint.y)/3
+
+                        p0=Point(dest.midpoint)
+                        p1=p0-Point(0,Yovertravel)
+                        p2=Point(p1.y,nextdest.x)
+                        p3=Point(p3.x,nextdest.y)
+
+                        p.
+                patch_width=self.destinations[midport-1].midpoint[0]+self.destinations[midport-1].width/2-\
+                    (self.destinations[0].midpoint[0]-self.destinations[0].width/2)
+
+                # self._signal_paths.append(pp.Path().append(pp.straight(length=patch_width)))
+
+                patch_height=self.destinations[0].width
+
+                patch=Point(patch_width,patch_height)
+
+                origin=Point(self.destinations[0].midpoint[0]-self.destinations[0].width/2,\
+                    self.destinations[0].midpoint[1]-patch_height)
+
+                routing_cell.add(\
+                    pg.bbox(\
+                        (origin.coord,(origin+patch).coord),\
+                        layer=self.probe.layer))
+
+                patch_width=self.destinations[-1].midpoint[0]+self.destinations[-1].width/2-\
+                    (self.destinations[midport].midpoint[0]-self.destinations[midport].width/2)
+
+                # self._signal_paths.append(pp.Path().append(pp.straight(length=patch_width)))
+
+                patch_height=self.destinations[midport].width
+
+                patch=Point(patch_width,patch_height)
+
+                origin=Point(self.destinations[midport].midpoint[0]-self.destinations[midport].width/2,\
+                    self.destinations[midport].midpoint[1]-patch_height)
+
+                routing_cell.add(\
+                    pg.bbox(\
+                        (origin.coord,(origin+patch).coord),\
+                        layer=self.probe.layer))
+
+                return routing_cell
+
+            elif numports%2==1:
+
+                midport=int((numports-1)/2)
+
+                routing_cell=self._route_signal(bbox,probe_port,[self.destinations[midport]])
+
+                patch_width=self.destinations[-1].midpoint[0]+self.destinations[-1].width/2-\
+                    (self.destinations[0].midpoint[0]-self.destinations[0].width/2)
+
+                # self._signal_paths.append(pp.Path().append(pp.straight(length=patch_width)))
+
+                patch_height=self.destinations[0].width
+
+                patch=Point(patch_width,patch_height)
+
+                origin=Point(self.destinations[0].midpoint[0]-self.destinations[0].width/2,\
+                    self.destinations[0].midpoint[1]-patch_height)
+
+                routing_cell.add(\
+                    pg.bbox(\
+                        (origin.coord,(origin+patch).coord),\
+                        layer=self.probe.layer))
+
+                return routing_cell
+
+
 
 _allclasses=(IDT,Bus,EtchPit,Anchor,Via,Routing,GSProbe,GSGProbe,Pad,MultiRouting,\
 LFERes,FBERes,TFERes)
