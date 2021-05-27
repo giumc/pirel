@@ -1077,8 +1077,6 @@ def bondstack(cls,n=4,sharedpad=False):
 
             cell=padded_cls.draw(self)
 
-
-
             return cell
 
     bondstack.__name__=" ".join([f"Bondstack of {n}",padded_cls.__name__])
