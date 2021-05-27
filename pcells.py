@@ -1761,13 +1761,10 @@ class ParasiticAwareMultiRouting(MultiRouting):
 
             p=[]
 
-            from itertools import izip
 
             def pairwise(iterable):
 
-                a=iter(iterable)
-
-                return izip(a,a)
+                zip(*[iter(iterable)]*2)
 
             if numports %2 ==0:
 
@@ -1777,10 +1774,17 @@ class ParasiticAwareMultiRouting(MultiRouting):
 
                 base_routing.destinations=self.destinations[midport-1:midport+1]
 
-                for dest,nextdest in pairwise(self.destinations):
+                for dest,nextdest in zip(self.destinations,self.destinations[1:]):
 
-                    if dest in base_routing.destinations or nextdest in base_routing.destinations:
-                        continue
+                    if dest in base_routing.destinations :
+
+                        if nextdest in base_routing.destinations:
+
+                            p.extend(base_routing.paths)
+
+                        else:
+
+                            continue
 
                     else:
 
@@ -1791,69 +1795,37 @@ class ParasiticAwareMultiRouting(MultiRouting):
                         p2=Point(p1.y,nextdest.x)
                         p3=Point(p3.x,nextdest.y)
 
-                        p.
-                patch_width=self.destinations[midport-1].midpoint[0]+self.destinations[midport-1].width/2-\
-                    (self.destinations[0].midpoint[0]-self.destinations[0].width/2)
+                        list_points=_check_points_path(p0,p1,p2,p3,trace_width=dest.width)
 
-                # self._signal_paths.append(pp.Path().append(pp.straight(length=patch_width)))
+                        p.append(pp.smooth(points=list_points,radius=radius,num_pts=30))
 
-                patch_height=self.destinations[0].width
-
-                patch=Point(patch_width,patch_height)
-
-                origin=Point(self.destinations[0].midpoint[0]-self.destinations[0].width/2,\
-                    self.destinations[0].midpoint[1]-patch_height)
-
-                routing_cell.add(\
-                    pg.bbox(\
-                        (origin.coord,(origin+patch).coord),\
-                        layer=self.probe.layer))
-
-                patch_width=self.destinations[-1].midpoint[0]+self.destinations[-1].width/2-\
-                    (self.destinations[midport].midpoint[0]-self.destinations[midport].width/2)
-
-                # self._signal_paths.append(pp.Path().append(pp.straight(length=patch_width)))
-
-                patch_height=self.destinations[midport].width
-
-                patch=Point(patch_width,patch_height)
-
-                origin=Point(self.destinations[midport].midpoint[0]-self.destinations[midport].width/2,\
-                    self.destinations[midport].midpoint[1]-patch_height)
-
-                routing_cell.add(\
-                    pg.bbox(\
-                        (origin.coord,(origin+patch).coord),\
-                        layer=self.probe.layer))
-
-                return routing_cell
+                return p
 
             elif numports%2==1:
 
                 midport=int((numports-1)/2)
 
-                routing_cell=self._route_signal(bbox,probe_port,[self.destinations[midport]])
+                base_routing=deepcopy(self)
 
-                patch_width=self.destinations[-1].midpoint[0]+self.destinations[-1].width/2-\
-                    (self.destinations[0].midpoint[0]-self.destinations[0].width/2)
+                base_routing.destinations=self.destinations[midport]
 
-                # self._signal_paths.append(pp.Path().append(pp.straight(length=patch_width)))
+                for dest,nextdest in zip(self.destinations,self.destinations[1:]):
 
-                patch_height=self.destinations[0].width
+                    if dest in base_routing.destinations :
+                        p.extend(base_routing.paths)
 
-                patch=Point(patch_width,patch_height)
+                    Yovertravel=(dest.midpoint.y-self.sources[0].midpoint.y)/3
 
-                origin=Point(self.destinations[0].midpoint[0]-self.destinations[0].width/2,\
-                    self.destinations[0].midpoint[1]-patch_height)
+                    p0=Point(dest.midpoint)
+                    p1=p0-Point(0,Yovertravel)
+                    p2=Point(p1.y,nextdest.x)
+                    p3=Point(p3.x,nextdest.y)
 
-                routing_cell.add(\
-                    pg.bbox(\
-                        (origin.coord,(origin+patch).coord),\
-                        layer=self.probe.layer))
+                    list_points=_check_points_path(p0,p1,p2,p3,trace_width=dest.width)
 
-                return routing_cell
+                    p.append(pp.smooth(points=list_points,radius=radius,num_pts=30))
 
-
+                return p
 
 _allclasses=(IDT,Bus,EtchPit,Anchor,Via,Routing,GSProbe,GSGProbe,Pad,MultiRouting,\
 LFERes,FBERes,TFERes)
