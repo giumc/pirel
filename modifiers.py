@@ -531,8 +531,8 @@ def addProbe(cls,probe=pc.GSGProbe):
 
                         dut_port_top.append(device_ports[port_name])
 
-                groundroute.sources=probe_ports
-                groundroute.destinations=tuple(dut_port_top)
+                groundroute.source=probe_ports
+                groundroute.destination=tuple(dut_port_top)
 
                 routing_tot=groundroute.draw()
                 #signal routing
@@ -602,7 +602,8 @@ def addProbe(cls,probe=pc.GSGProbe):
 
             routing.trace_width=width
 
-            routing.ports=tuple(copy(x) for x in [p1,p2])
+            routing.source=copy(p1)
+            routing.destination=copy(p2)
 
             return routing
 

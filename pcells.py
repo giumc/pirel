@@ -818,7 +818,9 @@ class Routing(LayoutPart):
 
     trace_width=LayoutParamInterface()
 
-    ports=LayoutParamInterface()
+    source=LayoutParamInterface()
+
+    destination=LayoutParamInterface()
 
     layer=LayoutParamInterface()
 
@@ -828,14 +830,15 @@ class Routing(LayoutPart):
         self.clearance=LayoutDefault.Routingclearance
         self.side=LayoutDefault.Routingside
         self.trace_width=LayoutDefault.Routingtrace_width
-        self.ports=LayoutDefault.Routingports
+        self.source=LayoutDefault.Routingports[0]
+        self.destination=LayoutDefault.Routingports[1]
         self.layer=LayoutDefault.Routinglayer
 
     def _draw_frame(self):
 
         rect=pg.bbox(self.clearance,layer=self.layer)
-        rect.add_port(self.ports[0])
-        rect.add_port(self.ports[1])
+        rect.add_port(self.source)
+        rect.add_port(self.destination)
         rect.name=self.name+"frame"
 
         return rect
@@ -868,14 +871,14 @@ class Routing(LayoutPart):
 
         ll,lr,ul,ur=get_corners(bbox)
 
-        source=self.ports[0]
+        source=self.source
 
-        destination=self.ports[1]
+        destination=self.destination
 
         if source.y>destination.y:
 
-            source=self.ports[1]
-            destination=self.ports[0]
+            source=self.destination
+            destination=self.source
 
         if Point(source.midpoint).in_box(bbox.bbox) :
 
@@ -975,9 +978,13 @@ class Routing(LayoutPart):
                     #right path
 
                     p1=p0-Point(0,source.width/2)
+
                     p2=Point(lr.x+self.trace_width,p1.y)
+
                     p3=Point(p2.x,self.trace_width+destination.y)
+
                     p4=Point(destination.x,p3.y)
+
                     p5=Point(destination.x,destination.y)
 
                     list_points_rx=_check_points_path(p0,p1,p2,p3,p4,p5,trace_width=self.trace_width)
@@ -1684,23 +1691,11 @@ class MultiRouting(Routing):
 
             for d in self.destinations:
 
-                r=self._create_routing(s,d)
-
-                p.append(r.path)
+                p.append(self._make_routing(s,d))
 
         return p
 
-    def _create_routing(self,s,d):
-
-        r=Routing()
-
-        r.trace_width=self.trace_width
-
-        r.layer=self.layer
-
-        r.side='auto'
-
-        r.clearance=self.clearance
+    def _make_routing(self,s,d):
 
         if not all([isinstance(p, Port) for p in (s,d)]):
 
@@ -1708,9 +1703,15 @@ class MultiRouting(Routing):
 
         else:
 
-            r.ports=(s,d,)
+            r=Routing()
+            r.clearance=self.clearance
+            r.side=self.side
+            r.layer=self.layer
+            r.trace_width=self.trace_width
+            r.source=s
+            r.destination=d
 
-        return r
+            return r.path
 
     def draw(self):
 
@@ -1783,7 +1784,7 @@ class ParasiticAwareMultiRouting(MultiRouting):
                 midport=int((numports-1)/2)
 
                 base_routing=deepcopy(self)
-                import pdb; pdb.set_trace()
+                # import pdb; pdb.set_trace()
 
                 base_routing.destinations=(self.destinations[midport],)
 

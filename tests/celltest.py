@@ -112,6 +112,8 @@ class RoutingTest(TestCase):
 
         master_cell=Device()
 
+        r.source=pt.Port(name='1',midpoint=s0.coord,width=r.trace_width,orientation=90)
+        
         for n in range(10):
 
             d0=d0+Point(dx_increment,0)
@@ -134,20 +136,9 @@ class RoutingTest(TestCase):
 
                     dt=d0
 
-                r.ports=(pt.Port(name='1',midpoint=s0.coord,width=r.trace_width,orientation=90),\
-                        pt.Port(name='2',midpoint=dt.coord,width=r.trace_width,orientation=angle))
+                r.destination=pt.Port(name='2',midpoint=dt.coord,width=r.trace_width,orientation=angle)
 
-                try:
-
-                    new_cell=master_cell<<r._draw_with_frame()
-
-                except Exception as e:
-
-                    print(e)
-
-                    pt.check(r._draw_with_frame())
-
-                    self.assertTrue(1==0)
+                new_cell=master_cell<<r._draw_with_frame()
 
                 cells[-1].append(new_cell)
 
