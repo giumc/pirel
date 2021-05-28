@@ -243,6 +243,42 @@ class MultiRoutingTest(TestCase):
 
         self.assertTrue(1)
 
+class ParasiticAwareMultiRoutingTest(TestCase):
+
+    def test_cell(self):
+
+        master_cell=Device()
+        obj=pc.ParasiticAwareMultiRouting()
+
+        dx=100
+
+        trace_width=50
+
+        sources=(pt.Port(name='1',midpoint=(0,0),width=trace_width/2,orientation=90),)
+
+        n_max=7
+
+        for n in range(1,n_max):
+
+            dest=tuple([pt.Port(
+                name='d'+str(x),
+                midpoint=(dx*x,trace_width*4),
+                width=dx/4,
+                orientation=-90)]) for x in range(-n,n)])
+
+            obj.sources=sources
+            obj.destinations=dest
+            obj.trace_width=trace_width
+            obj.clearance=((500,500),(1000,1000))
+
+            master_cell<<obj.draw()
+
+        master_cell.distribute(direction='x')
+        master_cell.align(alignment='y')
+
+        check(master_cell)
+
+
 class ModifiersTest(TestCase):
 
     def test_modifiers_on_LFEREs(self):
@@ -258,10 +294,6 @@ class ModifiersTest(TestCase):
                 print(obj.__class__.__name__)
 
                 obj.draw()
-
-
-
-
 
 class PEtchTest(TestCase):
 

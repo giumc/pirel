@@ -1761,7 +1761,6 @@ class ParasiticAwareMultiRouting(MultiRouting):
 
             p=[]
 
-
             def pairwise(iterable):
 
                 zip(*[iter(iterable)]*2)
@@ -1788,16 +1787,7 @@ class ParasiticAwareMultiRouting(MultiRouting):
 
                     else:
 
-                        Yovertravel=(dest.midpoint.y-self.sources[0].midpoint.y)/3
-
-                        p0=Point(dest.midpoint)
-                        p1=p0-Point(0,Yovertravel)
-                        p2=Point(p1.y,nextdest.x)
-                        p3=Point(p3.x,nextdest.y)
-
-                        list_points=_check_points_path(p0,p1,p2,p3,trace_width=dest.width)
-
-                        p.append(pp.smooth(points=list_points,radius=radius,num_pts=30))
+                        p.append(self._make_paware_connection(dest,nextdest))
 
                 return p
 
@@ -1812,20 +1802,30 @@ class ParasiticAwareMultiRouting(MultiRouting):
                 for dest,nextdest in zip(self.destinations,self.destinations[1:]):
 
                     if dest in base_routing.destinations :
+
                         p.extend(base_routing.paths)
 
-                    Yovertravel=(dest.midpoint.y-self.sources[0].midpoint.y)/3
+                    else:
 
-                    p0=Point(dest.midpoint)
-                    p1=p0-Point(0,Yovertravel)
-                    p2=Point(p1.y,nextdest.x)
-                    p3=Point(p3.x,nextdest.y)
-
-                    list_points=_check_points_path(p0,p1,p2,p3,trace_width=dest.width)
-
-                    p.append(pp.smooth(points=list_points,radius=radius,num_pts=30))
+                        p.append(self._make_paware_connection(dest,nextdest))
 
                 return p
+
+    def _make_paware_connection(self,p1,p2):
+
+        Yovertravel=(p1.midpoint.y-self.sources[0].midpoint.y)/3
+
+        p0=Point(p1.midpoint)
+
+        p1=p0-Point(0,Yovertravel)
+
+        p2=Point(p1.y,p2.x)
+
+        p3=Point(p3.x,p2.y)
+
+        list_points=_check_points_path(p0,p1,p2,p3,trace_width=p1.width)
+
+        return pp.smooth(points=list_points,radius=radius,num_pts=30)
 
 _allclasses=(IDT,Bus,EtchPit,Anchor,Via,Routing,GSProbe,GSGProbe,Pad,MultiRouting,\
 LFERes,FBERes,TFERes)
