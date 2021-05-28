@@ -248,6 +248,7 @@ class ParasiticAwareMultiRoutingTest(TestCase):
     def test_cell(self):
 
         master_cell=Device()
+
         obj=pc.ParasiticAwareMultiRouting()
 
         dx=100
@@ -262,10 +263,11 @@ class ParasiticAwareMultiRoutingTest(TestCase):
 
             dest=tuple([pt.Port(
                 name='d'+str(x),
-                midpoint=(dx*x,trace_width*4),
+                midpoint=(dx*x,trace_width*6),
                 width=dx/4,
-                orientation=-90)]) for x in range(-n,n)])
+                orientation=-90) for x in range(-n,n+1)])
 
+            print("\n".join([str(x) for x in dest]))
             obj.sources=sources
             obj.destinations=dest
             obj.trace_width=trace_width
@@ -274,10 +276,10 @@ class ParasiticAwareMultiRoutingTest(TestCase):
             master_cell<<obj.draw()
 
         master_cell.distribute(direction='x')
+
         master_cell.align(alignment='y')
 
-        check(master_cell)
-
+        pt.check(master_cell)
 
 class ModifiersTest(TestCase):
 

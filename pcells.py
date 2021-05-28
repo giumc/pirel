@@ -809,6 +809,8 @@ class Routing(LayoutPart):
         only 'auto','left','right'
 
     '''
+    _radius=0.1
+    _num_pts=30
 
     clearance= LayoutParamInterface()
 
@@ -860,8 +862,6 @@ class Routing(LayoutPart):
     @property
     def path(self):
 
-        radius=0.1
-
         tol=1e-3
 
         bbox=pg.bbox(self.clearance)
@@ -905,7 +905,7 @@ class Routing(LayoutPart):
 
             try:
 
-                p=pp.smooth(points=list_points,radius=radius,num_pts=30)
+                p=pp.smooth(points=list_points,radius=self._radius,num_pts=self._num_pts)
 
             except Exception:
 
@@ -937,7 +937,7 @@ class Routing(LayoutPart):
 
                     try:
 
-                        p=pp.smooth(points=list_points_rx,radius=radius,num_pts=30)
+                        p=pp.smooth(points=list_points_rx,radius=self._radius,num_pts=self._num_pts)
 
                     except Exception :
 
@@ -966,7 +966,7 @@ class Routing(LayoutPart):
 
                     try:
 
-                        p_lx=pp.smooth(points=list_points_lx,radius=radius,num_pts=30)
+                        p_lx=pp.smooth(points=list_points_lx,radius=self._radius,num_pts=self._num_pts)
 
                     except:
 
@@ -984,7 +984,7 @@ class Routing(LayoutPart):
 
                     try:
 
-                        p_rx=pp.smooth(points=list_points_rx,radius=radius,num_pts=30)
+                        p_rx=pp.smooth(points=list_points_rx,radius=self._radius,num_pts=self._num_pts)
 
                     except:
 
@@ -1031,7 +1031,7 @@ class Routing(LayoutPart):
 
                     try:
 
-                        p=pp.smooth(points=list_points,radius=radius,num_pts=30)#source tucked inside clearance
+                        p=pp.smooth(points=list_points,radius=self._radius,num_pts=self._num_pts)#source tucked inside clearance
 
                     except Exception:
 
@@ -1053,7 +1053,7 @@ class Routing(LayoutPart):
 
                 try:
 
-                    p=pp.smooth(points=list_points_lx,radius=radius,num_pts=30)
+                    p=pp.smooth(points=list_points_lx,radius=self._radius,num_pts=self._num_pts)
 
                 except Exception:
 
@@ -1662,30 +1662,21 @@ class TFERes(LFERes):
 
         return cell
 
-class MultiRouting(LayoutPart):
-
-    sources=LayoutParamInterface()
-
-    destinations=LayoutParamInterface()
-
-    clearance=LayoutParamInterface()
-
-    trace_width=LayoutParamInterface()
-
-    layer=LayoutParamInterface()
+class MultiRouting(Routing):
 
     def __init__(self,*a,**k):
 
-        super().__init__(*a,**k)
+        LayoutPart.__init__(self,*a,**k)
 
-        self.sources=LayoutDefault.MultiRoutingsources
-        self.destinations=LayoutDefault.MultiRoutingdestinations
+        self.source=LayoutDefault.MultiRoutingsources
+        self.destination=LayoutDefault.MultiRoutingdestinations
         self.clearance=LayoutDefault.Routingclearance
         self.trace_width=LayoutDefault.Routingtrace_width
         self.layer=LayoutDefault.Routinglayer
+        self.side=LayoutDefault.Routingside
 
     @property
-    def paths(self):
+    def path(self):
 
         p=[]
 
@@ -1725,13 +1716,13 @@ class MultiRouting(LayoutPart):
 
         c=Device(name=self.name)
 
-        for s in self.sources:
+        x=CrossSection()
 
-            for d in self.destinations:
+        x.add(layer=self.layer,width=self.trace_width)
 
-                r=self._create_routing(s,d)
+        for p in self.path:
 
-                c<<r.draw()
+            c<<x.extrude(p,simplify=0.1)
 
         return c
 
@@ -1740,7 +1731,7 @@ class MultiRouting(LayoutPart):
 
         resistance=[]
 
-        for p in self.paths:
+        for p in self.path:
 
             resistance.append(p.length()/self.trace_width)
 
@@ -1749,21 +1740,17 @@ class MultiRouting(LayoutPart):
 class ParasiticAwareMultiRouting(MultiRouting):
 
     @property
-    def paths(self):
+    def path(self):
 
         numports=len(self.destinations)
 
         if numports == 1 or numports == 2 :
 
-            return super().paths
+            return super().path
 
         else :
 
             p=[]
-
-            def pairwise(iterable):
-
-                zip(*[iter(iterable)]*2)
 
             if numports %2 ==0:
 
@@ -1771,7 +1758,7 @@ class ParasiticAwareMultiRouting(MultiRouting):
 
                 base_routing=deepcopy(self)
 
-                base_routing.destinations=self.destinations[midport-1:midport+1]
+                base_routing.destinations=tuple(self.destinations[midport-1:midport+1])
 
                 for dest,nextdest in zip(self.destinations,self.destinations[1:]):
 
@@ -1779,7 +1766,7 @@ class ParasiticAwareMultiRouting(MultiRouting):
 
                         if nextdest in base_routing.destinations:
 
-                            p.extend(base_routing.paths)
+                            p.extend(base_routing.path)
 
                         else:
 
@@ -1796,14 +1783,15 @@ class ParasiticAwareMultiRouting(MultiRouting):
                 midport=int((numports-1)/2)
 
                 base_routing=deepcopy(self)
+                import pdb; pdb.set_trace()
 
-                base_routing.destinations=self.destinations[midport]
+                base_routing.destinations=(self.destinations[midport],)
 
                 for dest,nextdest in zip(self.destinations,self.destinations[1:]):
 
                     if dest in base_routing.destinations :
 
-                        p.extend(base_routing.paths)
+                        p.extend(base_routing.path)
 
                     else:
 
@@ -1811,21 +1799,21 @@ class ParasiticAwareMultiRouting(MultiRouting):
 
                 return p
 
-    def _make_paware_connection(self,p1,p2):
+    def _make_paware_connection(self,s,d):
 
-        Yovertravel=(p1.midpoint.y-self.sources[0].midpoint.y)/3
+        Yovertravel=(s.midpoint[1]-self.sources[0].midpoint[1])/3
 
-        p0=Point(p1.midpoint)
+        p0=Point(s.midpoint)
 
         p1=p0-Point(0,Yovertravel)
 
-        p2=Point(p1.y,p2.x)
+        p2=Point(p1.y,d.midpoint[0])
 
-        p3=Point(p3.x,p2.y)
+        p3=Point(p2.y,d.midpoint[1])
 
-        list_points=_check_points_path(p0,p1,p2,p3,trace_width=p1.width)
+        list_points=_check_points_path(p0,p1,p2,p3,trace_width=s.width)
 
-        return pp.smooth(points=list_points,radius=radius,num_pts=30)
+        return pp.smooth(points=list_points,radius=self._radius,num_pts=self._num_pts)
 
 _allclasses=(IDT,Bus,EtchPit,Anchor,Via,Routing,GSProbe,GSGProbe,Pad,MultiRouting,\
 LFERes,FBERes,TFERes)
