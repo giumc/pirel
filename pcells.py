@@ -1687,9 +1687,9 @@ class MultiRouting(Routing):
 
         p=[]
 
-        for s in self.sources:
+        for s in self.source:
 
-            for d in self.destinations:
+            for d in self.destination:
 
                 p.append(self._make_routing(s,d))
 
@@ -1743,7 +1743,7 @@ class ParasiticAwareMultiRouting(MultiRouting):
     @property
     def path(self):
 
-        numports=len(self.destinations)
+        numports=len(self.destination)
 
         if numports == 1 or numports == 2 :
 
@@ -1759,19 +1759,19 @@ class ParasiticAwareMultiRouting(MultiRouting):
 
                 base_routing=deepcopy(self)
 
-                base_routing.destinations=tuple(self.destinations[midport-1:midport+1])
+                base_routing.destination=tuple(self.destination[midport-1:midport+1])
 
-                for dest,nextdest in zip(self.destinations,self.destinations[1:]):
+                for dest,nextdest in zip(self.destination,self.destination[1:]):
 
-                    if dest in base_routing.destinations :
+                    if dest in base_routing.destination :
 
-                        if nextdest in base_routing.destinations:
+                        if nextdest in base_routing.destination:
 
                             p.extend(base_routing.path)
 
                         else:
 
-                            continue
+                            p.append(self._make_paware_connection(dest,nextdest))
 
                     else:
 
@@ -1784,15 +1784,15 @@ class ParasiticAwareMultiRouting(MultiRouting):
                 midport=int((numports-1)/2)
 
                 base_routing=deepcopy(self)
-                # import pdb; pdb.set_trace()
 
-                base_routing.destinations=(self.destinations[midport],)
+                base_routing.destination=(self.destination[midport],)
 
-                for dest,nextdest in zip(self.destinations,self.destinations[1:]):
+                for dest,nextdest in zip(self.destination,self.destination[1:]):
 
-                    if dest in base_routing.destinations :
+                    if dest in base_routing.destination :
 
                         p.extend(base_routing.path)
+                        p.append(self._make_paware_connection(dest,nextdest))
 
                     else:
 
@@ -1800,24 +1800,85 @@ class ParasiticAwareMultiRouting(MultiRouting):
 
                 return p
 
+    def _yovertravel(self,s):
+        return (s.midpoint[1]-self.source[0].midpoint[1])/3
+
     def _make_paware_connection(self,s,d):
 
-        Yovertravel=(s.midpoint[1]-self.sources[0].midpoint[1])/3
+        Yovertravel=self._yovertravel(s)
 
         p0=Point(s.midpoint)
 
         p1=p0-Point(0,Yovertravel)
 
-        p2=Point(p1.y,d.midpoint[0])
+        p2=Point(d.midpoint[0],p1.y)
 
-        p3=Point(p2.y,d.midpoint[1])
+        p3=Point(p2.x,d.midpoint[1])
 
         list_points=_check_points_path(p0,p1,p2,p3,trace_width=s.width)
 
-        return pp.smooth(points=list_points,radius=self._radius,num_pts=self._num_pts)
+        try:
+
+            return  pp.smooth(
+                        points=list_points,
+                        radius=self._radius,
+                        num_pts=self._num_pts)
+
+        except Exception:
+
+            import pdb; pdb.set_trace()
+
+    @property
+    def resistance_squares(self):
+
+        p=self.path
+
+        numpaths=len(p)
+
+        if numpaths==1 or numpaths==2:
+
+            return super().resistance_squares
+
+        else:
+
+            original_res=super().resistance_squares
+
+            res=[]
+
+            if numpaths%2==0:
+
+                midpoint=int(numpaths/2)
+
+                for x in range(numpaths):
+
+                    if x==midpoint-1 or x==midpoint:
+
+                        res.append(original_res[x])
+
+                    else:
+
+                        res.append(original_res[x]-self._yovertravel(self.destination[x])/self.trace_width)
+
+                return res
+
+            if numpaths%2==1:
+
+                midpoint=int((numpaths-1)/2)
+
+                for x in range(numpaths):
+
+                    if x==midpoint:
+
+                        res.append(original_res[x])
+
+                    else:
+
+                        res.append(original_res[x]-self._yovertravel(self.destination[x])/self.trace_width)
+
+                return res
 
 _allclasses=(IDT,Bus,EtchPit,Anchor,Via,Routing,GSProbe,GSGProbe,Pad,MultiRouting,\
-LFERes,FBERes,TFERes)
+ParasiticAwareMultiRouting,LFERes,FBERes,TFERes)
 
 for cls in _allclasses:
 

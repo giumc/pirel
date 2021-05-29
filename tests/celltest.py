@@ -20,6 +20,8 @@ class pCellTest(TestCase):
 
             layobj=layclass()
 
+            print(pt.get_class_param(layclass))
+
             self._check_lookup(layobj)
 
             self._recheck_lookup(layobj)
@@ -29,6 +31,8 @@ class pCellTest(TestCase):
         for mods in pm._allmodifiers:
 
             if not mods==pm.addLargeGnd:
+
+                import pdb; pdb.set_trace()
 
                 cell=mods(base_dev)()
 
@@ -113,7 +117,7 @@ class RoutingTest(TestCase):
         master_cell=Device()
 
         r.source=pt.Port(name='1',midpoint=s0.coord,width=r.trace_width,orientation=90)
-        
+
         for n in range(10):
 
             d0=d0+Point(dx_increment,0)
@@ -210,9 +214,9 @@ class MultiRoutingTest(TestCase):
 
                 dest.append(pt.Port(name=str(n),midpoint=dt.coord,width=r.trace_width,orientation=angle))
 
-            r.sources=(pt.Port(name='-1',midpoint=s0.coord,width=r.trace_width,orientation=90),)
+            r.source=(pt.Port(name='-1',midpoint=s0.coord,width=r.trace_width,orientation=90),)
 
-            r.destinations=tuple(dest)
+            r.destination=tuple(dest)
 
             try:
 
@@ -224,7 +228,6 @@ class MultiRoutingTest(TestCase):
                 print(e)
 
                 self.assertTrue(1==0)
-                # import pdb; pdb.set_trace()
 
         g=Group(cells)
 
@@ -237,6 +240,10 @@ class MultiRoutingTest(TestCase):
 class ParasiticAwareMultiRoutingTest(TestCase):
 
     def test_cell(self):
+        self._gen_cells(range(1,7))
+        self._gen_cells(range(2,8,2))
+
+    def _gen_cells(self,numbers):
 
         master_cell=Device()
 
@@ -249,20 +256,20 @@ class ParasiticAwareMultiRoutingTest(TestCase):
         sources=(pt.Port(name='1',midpoint=(0,0),width=trace_width/2,orientation=90),)
 
         n_max=7
-
-        for n in range(1,n_max):
+        for n in range(1,n_max+1):
 
             dest=tuple([pt.Port(
                 name='d'+str(x),
                 midpoint=(dx*x,trace_width*6),
-                width=dx/4,
-                orientation=-90) for x in range(-n,n+1)])
+                width=trace_width,
+                orientation=-90) for x in range(-n,n+1,2)])
 
-            print("\n".join([str(x) for x in dest]))
-            obj.sources=sources
-            obj.destinations=dest
+            # print("\n".join([str(x) for x in dest]))
+
+            obj.source=sources
+            obj.destination=dest
             obj.trace_width=trace_width
-            obj.clearance=((500,500),(1000,1000))
+            obj.clearance=((5000,5000),(10000,10000))
 
             master_cell<<obj.draw()
 
