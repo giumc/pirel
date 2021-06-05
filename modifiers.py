@@ -434,9 +434,9 @@ def addPad(cls):
 
     return addPad
 
-def addPEtch(cls):
+def addPartialEtch(cls):
 
-    class addPEtch(cls):
+    class addPartialEtch(cls):
 
         @staticmethod
         def get_components():
@@ -457,11 +457,11 @@ def addPEtch(cls):
 
             return original_comp
 
-    return addPEtch
+    addPartialEtch.draw=cached(addPartialEtch)(addPartialEtch.draw)
 
-    addPEtch.draw=cached(addPEtch)(addPEtch.draw)
+    addPartialEtch.__name__=cls.__name__+' w PartialEtching'
 
-    adddPEtch.__name__=cls.__name__+' w PEtching'
+    return addPartialEtch
 
 def addProbe(cls,probe=pc.GSGProbe):
 
@@ -532,9 +532,11 @@ def addProbe(cls,probe=pc.GSGProbe):
                         dut_port_top.append(device_ports[port_name])
 
                 groundroute.source=probe_ports
+
                 groundroute.destination=tuple(dut_port_top)
 
                 routing_tot=groundroute.draw()
+
                 #signal routing
 
                 probe_port_center=probe_ref.ports['sig']
@@ -1085,4 +1087,4 @@ def bondstack(cls,n=4,sharedpad=False):
 
     return bondstack
 
-_allmodifiers=(Scaled,addVia,addPad,addPEtch,addProbe,addLargeGnd,array,fixture,bondstack)
+_allmodifiers=(Scaled,addVia,addPad,addPartialEtch,addProbe,addLargeGnd,array,fixture,bondstack)

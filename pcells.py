@@ -1414,6 +1414,8 @@ class LFERes(LayoutPart):
 
         self.bus.layer=self.idt.layer
 
+        self.etchpit.x=0.45*self.idt.active_area.x
+
         self.etchpit.active_area=Point(self.idt.active_area.x,\
             self.idt.active_area.y+2*self.bus.size.y+self.anchor.etch_margin.y*2)
 
@@ -1509,7 +1511,6 @@ class FBERes(LFERes):
 
             del plate
 
-
         elif self.plate_position=='in, short':
 
             plate=pg.rectangle(\
@@ -1555,6 +1556,7 @@ class FBERes(LFERes):
                     self.anchor.size.y+2*self.anchor.etch_margin.y)
 
             lr_cell=get_corners(cell)[0]
+
             lr_plate=get_corners(plate_ref)[0]
 
             plate_ref.move(origin=lr_plate.coord,\

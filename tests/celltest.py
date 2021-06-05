@@ -20,7 +20,7 @@ class pCellTest(TestCase):
 
             layobj=layclass()
 
-            print(pt.get_class_param(layclass))
+            # print(pt.get_class_param(layclass))
 
             self._check_lookup(layobj)
 
@@ -31,8 +31,6 @@ class pCellTest(TestCase):
         for mods in pm._allmodifiers:
 
             if not mods==pm.addLargeGnd:
-
-                import pdb; pdb.set_trace()
 
                 cell=mods(base_dev)()
 
@@ -240,8 +238,10 @@ class MultiRoutingTest(TestCase):
 class ParasiticAwareMultiRoutingTest(TestCase):
 
     def test_cell(self):
-        self._gen_cells(range(1,7))
+
+        self._gen_cells (range(1,7))
         self._gen_cells(range(2,8,2))
+        print(pt.get_class_param(pc.ParasiticAwareMultiRouting))
 
     def _gen_cells(self,numbers):
 
@@ -293,13 +293,13 @@ class ModifiersTest(TestCase):
 
                 print(obj.__class__.__name__)
 
-                obj.draw()
+                pt.check(obj.draw())
 
 class PEtchTest(TestCase):
 
     def test_draw(self):
 
-        cell=pm.addPEtch(pc.FBERes)()
+        cell=pm.addPartialEtch(pc.FBERes)()
 
         pt.check(cell.draw())
 
