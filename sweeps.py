@@ -1,5 +1,6 @@
 from pirel.tools import *
 
+from phidl.device_layout import Group
 import matplotlib.pyplot as plt
 
 import matplotlib as mpl
@@ -11,6 +12,8 @@ from matplotlib.ticker import LinearLocator
 import numpy as np
 
 import pathlib
+
+from pirel.pcells import TextParam
 
 plt.style.use(str((pathlib.Path(__file__).parent/'addOns'/'pltstl.mplstyle').absolute()))
 
@@ -503,8 +506,6 @@ class PArray(LayoutPart):
 
     @device.setter
     def device(self,value):
-
-        from building_blocks import LayoutPart
 
         if not isinstance(value,LayoutPart):
 

@@ -143,7 +143,7 @@ class TextParam:
 
                 raise ValueError("Passed parameter {} is not a string ".format(label.__class__.__name__))
 
-        text_cell=Device(name=self.get('label')+"Text").add(self.draw()).flatten()
+        text_cell=DeviceReference(self.draw())
 
         o=Point(0,0)
 
@@ -196,7 +196,7 @@ class TextParam:
 
             text_opts[name]=self.get(name)
 
-        package_directory = str(pathlib.path(__file__).parent/'addOns')
+        package_directory = str(pathlib.Path(__file__).parent/'addOns')
 
         font=os.path.join(package_directory,text_opts['font'])
 
@@ -1880,6 +1880,6 @@ class ParasiticAwareMultiRouting(MultiRouting):
 _allclasses=(IDT,Bus,EtchPit,Anchor,Via,Routing,GSProbe,GSGProbe,Pad,MultiRouting,\
 ParasiticAwareMultiRouting,LFERes,FBERes,TFERes)
 
-for cls in _allclasses:
-
-    cls.draw=cached(cls)(cls.draw)
+# for cls in _allclasses:
+#
+#     cls.draw=cached(cls)(cls.draw)

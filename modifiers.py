@@ -343,7 +343,7 @@ def addVia(cls,side='top',bottom_conn=False):
 
     addVia.__name__=" ".join([cls.__name__,"w Via"])
 
-    addVia.draw=cached(addVia)(addVia.draw)
+    # addVia.draw=cached(addVia)(addVia.draw)
 
     return addVia
 
@@ -428,7 +428,7 @@ def addPad(cls):
 
             return r0
 
-    addPad.draw=cached(addPad)(addPad.draw)
+    # addPad.draw=cached(addPad)(addPad.draw)
 
     addPad.__name__=" ".join([cls.__name__,"w Pad"])
 
@@ -459,7 +459,7 @@ def addPEtch(cls):
 
     return addPEtch
 
-    addPEtch.draw=cached(addPEtch)(addPEtch.draw)
+    # addPEtch.draw=cached(addPEtch)(addPEtch.draw)
 
     adddPEtch.__name__=cls.__name__+' w PEtching'
 
@@ -486,8 +486,6 @@ def addProbe(cls,probe=pc.GSGProbe):
             probe_dut_distance=self.probe_dut_distance
 
             cell.add_ref(device_cell, alias=self.name+"Device")
-
-            from phidl.device_layout import DeviceReference
 
             probe_ref=DeviceReference(probe_cell)
 
@@ -615,12 +613,6 @@ def addProbe(cls,probe=pc.GSGProbe):
 
             return t
 
-        def import_params(self,df):
-
-            cls.import_params(self,df)
-
-            if_match_import(self.probe,df,"Probe")
-
         def export_all(self):
 
             df=super().export_all()
@@ -740,7 +732,7 @@ def addProbe(cls,probe=pc.GSGProbe):
 
             supercomp=copy(cls.get_components())
 
-            supercomp.update({"Probe":probe})
+            supercomp.update({"Probe":probe,"SigTrace":pc.ParasiticAwareMultiRouting,"GndTrace":pc.MultiRouting})
 
             return supercomp
 
@@ -755,7 +747,7 @@ def addProbe(cls,probe=pc.GSGProbe):
 
     addProbe.__name__=" ".join([cls.__name__,"w Probe"])
 
-    addProbe.draw=cached(addProbe)(addProbe.draw)
+    # addProbe.draw=cached(addProbe)(addProbe.draw)
 
     return addProbe
 
@@ -783,7 +775,7 @@ def addLargeGnd(probe):
 
             cell.absorb(oldprobe)
 
-            import pdb; pdb.set_trace()
+            # import pdb; pdb.set_trace()
 
             groundpad=pg.compass(size=(self.ground_size,self.ground_size),\
             layer=self.layer)
@@ -824,7 +816,7 @@ def addLargeGnd(probe):
 
                     if 'left' in name:
 
-                        if self._pad_position=='side':
+                        if self.pad_position=='side':
 
                             left_port=Port(name=name,\
                                 midpoint=(left_port.midpoint[0]+self.ground_size/2,\
@@ -832,7 +824,7 @@ def addLargeGnd(probe):
                                 orientation=180,\
                                 width=self.ground_size)
 
-                        elif self._pad_position=='top':
+                        elif self.pad_position=='top':
 
                             left_port=Port(name=name,\
                                 midpoint=(left_port.midpoint[0],\
@@ -842,13 +834,13 @@ def addLargeGnd(probe):
 
                         else :
 
-                            raise ValueError(f"New pad position is {self._pad_position} : not acceptable")
+                            raise ValueError(f"New pad position is {self.pad_position} : not acceptable")
 
                         cell.add_port(left_port)
 
                     elif 'right' in name:
 
-                        if self._pad_position=='side':
+                        if self.pad_position=='side':
 
                             right_port=Port(name=name,\
                             midpoint=(right_port.midpoint[0]-self.ground_size/2,\
@@ -856,7 +848,7 @@ def addLargeGnd(probe):
                             orientation=0,\
                             width=self.ground_size)
 
-                        elif self._pad_position=='top':
+                        elif self.pad_position=='top':
 
                             right_port=Port(name=name,\
                             midpoint=(right_port.midpoint[0],\
@@ -866,13 +858,13 @@ def addLargeGnd(probe):
 
                         else :
 
-                            raise ValueError(f"New pad position is {self._pad_position} : not acceptable")
+                            raise ValueError(f"New pad position is {self.pad_position} : not acceptable")
 
                         cell.add_port(right_port)
 
             return cell
 
-    addLargeGnd.draw=pt.cached(addLargeGnd)(addLargeGnd.draw)
+    # addLargeGnd.draw=pt.cached(addLargeGnd)(addLargeGnd.draw)
 
     addLargeGnd.__name__=" ".join([probe.__name__,"w Large Ground"])
 

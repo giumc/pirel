@@ -8,7 +8,7 @@ from unittest import TestCase
 
 import unittest
 
-class pCellTest(TestCase):
+class pCellLookupTest(TestCase):
 
     def setUp(self):
 
@@ -305,6 +305,11 @@ class PEtchTest(TestCase):
 
         self.assertTrue(1)
 
+class AddProbeTest(TestCase):
+
+    def test_cell(self):
+
+        
 if __name__=='__main__':
     unittest.main()
 

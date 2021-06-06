@@ -1,12 +1,17 @@
-from PyResLayout import *
+import pirel.modifiers as pm
+import pirel.pcells as pc
+import pirel.tools as pt
+import pirel.sweeps as ps
 import numpy as np
 
 # dut=array(calibration(Scaled(LFERes),'open'),3)
-# dut=addVia(array(Scaled(FBERes),3),'top')(name='Hey')
-probe=addLargeGnd(GSGProbe)
-# device=addProbe(dut,probe)(name="HI")
+dut=pm.addVia(pm.array(pm.Scaled(pc.FBERes),3),'top')
+probe=pm.addLargeGnd(pc.GSGProbe)
+device=pm.addProbe(dut,probe)(name="HI")
 
-device=probe(name='HI')
+# device=probe(name='HI')
+
+# pt.check(device.draw())
 
 param=device.export_params()
 
@@ -53,7 +58,8 @@ param["GndRoutingWidth"]=150
 
 # device.probe._pad_position='top'
 
-device._pad_position='top'
+param['PadPosition']='top'
+
 device.import_params(param)
 
 print(device)
@@ -61,10 +67,10 @@ print(device)
 
 # param1=SweepParam({"IDTCoverage":[0.3,0.5,0.7]})
 
-param2=SweepParam({"Pitch":[50,100,150]})
+param2=ps.SweepParam({"ProbePitch":[50,100,150]})
 
 # array=PArray(device,param1.combine(param2),name="HiArray")
-array=PArray(device,param2,name="HiArray")
+array=ps.PArray(device,param2,name="HiArray")
 
 array.x_spacing=200
 
@@ -74,7 +80,7 @@ array.view()
 
 # exit()
 
-mat=PMatrix(device,\
+mat=ps.PMatrix(device,\
 param2,\
 param2,name="Hi")
 
