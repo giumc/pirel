@@ -680,14 +680,13 @@ class LayoutPart(ABC) :
         modkeys=[*df.keys()]
 
         pop_all_match(modkeys,".*Layer*")
-        pop_all_match(modkeys,".*_Layer*")
 
         pop_all_dict(df,[item for item in [*df.keys()] if item not in modkeys])
 
         return df
 
-    @classmethod
-    def get_components(self):
+    @staticmethod
+    def get_components():
 
         return {}
 
@@ -961,8 +960,6 @@ def cached(cls):
                 setattr(cls,dict_name,{})
 
             dict_lookup=getattr(cls,dict_name)
-
-            import pdb; pdb.set_trace()
 
             if paramhash in dict_lookup.keys():
 
