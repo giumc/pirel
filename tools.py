@@ -4,10 +4,6 @@ from copy import copy,deepcopy
 
 import numpy as np
 
-import phidl.geometry as pg
-
-from phidl.device_layout import Port,CellArray,Device
-
 from pandas import Series,DataFrame
 
 from phidl import set_quickplot_options
@@ -17,6 +13,18 @@ from phidl import quickplot as qp
 import warnings
 
 import re
+
+import pathlib
+
+import gdspy
+
+
+
+import phidl.geometry as pg
+
+from phidl.device_layout import Port,CellArray,Device
+
+import phidl.device_layout as dl
 
 class Point:
     ''' Handles 2-d coordinates.
@@ -1061,5 +1069,42 @@ def _check_points_path(*points,trace_width=100):
             out_list.append(p.coord)
 
         return out_list
+
+def generate_gds_from_image(path,**kwargs):
+
+    import nazca as nd
+
+    if isinstance(path,pathlib.Path):
+
+        path=str(path.absolute())
+
+    else:
+
+        path=pathlib.Path(path)
+
+    cell=nd.image(path,**kwargs).put()
+
+    path=path.parent/(path.stem+".gds")
+
+    nd.export_gds(filename=str(path.absolute()))
+
+    return path
+
+def import_gds(path,cellname=None,flatten=True,**kwargs):
+
+    if isinstance(path,str):
+
+        path=pathlib.Path(path)
+
+    cell=pg.import_gds(str(path.absolute()))
+
+    if flatten==True:
+        cell.flatten()
+
+    if cellname is not None:
+
+        cell._internal_name=cellname
+
+    return cell
 
 warnings.formatwarning = custom_formatwarning

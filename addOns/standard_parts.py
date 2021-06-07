@@ -1,7 +1,14 @@
 import phidl.geometry as pg
+
 import phidl.device_layout as dl
+
 import pathlib
-from devices import *
+
+import gdspy
+
+import numpy as np
+
+from pirel.tools import LayoutDefault,join
 
 def resistivity_test_cell():
 
@@ -14,7 +21,7 @@ def resistivity_test_cell():
 
     """
 
-    with open(str(os.path.dirname(__file__))+'\\ResistivityTest.gds', 'rb') as infile:
+    with open(str(pathlib.Path(__file__).parent/'ResistivityTest.gds'), 'rb') as infile:
 
         cell=pg.import_gds(infile)
 
@@ -93,15 +100,15 @@ def verniers(scale=[1, 0.5, 0.1],layers=[1,2],label='TE',text_size=20,reversed=F
 
             cal=cal.remove_polygons(lambda pts, layer, datatype: layer == layer2)
 
-            replica=Device()
+            replica=dl.Device()
 
             replica.add(gdspy.PolygonSet(tobedel,layer=layer2))
 
-            frame=Device()
+            frame=dl.Device()
 
             frame.add(pg.bbox(replica.bbox,layer=layer2))
 
-            frame_ext=Device()
+            frame_ext=dl.Device()
 
             frame_ext.add(gdspy.PolygonSet(frame.copy('tmp',scale=1.5).get_polygons(),layer=layer2))
 
@@ -149,7 +156,7 @@ def verniers(scale=[1, 0.5, 0.1],layers=[1,2],label='TE',text_size=20,reversed=F
 
     overlabel=pg.bbox(label.bbox,layer=layers[1])
 
-    overlabel_scaled=Device().add(gdspy.PolygonSet(overlabel.copy('tmp',scale=2).get_polygons(),layer=layers[1]))
+    overlabel_scaled=dl.Device().add(gdspy.PolygonSet(overlabel.copy('tmp',scale=2).get_polygons(),layer=layers[1]))
 
     overlabel_scaled.move(origin=overlabel_scaled.center,\
         destination=label.center)
@@ -173,7 +180,7 @@ def chip_frame(name="Default",size=(20e3,20e3),layer=LayoutDefault.layerTop,logo
         die_name="",layer=layer,draw_bbox=False,
         street_length=street_length,street_width=street_width)
 
-    cell=Device(name=name)
+    cell=dl.Device(name=name)
 
     cell.absorb(cell<<die_cell)
 
@@ -215,7 +222,7 @@ def chip_frame(name="Default",size=(20e3,20e3),layer=LayoutDefault.layerTop,logo
     g.distribute(direction='x',spacing=150)
     g.align(alignment='y')
 
-    logo_cell=Device(name="logos")
+    logo_cell=dl.Device(name="logos")
 
     for c in cells_logo:
 
@@ -244,7 +251,7 @@ def chip_frame(name="Default",size=(20e3,20e3),layer=LayoutDefault.layerTop,logo
 
 def align_TE_on_via():
 
-    cell=Device("Align TE on VIA")
+    cell=dl.Device("Align TE on VIA")
 
     circle=pg.circle(radius=50,layer=LayoutDefault.layerVias)
 
@@ -292,61 +299,3 @@ def dice(cell,width=100,layer=LayoutDefault.layerTop,spacing=150):
         'location':'bottom',\
         'distance':Point(0,-width-spacing/2),\
         'layer':layer}).add_text(cell)
-
-def generate_gds_from_image(path,**kwargs):
-
-    """ Converts a png file in gds.
-
-        Uses nazca.image() method for the conversion.
-
-        Parameters
-        ----------
-            path : str or pathlib.Path
-
-            **kwargs : passed to nazca.image()
-
-        Appends to input path a file with a .gds extension.
-
-        Examples
-        --------
-        generate_gds_from_image( r"MyPath\\NEU logo.png",\
-            layer=ld.layerTop,threshold=0.3,pixelsize=1,size=2048,invert=True)
-
-         #will create a "MyPath\\NEU logo.gds" file.
-    """
-
-    import nazca as nd
-
-    if isinstance(path,pathlib.Path):
-
-        path=str(path.absolute())
-
-    else:
-
-        path=pathlib.Path(path)
-
-    cell=nd.image(path,**kwargs).put()
-
-    path=path.parent/(path.stem+".gds")
-
-    nd.export_gds(filename=str(path.absolute()))
-
-    return path
-
-def import_gds(path,cellname=None,flatten=True,**kwargs):
-
-    if isinstance(path,str):
-
-        path=pathlib.Path(path)
-
-    cell=pg.import_gds(str(path.absolute()))
-
-    if flatten==True:
-
-        cell.flatten()
-
-    if cellname is not None:
-
-        cell.name=cellname
-        
-    return cell
