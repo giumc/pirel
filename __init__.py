@@ -1,8 +1,4 @@
-import os
-import sys
-
-file_dir = os.path.dirname(__file__)
-sys.path.append(file_dir)
-
-from devices import *
-from tools import *
+import pirel.tools
+import pirel.pcells
+import pirel.modifiers
+import pirel.sweeps

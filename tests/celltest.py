@@ -1,66 +1,348 @@
-from tools import *
-from devices import *
+import pirel.pcells as pc
+import pirel.tools as pt
+import pirel.modifiers as pm
 
-from phidl import quickplot as qp
+from phidl.device_layout import Device,Group
+import phidl
+from unittest import TestCase
 
-# from phidl import export_gds
+import unittest
 
-import pandas as pd
+class pCellLookupTest(TestCase):
 
-# d=addProbe(\
-#     addVia(array(Scaled(FBERes),4)),\
-#     addLargeGnd(GSGProbe))(name="DEF")
+    def setUp(self):
+
+        phidl.reset()
+
+    def test_allclasses(self):
+
+        for layclass in pc._allclasses:
+
+            layobj=layclass()
+
+            print(pt.get_class_param(layclass))
+
+            self._check_lookup(layobj)
+
+            self._recheck_lookup(layobj)
+
+        base_dev=pc.LFERes
+
+        for mods in pm._allmodifiers:
+
+            if not mods==pm.addLargeGnd:
+
+                import pdb; pdb.set_trace()
+
+                cell=mods(base_dev)()
+
+                self._check_lookup(cell)
+                self._recheck_lookup(cell)
+
+    def _check_lookup(self,obj):
+
+            obj.draw()
+
+            map=pt.get_class_param(obj.__class__)
+
+            pt.pop_all_match(map,".*name*")
+
+            cmpdict=pt._get_hashable_params(obj,map)
+
+            try:
+
+                if cmpdict in obj._draw_lookup:
+
+                    print(f"After first call, found cell for {obj.__class__.__name__}!")
+
+                    self.assertTrue(cmpdict in obj._draw_lookup)
+
+            except Exception:
+
+                print(f"Error in {obj.__class__.__name__}!")
+
+                print(cmpdict)
+
+                print( obj._draw_lookup)
+
+                self.assertTrue(cmpdict in obj._draw_lookup)
+
+    def _recheck_lookup(self,obj):
+
+        cell=obj.draw()
+
+        map=pt.pop_all_match(pt.get_class_param(obj.__class__),'.*name*')
+
+        try:
+
+            if pt._get_hashable_params(obj,map) in obj._draw_lookup:
+
+                print(f"Found again cell for {obj.__class__.__name__}!")
+
+                self.assertTrue(obj._draw_lookup[pt._get_hashable_params(obj,map)]==cell)
+
+        except Exception:
+
+            print(f"""Device for {obj.__class__.__name__} with params
+            {pt._get_hashable_params(obj,map)} should be in lookup""")
+
+            self.assertTrue(obj._draw_lookup[pt._get_hashable_params(obj,map)]==cell)
+
+class RoutingTest(TestCase):
+
+    def test_routing(self):
+
+        r=pc.Routing()
+
+        from pirel.tools import Point
+
+        ll=Point(500,500)
+        ur=Point(1000,1000)
+
+        r.clearance=(ll.coord,ur.coord)
+
+        r.trace_width=50
+
+        dx_increment=200
+        dy_increment=50
+
+        s0=Point(750,0)
+
+        d0=Point(0,100)
+
+        cells=[]
+
+        gtot=[]
+
+        master_cell=Device()
+
+        r.source=pt.Port(name='1',midpoint=s0.coord,width=r.trace_width,orientation=90)
+
+        for n in range(10):
+
+            d0=d0+Point(dx_increment,0)
+
+            cells.append([])
+
+            for n in range(10):
+
+                d0=d0+Point(0,dy_increment)
+
+                angle=-90
+
+                if d0.y>ll.y:
+
+                    dt=d0+Point(0,ur.y-ll.y+10)
+
+                    angle=90
+
+                else:
+
+                    dt=d0
+
+                r.destination=pt.Port(name='2',midpoint=dt.coord,width=r.trace_width,orientation=angle)
+
+                new_cell=master_cell<<r._draw_with_frame()
+
+                cells[-1].append(new_cell)
+
+            g=Group(cells[-1])
+
+            g.distribute(direction='x')
+
+            gtot.append(g)
+
+        g=Group(gtot)
+
+        g.distribute(direction='y')
+
+        pt.check(master_cell)
+
+        self.assertTrue(1)
+
+class MultiRoutingTest(TestCase):
+
+    def test_routing(self):
+
+        r=pc.MultiRouting()
+
+        from pirel.tools import Point
+
+        ll=Point(500,500)
+        ur=Point(1000,1000)
+
+        r.clearance=(ll.coord,ur.coord)
+
+        r.trace_width=50
+
+        dx_increment=200
+        dy_increment=50
+
+        s0=Point(750,0)
+
+        d0=Point(0,100)
+
+        cells=[]
+
+        master_cell=Device()
+
+        for n in range(10):
+
+            d0=d0+Point(dx_increment,0)
+
+            dest=[]
+
+            for n in range(10):
+
+                d0=d0+Point(0,dy_increment)
+
+                angle=-90
+
+                if d0.y>ll.y:
+
+                    dt=d0+Point(0,ur.y-ll.y+10)
+
+                    angle=90
+
+                else:
+
+                    dt=d0
+
+                if dt.in_box(r.clearance):
+
+                    dt=dt+Point(300,300)
+
+                dest.append(pt.Port(name=str(n),midpoint=dt.coord,width=r.trace_width,orientation=angle))
+
+            r.source=(pt.Port(name='-1',midpoint=s0.coord,width=r.trace_width,orientation=90),)
+
+            r.destination=tuple(dest)
+
+            try:
+
+                new_cell=master_cell<<r.draw()
+                cells.append(new_cell)
+
+            except Exception as e:
+
+                print(e)
+
+                self.assertTrue(1==0)
+
+        g=Group(cells)
+
+        g.distribute(direction='x')
+
+        pt.check(master_cell)
+
+        self.assertTrue(1)
+
+class ParasiticAwareMultiRoutingTest(TestCase):
+
+    def test_cell(self):
+        self._gen_cells(range(1,7))
+        self._gen_cells(range(2,8,2))
+
+    def _gen_cells(self,numbers):
+
+        master_cell=Device()
+
+        obj=pc.ParasiticAwareMultiRouting()
+
+        dx=100
+
+        trace_width=50
+
+        sources=(pt.Port(name='1',midpoint=(0,0),width=trace_width/2,orientation=90),)
+
+        n_max=7
+
+        for n in range(1,n_max+1):
+
+            dest=tuple([pt.Port(
+                name='d'+str(x),
+                midpoint=(dx*x,trace_width*6),
+                width=trace_width,
+                orientation=-90) for x in range(-n,n+1,2)])
+
+            # print("\n".join([str(x) for x in dest]))
+
+            obj.source=sources
+            obj.destination=dest
+            obj.trace_width=trace_width
+            obj.clearance=((5000,5000),(10000,10000))
+
+            master_cell<<obj.draw()
+
+        master_cell.distribute(direction='x')
+
+        master_cell.align(alignment='y')
+
+        pt.check(master_cell)
+
+class ModifiersTest(TestCase):
+
+    def test_modifiers_on_LFEREs(self):
+
+        cls=pc.LFERes
+
+        for x in pm._allmodifiers :
+
+            if not x==pm.addLargeGnd :
+
+                obj=x(cls)()
+
+                print(obj.__class__.__name__)
+
+                obj.draw()
+
+class PEtchTest(TestCase):
+
+    def test_draw(self):
+
+        cell=pm.addPEtch(pc.FBERes)()
+
+        pt.check(cell.draw())
+
+        self.assertTrue(1)
+
+class AddProbeTest(TestCase):
+
+    def test_cell(self):
+
+        pass
+
+if __name__=='__main__':
+    unittest.main()
+
+
+# d=addProbe(array(calibration(FBERes,'open'),4),addLargeGnd(GSGProbe))(name="DEF")
+# base_params=d.export_params()
 #
-d=addProbe(\
-    array(Scaled(FBERes),3),\
-    addLargeGnd(GSGProbe))(name="DEF")
-
-base_params=d.export_params()
 #
-base_params["PrrobeGroundPadSize"]=400
-base_params["ProbeSizeX"]=100
-base_params["ProbePitch"]=200
-base_params["ProbeSizeY"]=100
-base_params["GNDRoutingWidth"]=250
+# base_params["IDTPitch"]=7
+# base_params["IDTN"]=2
+# base_params["IDTOffset"]=1
+# base_params["IDTLength"]=100
+# base_params["IDTCoverage"]=0.5
+# base_params["BusSizeY"]=5
+# base_params["EtchPitX"]=10
+# base_params["IDTActiveAreaMargin"]=1
+# base_params["AnchorSizeY"]=20
+# base_params["AnchorSizeX"]=20
+# base_params["AnchorXOffset"]=0
+# base_params["AnchorMetalizedX"]=10
+# base_params["AnchorMetalizedY"]=24
+# base_params["ViaSize"]=10
+# base_params["Overvia"]=2
+# base_params["ViaAreaY"]=30
+# base_params["ViaAreaX"]= lambda : 3*d.idt.n*d.idt.pitch
+# d.import_params(base_params)
+#
+# print(d)
+#
+# import
 
-base_params["IDTPitch"]=7
-base_params["IDTN"]=2
-base_params["IDTOffset"]=1
-base_params["IDTLength"]=105
-base_params["IDTCoverage"]=0.5
-base_params["BusSizeY"]=5
-base_params["EtchX"]=0.4
-base_params["AnchorSizeY"]=4
-base_params["AnchorSizeX"]=0.1
-base_params["AnchorXOffset"]=0
-base_params["AnchorEtchMarginX"]=0.1
-base_params["AnchorEtchMarginY"]=0.2
 
-base_params["BusExtLength"]=0.5*7
-
-base_params["ViaSize"]=40
-base_params["ViaAreaX"]=300
-base_params["ViaAreaY"]=300
-base_params["ViaShape"]='square'
-base_params["Overvia"]=2
-
-d.import_params(base_params)
-
-d.draw().write_gds("test.gds")
-
-# check_cell(verniers())
-# check_cell(alignment_marks_4layers())
-# check_cell(resistivity_test_cell())
-# check_cell(chip_frame())
-# print(d.resistance())
-# p=PArraySeries(d)
-# v=check_cell(verniers([0.25,0.5,1 ]))
-# p.x_param=[\
-# SweepParam({'IDTN_fingers':[5,10,15,20]}),\
-# SweepParam({'IDTLength':[20,40,60]})]
-# SweepParam({'ViaSize':[10,20,50]})]
-
-# p.view()
-# rpq=1
-
-# print(d.resistance(res_per_square=rpq))
+#
+# d.draw().write_gds(str(path

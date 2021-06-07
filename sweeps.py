@@ -1,5 +1,6 @@
-from building_blocks import *
+from pirel.tools import *
 
+from phidl.device_layout import Group
 import matplotlib.pyplot as plt
 
 import matplotlib as mpl
@@ -10,11 +11,17 @@ from matplotlib.ticker import LinearLocator
 
 import numpy as np
 
-plt.style.use(os.path.dirname(__file__)+os.path.sep+'pltstl.mplstyle')
+import pathlib
+
+from pirel.pcells import TextParam
+
+plt.style.use(str((pathlib.Path(__file__).parent/'addOns'/'pltstl.mplstyle').absolute()))
+
+from math import ceil,floor
 
 import sys
 
-class SweepParam():
+class SweepParam:
 
     """ Class used to generate and combine sweep parameters in PArray/PMatrix.
 
@@ -360,28 +367,31 @@ class SweepParam():
 
         if n>=len(self):
 
-            raise ValueError(f"""subset returns a smaller number of arrays
-                than the original subset\n, input less than {n}""")
+            warning.warn(f""" SweepParam.subset : {n} larger than SweepParam length ({len(self)})""")
+
+            return self
 
         from numpy import ceil
 
         if len(self)%2==1:
 
-            spacing=int(ceil((len(self)+1)/n))
+            spacing=int(floor((len(self)+1)/n))
 
         else:
 
-            spacing=int(ceil(len(self)/n))
+            spacing=int(floor(len(self)/n))
 
         new_dict={}
 
         for name in self.names:
 
             old_values=self._dict[name]
-            new_values=[old_values[x] for x in range(0,len(self),spacing)]
+
+            new_values=[old_values[x] for x in range(0,len(self)-1,spacing)]
 
             if not len(new_values)==n:
 
+                import pdb; pdb.set_trace()
                 raise ValueError("bug in subset creation, wrong length")
 
             else:
@@ -390,7 +400,7 @@ class SweepParam():
 
         return SweepParam(new_dict)
 
-class _SweepParamValidator():
+class _SweepParamValidator:
 
     def __init__(self,def_param=LayoutDefault.Arrayx_param):
 
@@ -422,9 +432,10 @@ class _SweepParamValidator():
 
                 raise ValueError("param needs to be a SweepParam")
 
-            self._set_valid_names(obj.get_params_name())
+            self._set_valid_names([*obj.export_params().keys()])
 
             if not all([names in self._valid_names for names in layout_param.names]):
+
 
                 raise ValueError("At least one param key in {} is invalid".format(','.join([*layout_param.names])))
 
@@ -450,29 +461,6 @@ class _SweepParamValidator():
 
         self._valid_names=opts
 
-class _SweepArrayValidator(_SweepParamValidator):
-
-    def __set__(self,owner,layout_params):
-
-        if not isinstance(layout_params,list):
-
-            if not isinstance(layout_params,SweepParam):
-
-                raise ValueError("a SweepParam instance needs to be passed here")
-
-            else:
-
-                layout_params=[layout_params]
-
-        sweep_row=list()
-
-        for par in layout_params:
-
-            _SweepParamValidator.__set__(self,owner,par)
-            sweep_row.append(getattr(owner,self.private_name))
-
-        setattr(owner,self.private_name,sweep_row)
-
 class PArray(LayoutPart):
 
     """ Class used to create a parametric array of cells.
@@ -491,7 +479,13 @@ class PArray(LayoutPart):
 
     def __init__(self,device,x_param,*args,**kwargs):
 
-        super().__init__(*args,**kwargs)
+        if 'name' in kwargs.keys():
+
+            self.name=kwargs['name']
+
+        else:
+
+            self.name='Default'
 
         self.device=device
 
@@ -513,8 +507,6 @@ class PArray(LayoutPart):
     @device.setter
     def device(self,value):
 
-        from building_blocks import LayoutPart
-
         if not isinstance(value,LayoutPart):
 
             raise Exception("{} is an invalid entry for object of {}".format(value,self.device.__class__.__name__))
@@ -523,7 +515,7 @@ class PArray(LayoutPart):
 
             self._device=value
 
-            self._device.name=self.name
+            self.device.name=self.name
 
     def export_params(self):
 
@@ -588,7 +580,13 @@ class PArray(LayoutPart):
 
         param=self.x_param
 
-        df=copy(df_original)
+        df={}
+
+        for key,val in df_original.items():
+
+            if callable(val):
+
+                df[key]=val
 
         for index in range(len(param)):
 
@@ -598,9 +596,15 @@ class PArray(LayoutPart):
 
             device.import_params(df)
 
-            print("drawing device {} of {}".format(index+1,len(param)),end="\r")
+            # print("drawing device {} of {}".format(index+1,len(param)),end="\r")
 
-            new_cell=Device(name=self.name+'_'+str(index)).add(join(device.draw()))
+            new_cell=Device()
+            new_cell.absorb(new_cell<<device.draw())
+            new_cell=join(new_cell)
+
+            master_cell<<new_cell
+
+            new_cell.name=self.name+"_"+str(index+1)
 
             if self.labels_top is not None:
 
@@ -613,8 +617,6 @@ class PArray(LayoutPart):
                 self.text_params.set('location','bottom')
 
                 self.text_params.add_text(new_cell,self.labels_bottom[index])
-
-            master_cell<<new_cell
 
             cells.append(new_cell)
 
@@ -778,10 +780,9 @@ class PMatrix(PArray):
 
     y_param=_SweepParamValidator(LayoutDefault.Matrixy_param)
 
-    def __init__(self,device,x_param,y_param,*args,**kwargs):
+    def __init__(self,device,x_param,y_param,*a,**k):
 
-        super().__init__(device,x_param,*args,**kwargs)
-
+        super().__init__(device,x_param,*a,*k)
         self.y_spacing=LayoutDefault.Matrixy_spacing
         self.y_param=y_param
         self.labels_top=LayoutDefault.Matrixlabels_top
@@ -807,7 +808,13 @@ class PMatrix(PArray):
 
         x_param=self.x_param
 
-        df=copy(df_original)
+        df={}
+
+        for key in df_original.keys():
+
+            if callable(df_original[key]):
+
+                df.update({key:df_original[key]})
 
         for index in range(len(y_param)):
 
@@ -817,7 +824,7 @@ class PMatrix(PArray):
 
             device.import_params(df)
 
-            print("drawing array {} of {}".format(index+1,len(y_param)))
+            print("drawing array {} of {}".format(index+1,len(y_param)),end='\r')
 
             if top_label_matrix is not None:
 
@@ -854,7 +861,7 @@ class PMatrix(PArray):
             self.name=master_name+"Arr"+str(index+1)
 
             new_cell=PArray.draw(self)
-            # sys.stdout.flush()
+
             print("\033[K",end='')
 
             master_cell<<new_cell
@@ -865,7 +872,7 @@ class PMatrix(PArray):
 
         g.distribute(direction='y',spacing=self.y_spacing)
 
-        g.align(alignment='xmin')
+        g.align(alignment='x')
 
         device.import_params(df_original)
 
@@ -888,7 +895,7 @@ class PMatrix(PArray):
 
         import itertools
 
-        top_label=[[top_label+x+"\n"+y for x in x_label] for y in y_label]
+        top_label=[[top_label+x+y for x in x_label] for y in y_label]
 
         if top==True:
 
@@ -1010,68 +1017,3 @@ class PMatrix(PArray):
         self.import_params(df_original)
 
         return fig
-#
-# class PArraySeries(PArray):
-#
-#     x_param=_SweepArrayValidator(LayoutDefault.Arrayx_param)
-#
-#     def __init__(self,device,*a,**k):
-#
-#         PArray.__init__(self,device,*a,*k)
-#
-#         self.y_spacing = 100
-#
-#     def draw(self):
-#
-#         cellparts=list()
-#
-#         device=self.device
-#
-#         df_original=device.export_params()
-#
-#         df=copy(df_original)
-#
-#         p=PArray(device,self.x_param)
-#
-#         for i,par in enumerate(self.x_param):
-#
-#             p.x_spacing=self.x_spacing
-#
-#             p.x_param=par
-#
-#             p.auto_labels(row_index=1,col_index=0)
-#
-#             cellparts.append(p.draw())
-#
-#         g=Group(cellparts)
-#
-#         g.distribute(direction='y',spacing=self.y_spacing)
-#
-#         g.align(alignment='xmin')
-#
-#         cell=Device(self.name)
-#
-#         [cell<<x for x in cellparts]
-#
-#         device.import_params(df_original)
-#
-#         return cell
-#
-#     @property
-#     def table(self):
-#
-#         x_param=self.x_param
-#
-#         data_tot=DataFrame()
-#
-#         for p in x_param:
-#
-#             device=deepcopy(self.device)
-#
-#             parr=PArray(device)
-#
-#             parr.x_param=p
-#
-#             data_tot.append(parr.table)
-#
-#         return data_tot
