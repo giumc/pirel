@@ -392,20 +392,6 @@ def addPad(cls):
 
             return cell
 
-        def export_params(self):
-
-            t=cls.export_params(self)
-
-            pop_all_dict(t,["PadName"])
-
-            return t
-
-        def import_params(self, df):
-
-            cls.import_params(self,df)
-
-            if_match_import(self.pad,df,"Pad")
-
         @staticmethod
         def get_components():
 
@@ -434,9 +420,9 @@ def addPad(cls):
 
     return addPad
 
-def addPEtch(cls):
+def addPartialEtch(cls):
 
-    class addPEtch(cls):
+    class addPartialEtch(cls):
 
         @staticmethod
         def get_components():
@@ -447,7 +433,7 @@ def addPEtch(cls):
 
                 if comp_value==pc.IDT:
 
-                    original_comp[compname]=pc.PEtchIDT
+                    original_comp[compname]=pc.PartialEtchIDT
 
                     break
 
@@ -457,11 +443,11 @@ def addPEtch(cls):
 
             return original_comp
 
-    return addPEtch
+    return addPartialEtch
 
-    # addPEtch.draw=cached(addPEtch)(addPEtch.draw)
+    # addPartialEtch.draw=cached(addPartialEtch)(addPartialEtch.draw)
 
-    adddPEtch.__name__=cls.__name__+' w PEtching'
+    adddPartialEtch.__name__=cls.__name__+' w PartialEtching'
 
 def addProbe(cls,probe=pc.GSGProbe):
 
@@ -475,7 +461,11 @@ def addProbe(cls,probe=pc.GSGProbe):
 
             self.gnd_routing_width=100.0
 
+            self._setup_routings()
+
         def draw(self):
+
+            self._setup_routings()
 
             device_cell=cls.draw(self)
 
@@ -483,134 +473,26 @@ def addProbe(cls,probe=pc.GSGProbe):
 
             cell=Device(name=self.name)
 
-            probe_dut_distance=self.probe_dut_distance
-
             cell.add_ref(device_cell, alias=self.name+"Device")
 
-            probe_ref=DeviceReference(probe_cell)
+            probe_ref=cell.add_ref(probe_cell, alias=self.name+"Probe")
 
-            for p_name in device_cell.ports.keys():
+            self._move_probe_ref(probe_ref)
 
-                if re.search('bottom',p_name):
+            cell.add_ref(self.gndtrace.draw(),alias=self.name+"GndTrace")
 
-                    probe_ref.move(origin=(probe_ref.center[0],probe_ref.ymax),\
-                    destination=(\
-                        device_cell.center[0],\
-                        device_cell.ports[p_name].midpoint[1]-probe_dut_distance.y))
-
-                    break
-
-            else:
-
-                raise ValueError(f"no bottom port in {cls.__name__} cell")
-
-            routing_tot=Device(name='Routing')
-
-            bbox=super()._bbox_mod(cell.bbox)
-
-            groundroute=pc.MultiRouting()
-            groundroute.layer=self.probe.layer
-            groundroute.clearance=bbox
-            groundroute.trace_width=self.gnd_routing_width
-
-            if isinstance(self.probe,pc.GSGProbe):
-
-                #ground routing
-
-                probe_ports=(probe_ref.ports['gnd_left'],probe_ref.ports['gnd_right'],)
-
-                device_ports=device_cell.ports
-
-                dut_port_top=[]
-
-                for port_name in device_ports.keys():
-
-                    if re.search('top',port_name):
-
-                        dut_port_top.append(device_ports[port_name])
-
-                groundroute.source=probe_ports
-
-                groundroute.destination=tuple(dut_port_top)
-
-                routing_tot=groundroute.draw()
-                #signal routing
-
-                probe_port_center=probe_ref.ports['sig']
-
-                for p_name in device_cell.ports.keys():
-
-                    if re.search('bottom',p_name):
-
-                        self._signal_routing_width=device_cell.ports[p_name].width
-
-                        break
-
-                else:
-
-                    raise ValueError(f"no bottom port in {cls.__name__} cell")
-
-                bottom_ports=[]
-
-                for port_name in device_ports.keys():
-
-                    if re.search('bottom',port_name):
-
-                        bottom_ports.append(device_ports[port_name])
-
-                # self._signal_paths=[]
-
-                sig_routing_cell=self._route_signal(bbox,probe_port_center,bottom_ports)
-
-                routing_tot.add(pg.boolean(routing_tot,sig_routing_cell,'or',layer=self.probe.layer))
-
-            elif isinstance(self.probe,pc.GSProbe):
-
-                raise ValueError("DUT with GSprobe to be implemented ")
-
-            else:
-
-                raise ValueError("DUT without GSG/GSprobe to be implemented ")
-
-            if hasattr(self,'_stretch_top_margin'):
-
-                if self._stretch_top_margin:
-
-                    patch_top=pg.rectangle(\
-                    size=(dut_port_top.width,cell.ymax-dut_port_top.midpoint[1]),\
-                    layer=self.probe.layer)
-
-                    patch_top.move(origin=(patch_top.x,0),\
-                        destination=dut_port_top.midpoint)
-
-                    routing_tot.add(patch_top)
-
-            routing_tot=join(routing_tot.add(probe_ref))
-
-            cell.add_ref(routing_tot,alias=self.name+'Probe')
+            cell.add_ref(self.sigtrace.draw(),alias=self.name+"SigTrace")
 
             return cell
-
-        def _route(self,bbox,p1,p2,width):
-
-            routing=pc.Routing()
-
-            routing.layer=self.probe.layer
-
-            routing.clearance=bbox
-
-            routing.trace_width=width
-
-            routing.source=copy(p1)
-            routing.destination=copy(p2)
-
-            return routing
 
         def export_params(self):
 
             t=cls.export_params(self)
 
             pop_all_dict(t, ["ProbeName"])
+
+            pop_all_dict(t, [k for k in t if re.search('SigTrace',k) ])
+            pop_all_dict(t, [k for k in t if re.search('GndTrace',k) ])
 
             return t
 
@@ -621,107 +503,6 @@ def addProbe(cls,probe=pc.GSGProbe):
             df["ProbeResistance"]=self.probe_resistance_squares
 
             return df
-
-        def _route_signal(self,bbox : tuple, probe_port : Port, dut_ports : list) ->Device :
-
-            numports=len(dut_ports)
-
-            if numports == 1 :
-
-                routing=self._route(bbox,probe_port,dut_ports[0],dut_ports[0].width)
-
-                # self._signal_paths.append(routing.path)
-
-                c=routing.draw()
-
-                # del routing
-
-                return c
-
-            elif numports == 2 :
-
-                routing_cell=Device()
-
-                for dut_port in dut_ports :
-
-                    routing=self._route(bbox,probe_port,dut_port,dut_port.width)
-
-                    # self._signal_paths.append(routing.path)
-
-                    routing_cell.add(routing.draw())
-
-                    # del routing
-
-                return join(routing_cell)
-
-            else :
-
-                if numports %2 ==0:
-
-                    midport=int(numports/2)
-
-                    routing_cell=self._route_signal(bbox,probe_port,dut_ports[midport-1:midport+1])
-
-                    patch_width=dut_ports[midport-1].midpoint[0]+dut_ports[midport-1].width/2-\
-                        (dut_ports[0].midpoint[0]-dut_ports[0].width/2)
-
-                    # self._signal_paths.append(pp.Path().append(pp.straight(length=patch_width)))
-
-                    patch_height=dut_ports[0].width
-
-                    patch=Point(patch_width,patch_height)
-
-                    origin=Point(dut_ports[0].midpoint[0]-dut_ports[0].width/2,\
-                        dut_ports[0].midpoint[1]-patch_height)
-
-                    routing_cell.add(\
-                        pg.bbox(\
-                            (origin.coord,(origin+patch).coord),\
-                            layer=self.probe.layer))
-
-                    patch_width=dut_ports[-1].midpoint[0]+dut_ports[-1].width/2-\
-                        (dut_ports[midport].midpoint[0]-dut_ports[midport].width/2)
-
-                    # self._signal_paths.append(pp.Path().append(pp.straight(length=patch_width)))
-
-                    patch_height=dut_ports[midport].width
-
-                    patch=Point(patch_width,patch_height)
-
-                    origin=Point(dut_ports[midport].midpoint[0]-dut_ports[midport].width/2,\
-                        dut_ports[midport].midpoint[1]-patch_height)
-
-                    routing_cell.add(\
-                        pg.bbox(\
-                            (origin.coord,(origin+patch).coord),\
-                            layer=self.probe.layer))
-
-                    return routing_cell
-
-                elif numports%2==1:
-
-                    midport=int((numports-1)/2)
-
-                    routing_cell=self._route_signal(bbox,probe_port,[dut_ports[midport]])
-
-                    patch_width=dut_ports[-1].midpoint[0]+dut_ports[-1].width/2-\
-                        (dut_ports[0].midpoint[0]-dut_ports[0].width/2)
-
-                    # self._signal_paths.append(pp.Path().append(pp.straight(length=patch_width)))
-
-                    patch_height=dut_ports[0].width
-
-                    patch=Point(patch_width,patch_height)
-
-                    origin=Point(dut_ports[0].midpoint[0]-dut_ports[0].width/2,\
-                        dut_ports[0].midpoint[1]-patch_height)
-
-                    routing_cell.add(\
-                        pg.bbox(\
-                            (origin.coord,(origin+patch).coord),\
-                            layer=self.probe.layer))
-
-                    return routing_cell
 
         @property
         def resistance_squares(self):
@@ -744,7 +525,105 @@ def addProbe(cls,probe=pc.GSGProbe):
 
         @property
         def probe_dut_distance(self):
+
             return Point(0,self.idt.active_area.x/2)
+
+        def _move_probe_ref(self,probe_ref):
+
+            probe_dut_distance=self.probe_dut_distance
+
+            device_cell=cls.draw(self)
+
+            for p_name in device_cell.ports.keys():
+
+                if re.search('bottom',p_name):
+
+                    probe_ref.move(origin=(probe_ref.center[0],probe_ref.ymax),\
+                    destination=(\
+                        device_cell.center[0],\
+                        device_cell.ports[p_name].midpoint[1]-probe_dut_distance.y))
+
+                    break
+
+            else:
+
+                raise ValueError(f"no bottom port in {cls.__name__} cell")
+
+            return probe_ref
+
+        def _setup_routings(self):
+
+            device_cell=cls.draw(self)
+
+            probe_cell=self.probe.draw()
+
+            probe_ref=self._move_probe_ref(DeviceReference(probe_cell))
+
+            bbox=super()._bbox_mod(device_cell.bbox)
+
+            groundroute=self.gndtrace
+
+            groundroute.layer=self.probe.layer
+
+            groundroute.clearance=bbox
+
+            groundroute.trace_width=self.gnd_routing_width
+
+            if isinstance(self.probe,pc.GSGProbe):
+
+                #ground routing
+                device_ports=device_cell.ports
+
+                dut_port_top=[]
+
+                for port_name in device_ports.keys():
+
+                    if re.search('top',port_name):
+
+                        dut_port_top.append(device_ports[port_name])
+
+                groundroute.source=(probe_ref.ports['gnd_left'],probe_ref.ports['gnd_right'],)
+
+                groundroute.destination=tuple(dut_port_top)
+
+                #signal routing
+                signalroute=self.sigtrace
+
+                for p_name in device_cell.ports.keys():
+
+                    if re.search('bottom',p_name):
+
+                        signalroute.trace_width=device_cell.ports[p_name].width
+
+                        break
+
+                else:
+
+                    raise ValueError(f"no bottom port in {cls.__name__} cell")
+
+                bottom_ports=[]
+
+                for port_name in device_ports.keys():
+
+                    if re.search('bottom',port_name):
+
+                        bottom_ports.append(device_ports[port_name])
+
+                signalroute.layer=self.probe.layer
+
+                signalroute.clearance=bbox
+
+                signalroute.source=(probe_ref.ports['sig'],)
+
+                signalroute.destination=tuple(bottom_ports)
+
+            elif isinstance(self.probe,pc.GSProbe):
+
+                raise ValueError("DUT with GSprobe to be implemented ")
+
+            else:
+
+                raise ValueError("DUT without GSG/GSprobe to be implemented ")
 
     addProbe.__name__=" ".join([cls.__name__,"w Probe"])
 
@@ -775,8 +654,6 @@ def addLargeGnd(probe):
             oldprobe=cell<<probe.draw(self)
 
             cell.absorb(oldprobe)
-
-            # import pdb; pdb.set_trace()
 
             groundpad=pg.compass(size=(self.ground_size,self.ground_size),\
             layer=self.layer)
@@ -1078,4 +955,4 @@ def bondstack(cls,n=4,sharedpad=False):
 
     return bondstack
 
-_allmodifiers=(Scaled,addVia,addPad,addPEtch,addProbe,addLargeGnd,array,fixture,bondstack)
+_allmodifiers=(Scaled,addVia,addPad,addPartialEtch,addProbe,addLargeGnd,array,fixture,bondstack)

@@ -388,7 +388,7 @@ class IDT(LayoutPart) :
 
         return unitcell
 
-class PEtchIDT(IDT):
+class PartialEtchIDT(IDT):
 
     def _draw_unit_cell(self):
 
@@ -792,7 +792,9 @@ class Routing(LayoutPart):
     trace_width : float
         with of routing
 
-    ports : list of two phidl.Ports
+    source: phidl.Port
+
+    destination: phidl.Port
         for now, the ports have to be oriented as follows:
             +90 -> -90 if below obstacle
             +90 -> +90 if above obstacle
@@ -851,14 +853,9 @@ class Routing(LayoutPart):
 
         x.add(layer=self.layer,width=self.trace_width)
 
-        try:
+        path_cell=join(x.extrude(p,simplify=0.1))
 
-            path_cell=join(x.extrude(p,simplify=0.1))
-            path_cell.name=self.name
-
-        except Exception as e:
-
-            print (e)
+        path_cell.name=self.name
 
         return path_cell
 
@@ -1801,7 +1798,7 @@ class ParasiticAwareMultiRouting(MultiRouting):
                 return p
 
     def _yovertravel(self,s):
-        return (s.midpoint[1]-self.source[0].midpoint[1])/3
+        return (s.midpoint[1]-self.source[0].midpoint[1])/4
 
     def _make_paware_connection(self,s,d):
 
@@ -1877,7 +1874,7 @@ class ParasiticAwareMultiRouting(MultiRouting):
 
                 return res
 
-_allclasses=(IDT,Bus,EtchPit,Anchor,Via,Routing,GSProbe,GSGProbe,Pad,MultiRouting,\
+_allclasses=(IDT,PartialEtchIDT,Bus,EtchPit,Anchor,Via,Routing,GSProbe,GSGProbe,Pad,MultiRouting,\
 ParasiticAwareMultiRouting,LFERes,FBERes,TFERes)
 
 # for cls in _allclasses:

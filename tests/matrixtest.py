@@ -5,10 +5,10 @@ import pirel.sweeps as ps
 import numpy as np
 
 # dut=array(calibration(Scaled(LFERes),'open'),3)
-dut=pm.addVia(pm.array(pm.Scaled(pc.FBERes),3),'top')
+dut=pm.addVia(pm.array(pm.Scaled(pm.addPartialEtch(pc.FBERes)),3),'top')
 probe=pm.addLargeGnd(pc.GSGProbe)
 device=pm.addProbe(dut,probe)(name="HI")
-
+# device=dut(name='Hi')
 # device=probe(name='HI')
 
 # pt.check(device.draw())
@@ -17,7 +17,9 @@ param=device.export_params()
 
 param["IDTPitch"]=7
 
-param["IDTN"]=4
+param["NBlocks"]=4
+
+param["IDTN"]=8
 
 param["IDTYOffset"]=1
 
@@ -52,11 +54,9 @@ param["ProbeSizeY"]=10
 
 param["GndRoutingWidth"]=150
 
-# param["SizeX"]=10
-#
-# param["SizeY"]=10
+param["SizeX"]=10
 
-# device.probe._pad_position='top'
+param["SizeY"]=10
 
 param['PadPosition']='top'
 
@@ -65,26 +65,22 @@ device.import_params(param)
 print(device)
 # device.probe._pad_position='top'
 
-# param1=SweepParam({"IDTCoverage":[0.3,0.5,0.7]})
+param1=ps.SweepParam({"IDTCoverage":[0.3,0.5,0.7]})
 
 param2=ps.SweepParam({"ProbePitch":[50,100,150]})
-
+array=ps.PArray(device,param1,name="HiArray")
 # array=PArray(device,param1.combine(param2),name="HiArray")
-array=ps.PArray(device,param2,name="HiArray")
+# array=ps.PArray(device,param2,name="HiArray")
 
 array.x_spacing=200
 
 array.auto_labels()
 
-array.view()
-
-# exit()
+pt.check(array.draw())
 
 mat=ps.PMatrix(device,\
-param2,\
+param1,\
 param2,name="Hi")
-
-mat.device.fixture_type='short'
 
 mat.x_spacing=200
 

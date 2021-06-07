@@ -256,6 +256,7 @@ class ParasiticAwareMultiRoutingTest(TestCase):
         sources=(pt.Port(name='1',midpoint=(0,0),width=trace_width/2,orientation=90),)
 
         n_max=7
+
         for n in range(1,n_max+1):
 
             dest=tuple([pt.Port(
@@ -309,7 +310,8 @@ class AddProbeTest(TestCase):
 
     def test_cell(self):
 
-        
+        pass
+
 if __name__=='__main__':
     unittest.main()
 
