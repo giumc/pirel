@@ -832,17 +832,17 @@ def array(cls,n=2):
 
     return array
 
-def fixture(cls,type='open'):
+def fixture(cls,style='open'):
 
     class fixture(cls):
 
-        type=LayoutParamInterface('short','open')
+        style=LayoutParamInterface('short','open')
 
         def __init__(self,*a,**k):
 
             super().__init__(*a,**k)
 
-            self.type=type
+            self.style=style
 
         def draw(self):
 
@@ -850,7 +850,7 @@ def fixture(cls,type='open'):
 
             cell=pg.deepcopy(supercell)
 
-            type=self.type
+            style=self.style
 
             ports=supercell.ports
 
@@ -868,11 +868,11 @@ def fixture(cls,type='open'):
                     idt_parent=cell
                     idt_cell=cell['IDT']
 
-            if type=='open':
+            if style=='open':
 
                 idt_parent.remove(idt_cell)
 
-            if type=='short':
+            if style=='short':
 
                 top_port=idt_cell.ports['top']
 
@@ -897,14 +897,14 @@ def fixture(cls,type='open'):
         @property
         def resistance_squares(self):
 
-            type=self.type
+            style=self.style
 
-            if type=='open':
+            if style=='open':
 
                 from numpy import Inf
                 return 1e9
 
-            elif type=='short':
+            elif style=='short':
 
                 cell=cls.draw(self)
 
