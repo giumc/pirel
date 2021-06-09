@@ -1,5 +1,6 @@
-from PyResLayout import *
-
+import pirel.modifiers as pm
+import pirel.pcells as pc
+import pirel.tools as pt
 # d=IDT()
 # params=d.export_params()
 #
@@ -10,6 +11,12 @@ from PyResLayout import *
 # print(d)
 # d.view()
 # exit()
+
+p=pm.addLargeGnd(pc.GSGProbe)(name='Hi')
+p.pad_position='top'
+pt.check(p.draw())
+exit()
+
 
 # q=Bus()
 # print(q)

@@ -20,14 +20,13 @@ def Scaled(cls):
 
     Descaling rules:
         IDT gap (d) = IDT gap (n) * pitch
-        IDT length (d) = IDT length (n) * pitch
         Bus length (d) = Bus length (n) * pitch
         Etch pit width (d) = Etch pit width (d) * active region width
         Anchor width (d) = Anchor width (n) * active region width
-        Anchor length (d) = Anchor length (n) * active region width
+        Anchor length (d) = Anchor length (n) * pitch
         Anchor Margin Y (d) = Anchor Margin Y (n) * Anchor length
         Anchor Margin X (d) = Anchor Margin X (n) * Anchor width.
-
+        
     Parameters
     ----------
     cls : class
@@ -88,23 +87,6 @@ def Scaled(cls):
             self._normalized=True
 
         def _denormalize(self):
-            ''' Applies descaling rules and returns a copy of the descaled object.
-
-            Descaling rules:
-                IDT gap (d) = IDT gap (n) * pitch
-                IDT length (d) = IDT length (n) * pitch
-                Bus length (d) = Bus length (n) * pitch
-                Etch pit width (d) = Etch pit width (d) * active region width
-                Anchor width (d) = Anchor width (n) * active region width
-                Anchor length (d) = Anchor length (n) * active region width
-                Anchor Margin Y (d) = Anchor Margin Y (n) * Anchor length
-                Anchor Margin X (d) = Anchor Margin X (n) * Anchor width.
-
-            Returns
-            -------
-            selfcopy : object
-                 a deep copy of the calling object, with descaled parameters.
-            '''
 
             if self._normalized==False:
 
@@ -113,8 +95,6 @@ def Scaled(cls):
             p=self.idt.pitch
 
             self.idt.y_offset=self.idt.y_offset*p
-
-            # self.idt.length=self.idt.length*p
 
             self.bus.size=Point(self.bus.size.x,self.bus.size.y*p)
 

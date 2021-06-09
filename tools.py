@@ -18,8 +18,6 @@ import pathlib
 
 import gdspy
 
-
-
 import phidl.geometry as pg
 
 from phidl.device_layout import Port,CellArray,Device
@@ -493,14 +491,9 @@ class LayoutPart(ABC) :
         name : str
 
             instance name
+
         origin : PyResLayout.Point
-            layout cell origin
-
-        cell :  phidl.Device
-            container of last generated cell
-
-        text_params : property
-            see help
+            layout cell origin.
 
     '''
     name=LayoutParamInterface()
@@ -527,7 +520,7 @@ class LayoutPart(ABC) :
 
         # self.__class__.draw=cached(self.__class__.draw)
 
-    def view(self,blocking=True):
+    def view(self,blocking=False):
         ''' Visualize cell layout with current parameters.
 
         Parameters
@@ -596,6 +589,7 @@ class LayoutPart(ABC) :
         pass
 
     def export_params(self):
+        ''' Returns a dict with param names : param values. '''
 
         param_dict=self._params_dict
 
@@ -633,6 +627,7 @@ class LayoutPart(ABC) :
         Parameters
         ----------
         df : dict.
+
         '''
 
         for name in self.get_components().keys():

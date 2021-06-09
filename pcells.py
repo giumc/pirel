@@ -1061,6 +1061,8 @@ class Routing(LayoutPart):
 
                 except Exception:
 
+                    import pdb; pdb.set_trace()
+
                     raise ValueError("error in +180 source, lx path")
 
         return p
@@ -1464,7 +1466,21 @@ class LFERes(LayoutPart):
         return {'IDT':IDT,"Bus":Bus,"EtchPit":EtchPit,"Anchor":Anchor}
 
 class FBERes(LFERes):
+    ''' Floating Bottom Electrode Resonator.
 
+        Attributes
+        ----------
+
+            plate_position
+
+                can be 'in(/out), short(/long)' such that
+                    if 'in', plate is below active region only,
+                    if 'out', plate is below bus too.
+
+                    if 'short' plate is narrower than trench,
+                    if 'long', plate is larger than the trench.
+
+        '''
     plate_position=LayoutParamInterface(\
         'in, short','out, short','in, long','out, long')
 
