@@ -26,7 +26,7 @@ def Scaled(cls):
         Anchor length (d) = Anchor length (n) * pitch
         Anchor Margin Y (d) = Anchor Margin Y (n) * Anchor length
         Anchor Margin X (d) = Anchor Margin X (n) * Anchor width.
-        
+
     Parameters
     ----------
     cls : class
@@ -139,7 +139,7 @@ def addVia(cls,side='top',bottom_conn=False):
         via : PyResLayout.Via
             instance of a PyResLayout.Via class
 
-        padlayers : lenght 2 iterable of int
+        pad_layers : lenght 2 iterable of int
             top/bottom layers to draw vias pads
 
         over_via : float
@@ -166,17 +166,19 @@ def addVia(cls,side='top',bottom_conn=False):
 
         via_area=LayoutParamInterface()
 
+        pad_layers=LayoutParamInterface()
+
         def __init__(self,*args,**kwargs):
 
             cls.__init__(self,*args,**kwargs)
 
-            self.padlayers=[LayoutDefault.layerTop,LayoutDefault.layerBottom]
+            self.pad_layers=[LayoutDefault.layerTop,LayoutDefault.layerBottom]
 
-            self.over_via=2.0
+            self.over_via=LayoutDefault.addVia_over_via
 
-            self.via_distance=100.0
+            self.via_distance=LayoutDefault.addVia_via_distance
 
-            self.via_area=Point(100,100)
+            self.via_area=LayoutDefault.addVia_via_area
 
         def draw(self):
 
@@ -205,7 +207,7 @@ def addVia(cls,side='top',bottom_conn=False):
 
                         p=super_ref.ports[p_name]
 
-                        pad=pg.compass(size=(p.width,self.via_distance),layer=self.padlayers[0])
+                        pad=pg.compass(size=(p.width,self.via_distance),layer=self.pad_layers[0])
 
                         if sides=='top':
 
@@ -258,12 +260,12 @@ def addVia(cls,side='top',bottom_conn=False):
 
             port=viaref.ports['conn']
 
-            trace=pg.rectangle(size=(size,size),layer=self.padlayers[0])
+            trace=pg.rectangle(size=(size,size),layer=self.pad_layers[0])
 
             trace.move(origin=trace.center,\
                 destination=viaref.center)
 
-            trace2=pg.copy_layer(trace,layer=self.padlayers[0],new_layer=self.padlayers[1])
+            trace2=pg.copy_layer(trace,layer=self.pad_layers[0],new_layer=self.pad_layers[1])
 
             cell=Device(self.name)
 
@@ -281,7 +283,7 @@ def addVia(cls,side='top',bottom_conn=False):
 
             if bottom_conn==False:
 
-                cell.remove_layers(layers=[self.padlayers[1]])
+                cell.remove_layers(layers=[self.pad_layers[1]])
 
             return cell
 

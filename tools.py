@@ -202,11 +202,11 @@ class LayoutDefault:
     #IDT
 
     IDT_y = 200.0
-    IDTpitch = 8.0
+    IDTpitch = 20.0
     IDTcoverage = 0.7
     IDTy_offset = 10.0
     IDTlayer = layerTop
-    IDTn = 40
+    IDTn = 4
 
     #Bus
 
@@ -247,7 +247,7 @@ class LayoutDefault:
 
     Vialayer=layerVias
     Viashape='circle'
-    Viasize=5
+    Viasize=20
 
     #GSGProbe
 
@@ -317,6 +317,12 @@ class LayoutDefault:
     #array
 
     arraybusextlength=30.0
+
+    #addVia
+
+    addVia_over_via=2.0
+    addVia_via_area=Point(100,100)
+    addVia_via_distance=40
 
 class _LayoutParam:
 
