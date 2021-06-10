@@ -12,10 +12,10 @@ import pirel.tools as pt
 # d.view()
 # exit()
 
-p=pm.addLargeGnd(pc.GSGProbe)(name='Hi')
-p.pad_position='top'
-pt.check(p.draw())
-exit()
+# p=pm.addLargeGnd(pc.GSGProbe)(name='Hi')
+# p.pad_position='top'
+# pt.check(p.draw())
+# exit()
 
 
 # q=Bus()
@@ -63,20 +63,20 @@ exit()
 #     layer=ld.layerTop,threshold=0.3,pixelsize=1,size=4096)
 # d=phidl.geometry.import_gds(str(d.absolute()))
 # check_cell(d)
-d=LFERes()
-t=d.export_params()
-t["IDTLength"]=200
-t["IDTNFingers"]=10
-t["AnchorEtchMarginY"]=5
-t["AnchorEtchMarginX"]=5
-t["AnchorSizeX"]=40
-t["AnchorSizeY"]=40
-t["EtchX"]=160
-t["PlatePosition"]='out, long'
-d.import_params(t)
-print(d)
-d.view()
-exit()
+# d=LFERes()
+# t=d.export_params()
+# t["IDTLength"]=200
+# t["IDTNFingers"]=10
+# t["AnchorEtchMarginY"]=5
+# t["AnchorEtchMarginX"]=5
+# t["AnchorSizeX"]=40
+# t["AnchorSizeY"]=40
+# t["EtchX"]=160
+# t["PlatePosition"]='out, long'
+# d.import_params(t)
+# print(d)
+# d.view()
+# exit()
 # exit()
 # d=TFERes()
 # print(d)
@@ -96,24 +96,24 @@ exit()
 # d.view()
 # exit()
 
-# d=Scaled(TFERes)()
-# param=d.export_params()
-# param["IDTPitch"]=7
-# param["IDTN"]=4
-# param["IDTYOffset"]=1
-# param["IDTLength"]=10
-# param["IDTCoverage"]=0.5
-# param["BusSizeY"]=0.5
-# param["EtchX"]=0.4
-# param["AnchorSizeY"]=4
-# param["AnchorSizeX"]=0.5
-# param["AnchorEtchMarginX"]=0.2
-# param["AnchorEtchMarginY"]=0.2
-# d.import_params(param)
+d=pm.Scaled(pc.TFERes)()
+param=d.export_params()
+param["IDTPitch"]=7
+param["IDTN"]=4
+param["IDTYOffset"]=1
+param["IDTLength"]=10
+param["IDTCoverage"]=0.5
+param["BusSizeY"]=0.5
+param["EtchX"]=0.4
+param["AnchorSizeY"]=4
+param["AnchorSizeX"]=0.5
+param["AnchorEtchMarginX"]=0.2
+param["AnchorEtchMarginY"]=0.2
+d.import_params(param)
 
-# print(d)
-# d.view()
-#exit()
+pt.check(d.draw())
+
+exit()
 #
 # d=array(Scaled(LFERes),3)()
 # param=d.export_params()

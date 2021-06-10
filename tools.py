@@ -24,6 +24,11 @@ from phidl.device_layout import Port,CellArray,Device
 
 import phidl.device_layout as dl
 
+from IPython import get_ipython
+
+if get_ipython() is not None:
+    get_ipython().run_line_magic('matplotlib', 'qt')
+
 class Point:
     ''' Handles 2-d coordinates.
 
@@ -308,9 +313,9 @@ class LayoutDefault:
 
     #Pad
 
-    Padsize=400.0
+    Padsize=80.0
     Padlayer=IDTlayer
-    Paddistance=200.0
+    Paddistance=30.0
     Padport=Port(name='top',midpoint=(50,50),width=100,\
         orientation=-90)
 
@@ -854,13 +859,32 @@ def get_corners(device : Device) :
 
     return ll,lr,ul,ur
 
-def check(device : Device):
+def check(device : Device, joined=False):
     ''' Shows the device layout.
 
-    Blocks script until window is closed.
+        If run by terminal, blocks script until window is closed.
+
+        Parameters
+        ----------
+            device : phidl.Device
+
+            joined : boolean (optional, default False)
+
+                if true, returns a flattened/joined version of device
+
     '''
     set_quickplot_options(blocking=True)
-    qp(device)
+
+    if joined:
+
+        cell=Device()
+        cell.absorb(cell<<device)
+        cell.flatten()
+        qp(join(cell))
+
+    else:
+
+        qp(device)
 
 def if_match_import(obj : LayoutPart ,param : dict, tag : str ):
     ''' used to load data in subclasses.

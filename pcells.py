@@ -1612,23 +1612,27 @@ class FBERes(LFERes):
 
 class TFERes(LFERes):
 
+    bottom_layer=LayoutParamInterface()
+
     def __init__(self,*args,**kwargs):
 
         super().__init__(*args,**kwargs)
 
-        self.bottomlayer=LayoutDefault.TFEResbottomlayer
+        self.bottom_layer=LayoutDefault.layerBottom
 
     def draw(self):
 
         cell=Device(name=self.name)
 
-        cell.add_ref(LFERes.draw(self))
+        lfe_cell=LFERes.draw(self)
+
+        cell.add_ref(lfe_cell,alias='TopCell')
 
         idt_bottom=copy(self.idt)
 
-        idt_bottom.layer=self.bottomlayer
+        idt_bottom.layer=self.bottom_layer
 
-        idt_ref=cell<<idt_bottom.draw()
+        idt_ref=cell.add_ref(idt_bottom.draw(),alias='BottomIDT')
 
         p_bott=idt_ref.ports['bottom']
 
@@ -1642,43 +1646,34 @@ class TFERes(LFERes):
 
         bus_bottom=copy(self.bus)
 
-        bus_bottom.layer=self.bottomlayer
+        bus_bottom.layer=self.bottom_layer
 
-        bus_ref=cell<<bus_bottom.draw()
+        bus_ref=cell.add_ref(bus_bottom.draw(),alias='BottomBus')
 
         bus_ref.move(origin=(0,0),\
         destination=(0,-self.bus.size.y))
 
-        cell.absorb(bus_ref)
-
         anchor_bottom=copy(self.anchor)
 
-        anchor_bottom.layer=self.bottomlayer
+        anchor_bottom.layer=self.bottom_layer
+
         anchor_bottom.etch_choice=False
 
-        anchor_ref=cell<<anchor_bottom.draw()
+        anchor_ref=cell.add_ref(anchor_bottom.draw(),alias="BottomAnchor_Top")
 
         anchor_ref.connect(anchor_ref.ports['conn'],\
             destination=idt_ref.ports['top'],\
             overlap=-self.bus.size.y)
 
-        cell.absorb(anchor_ref)
-
-        anchor_ref_2=cell<<anchor_bottom.draw()
+        anchor_ref_2=cell.add_ref(anchor_bottom.draw(),alias="BottomAnchor_Bottom")
 
         anchor_ref_2.connect(anchor_ref_2.ports['conn'],\
             destination=idt_ref.ports['bottom'],\
             overlap=-self.bus.size.y)
 
-        cell.absorb(anchor_ref_2)
+        for p_value in lfe_cell.ports.values():
 
-        cell.absorb(idt_ref)
-
-        out_ports=cell.get_ports()
-
-        for p in out_ports:
-
-            cell.add_port(p)
+            cell.add_port(p_value)
 
         return cell
 

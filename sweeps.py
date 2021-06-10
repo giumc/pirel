@@ -1,6 +1,9 @@
 from pirel.tools import *
 
 from phidl.device_layout import Group
+
+import pdb
+
 import matplotlib.pyplot as plt
 
 import matplotlib as mpl
@@ -472,7 +475,23 @@ class PArray(LayoutPart):
 
             x_param : PyResLayout.SweepParam
 
-                every of the x_param.names has to be a parameter of device.
+                NOTE: each of the x_param.names has to be a parameter of device.
+
+        Attributes
+        ----------
+
+            labels_top : list
+
+                if set to None, top labels will be kept empty
+
+            labels_bottom : list
+
+                if set to None, top labels will be kept empty
+
+            text_params : pirel.tools.TextParam
+
+                to control text appearance
+
     """
 
     x_param=_SweepParamValidator(LayoutDefault.Arrayx_param)
@@ -493,11 +512,13 @@ class PArray(LayoutPart):
 
         self.x_spacing=LayoutDefault.Arrayx_spacing
 
-        self.labels_top=LayoutDefault.Arraylabels_top
+        self.labels_top=None
 
-        self.labels_bottom=LayoutDefault.Arraylabels_bottom
-
+        self.labels_bottom=None
+        
         self.text_params=copy(TextParam())
+
+        # self.auto_labels()
 
     @property
     def device(self):
@@ -672,7 +693,7 @@ class PArray(LayoutPart):
 
         bottom_label=[bottom_label+"{:03d} x {:03d}".format(col_index,y) for y in range(row_index,row_index+len(param))]
 
-        if top==True:
+        if top==True :
 
             self.labels_top=top_label
 
@@ -680,7 +701,7 @@ class PArray(LayoutPart):
 
             self.labels_top=None
 
-        if bottom==True:
+        if bottom==True :
 
             self.labels_bottom=bottom_label
 
@@ -785,8 +806,8 @@ class PMatrix(PArray):
         super().__init__(device,x_param,*a,*k)
         self.y_spacing=LayoutDefault.Matrixy_spacing
         self.y_param=y_param
-        self.labels_top=LayoutDefault.Matrixlabels_top
-        self.labels_bottom=LayoutDefault.Matrixlabels_bottom
+        self.labels_top=None
+        self.labels_bottom=None
 
     def draw(self):
 
@@ -893,11 +914,9 @@ class PMatrix(PArray):
 
         x_label=[top_label+x for x in self.x_param.labels]
 
-        import itertools
-
         top_label=[[top_label+x+y for x in x_label] for y in y_label]
 
-        if top==True:
+        if top==True :
 
             self.labels_top=top_label
 
@@ -905,7 +924,7 @@ class PMatrix(PArray):
 
             self.labels_top=None
 
-        if bottom==True:
+        if bottom==True :
 
             self.labels_bottom=[[bottom_label+"{:03d} x {:03d}".format(x,y) \
             for x in range(col_index,col_index+len(self.x_param))] \

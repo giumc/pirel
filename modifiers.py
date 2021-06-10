@@ -461,9 +461,7 @@ def addProbe(cls,probe=pc.GSGProbe):
 
             self._move_probe_ref(probe_ref)
 
-            cell.add_ref(self.gndtrace.draw(),alias=self.name+"GndTrace")
-
-            cell.add_ref(self.sigtrace.draw(),alias=self.name+"SigTrace")
+            cell.add_ref(self._draw_probe_routing(),alias=self.name+"GndTrace")
 
             return cell
 
@@ -474,7 +472,8 @@ def addProbe(cls,probe=pc.GSGProbe):
             pop_all_dict(t, ["ProbeName"])
 
             pop_all_dict(t, [k for k in t if re.search('SigTrace',k) ])
-            pop_all_dict(t, [k for k in t if re.search('GndTrace',k) ])
+            pop_all_dict(t, [k for k in t if re.search('GndLeftTrace',k) ])
+            pop_all_dict(t, [k for k in t if re.search('GndRightTrace',k) ])
 
             return t
 
@@ -496,7 +495,17 @@ def addProbe(cls,probe=pc.GSGProbe):
 
             supercomp=copy(cls.get_components())
 
-            supercomp.update({"Probe":probe,"SigTrace":pc.ParasiticAwareMultiRouting,"GndTrace":pc.MultiRouting})
+            if issubclass(probe,pc.GSGProbe):
+
+                supercomp.update({
+                    "Probe":probe,
+                    "SigTrace":pc.ParasiticAwareMultiRouting,
+                    "GndLeftTrace":pc.MultiRouting,
+                    "GndRightTrace":pc.MultiRouting})
+
+            else:
+
+                raise ValueError("To be implemented")
 
             return supercomp
 
@@ -543,30 +552,39 @@ def addProbe(cls,probe=pc.GSGProbe):
 
             bbox=super()._bbox_mod(device_cell.bbox)
 
-            groundroute=self.gndtrace
-
-            groundroute.layer=self.probe.layer
-
-            groundroute.clearance=bbox
-
-            groundroute.trace_width=self.gnd_routing_width
-
             if isinstance(self.probe,pc.GSGProbe):
 
-                #ground routing
-                device_ports=device_cell.ports
+                for index,groundroute in enumerate([self.gndlefttrace,self.gndrighttrace]):
 
-                dut_port_top=[]
+                    groundroute.layer=self.probe.layer
 
-                for port_name in device_ports.keys():
+                    groundroute.clearance=bbox
 
-                    if re.search('top',port_name):
+                    groundroute.trace_width=self.gnd_routing_width
 
-                        dut_port_top.append(device_ports[port_name])
+                    if index==0:
 
-                groundroute.source=(probe_ref.ports['gnd_left'],probe_ref.ports['gnd_right'],)
+                        groundroute.side='left'
 
-                groundroute.destination=tuple(dut_port_top)
+                        groundroute.source=(probe_ref.ports['gnd_left'],)
+
+                    elif index==1:
+
+                        groundroute.side='right'
+
+                        groundroute.source=(probe_ref.ports['gnd_right'],)
+
+                    device_ports=device_cell.ports
+
+                    dut_port_top=[]
+
+                    for port_name in device_ports.keys():
+
+                        if re.search('top',port_name):
+
+                            dut_port_top.append(device_ports[port_name])
+
+                    groundroute.destination=tuple(dut_port_top)
 
                 #signal routing
                 signalroute=self.sigtrace
@@ -601,11 +619,29 @@ def addProbe(cls,probe=pc.GSGProbe):
 
             elif isinstance(self.probe,pc.GSProbe):
 
-                raise ValueError("DUT with GSprobe to be implemented ")
+                raise ValueError("addProbe with GSprobe to be implemented ")
 
             else:
 
-                raise ValueError("DUT without GSG/GSprobe to be implemented ")
+                raise ValueError("addProbe without GSG/GSprobe to be implemented ")
+
+        def _draw_probe_routing(self):
+
+            if isinstance(self.probe,pc.GSGProbe):
+
+                routing_cell=Device()
+
+                routing_cell<<self.gndlefttrace.draw()
+
+                routing_cell<<self.gndrighttrace.draw()
+
+                routing_cell<<self.sigtrace.draw()
+
+                return routing_cell
+
+            else :
+
+                raise ValueError("To be implemented")
 
     addProbe.__name__=" ".join([cls.__name__,"w Probe"])
 
