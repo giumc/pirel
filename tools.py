@@ -27,7 +27,8 @@ import phidl.device_layout as dl
 from IPython import get_ipython
 
 if get_ipython() is not None:
-    get_ipython().run_line_magic('matplotlib', 'qt')
+    
+    get_ipython().run_line_magic('matplotlib', 'inline')
 
 class Point:
     ''' Handles 2-d coordinates.
@@ -550,7 +551,7 @@ class LayoutPart(ABC) :
 
         Can be overridden by subclasses of LayoutPart that require customized
         bounding boxes.
-
+ 
         Parameters
         ---------
 
@@ -859,7 +860,7 @@ def get_corners(device : Device) :
 
     return ll,lr,ul,ur
 
-def check(device : Device, joined=False):
+def check(device : Device, joined=False,blocking=True):
     ''' Shows the device layout.
 
         If run by terminal, blocks script until window is closed.
@@ -873,7 +874,7 @@ def check(device : Device, joined=False):
                 if true, returns a flattened/joined version of device
 
     '''
-    set_quickplot_options(blocking=True)
+    set_quickplot_options(blocking=blocking)
 
     if joined:
 
