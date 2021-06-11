@@ -1,7 +1,7 @@
 from setuptools import setup
 
 install_requires=[
-   'phidl','jupyter','jupyterlab'
+   'phidl','jupyter','jupyterlab','pandas'
 ]
 
 setup(name='pirel',
