@@ -27,7 +27,7 @@ import phidl.device_layout as dl
 from IPython import get_ipython
 
 if get_ipython() is not None:
-    
+
     get_ipython().run_line_magic('matplotlib', 'inline')
 
 class Point:
@@ -530,9 +530,7 @@ class LayoutPart(ABC) :
 
             setattr(self,p.lower(),cls(name=self.name+p))
 
-        # self.__class__.draw=cached(self.__class__.draw)
-
-    def view(self,blocking=False):
+    def view(self, blocking=False, gds=False):
         ''' Visualize cell layout with current parameters.
 
         Parameters
@@ -540,9 +538,22 @@ class LayoutPart(ABC) :
         blocking : boolean
 
             if true,block scripts until window is closed.
+
+        gds : boolean
+
+            if true, gdspy viewer is used.
+            if false (default), phidl viewer is used.
         '''
 
         set_quickplot_options(blocking=blocking)
+
+        if gds:
+
+            lib=gdspy.GdsLibrary()
+            cell=lib.new_cell("Output")
+            cell.add(self.draw())
+            gdspy.LayoutViewer(lib)
+
         qp(self.draw())
         return
 
@@ -551,7 +562,7 @@ class LayoutPart(ABC) :
 
         Can be overridden by subclasses of LayoutPart that require customized
         bounding boxes.
- 
+
         Parameters
         ---------
 
@@ -683,6 +694,8 @@ class LayoutPart(ABC) :
                 else:
 
                     setattr(self,param_key,Point(old_point.x,df[param_label+"Y"]))
+
+
 
     def export_all(self):
 

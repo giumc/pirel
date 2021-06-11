@@ -24,8 +24,8 @@ def Scaled(cls):
         Etch pit width (d) = Etch pit width (d) * active region width
         Anchor width (d) = Anchor width (n) * active region width
         Anchor length (d) = Anchor length (n) * pitch
-        Anchor Margin Y (d) = Anchor Margin Y (n) * Anchor length
-        Anchor Margin X (d) = Anchor Margin X (n) * Anchor width.
+        Anchor metal X (d) = Anchor metal X (n) * Anchor width
+        Anchor metal Y (d) = Anchor metal Y (n) * Anchor length.
 
     Parameters
     ----------
@@ -80,9 +80,13 @@ def Scaled(cls):
 
             self.etchpit.x=self.etchpit.x/active_area_x
 
-            self.anchor.size=Point(\
-                self.anchor.size.x/active_area_x,\
+            self.anchor.size=Point(
+                self.anchor.size.x/active_area_x,
                 self.anchor.size.y/p)
+
+            self.anchor.metalized=Point(
+                self.anchor.metalized.x/anchor_x,
+                self.anchor.metalized.y/anchor_y)
 
             self._normalized=True
 
@@ -105,6 +109,10 @@ def Scaled(cls):
             self.anchor.size=Point(\
                 self.anchor.size.x*active_area_x,\
                 self.anchor.size.y*p)
+
+            self.anchor.metalized=Point(
+                self.anchor.metalized.x*self.anchor.size.x,
+                self.anchor.metalized.y*self.anchor.size.y)
 
             self._normalized=False
 
