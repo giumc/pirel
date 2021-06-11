@@ -1,4 +1,4 @@
-Metadata-Version: 2.1
+Metadata-Version: 1.0
 Name: pirel
 Version: 0.1
 Summary: Python Package based on amccaugh\phidl for piezoelectric resonator GDS layout
@@ -6,8 +6,5 @@ Home-page: UNKNOWN
 Author: Giuseppe Michetti
 Author-email: michetti.g@northeastern.edu
 License: UNKNOWN
+Description: UNKNOWN
 Platform: UNKNOWN
-License-File: LICENSE
-
-UNKNOWN
-
