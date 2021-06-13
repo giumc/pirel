@@ -42,19 +42,19 @@ def Scaled(cls):
             cls.__init__(self,*args,**kwargs)
             self._normalized=False
 
-        def import_params(self,df):
+        def _set_params(self,df):
 
             self._normalize()
 
-            cls.import_params(self,df)
+            cls._set_params(self,df)
 
             self._denormalize()
 
-        def export_params(self):
+        def get_params(self):
 
             self._normalize()
 
-            df=cls.export_params(self)
+            df=cls.get_params(self)
 
             self._denormalize()
 
@@ -231,9 +231,9 @@ def addVia(cls,side='top',bottom_conn=False):
 
             return cell
 
-        def export_params(self):
+        def get_params(self):
 
-            t=cls.export_params(self)
+            t=cls.get_params(self)
 
             pop_all_dict(t,['ViaName'])
 
@@ -473,9 +473,9 @@ def addProbe(cls,probe=pc.GSGProbe):
 
             return cell
 
-        def export_params(self):
+        def get_params(self):
 
-            t=cls.export_params(self)
+            t=cls.get_params(self)
 
             pop_all_dict(t, ["ProbeName"])
 

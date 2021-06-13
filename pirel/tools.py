@@ -610,7 +610,7 @@ class LayoutPart(ABC) :
         '''
         pass
 
-    def export_params(self):
+    def get_params(self):
         ''' Returns a dict with param names : param values. '''
 
         param_dict=self._params_dict
@@ -619,7 +619,7 @@ class LayoutPart(ABC) :
 
         for p,c in self.get_components().items():
 
-            component_params=getattr(self,p.lower()).export_params()
+            component_params=getattr(self,p.lower()).get_params()
 
             for name,value in component_params.items():
 
@@ -643,15 +643,8 @@ class LayoutPart(ABC) :
 
         return out_dict
 
-    def import_params(self,df):
-        ''' Pass to cell parameters in a dict.
-
-        Parameters
-        ----------
-        df : dict.
-
-        '''
-
+    def _set_params(self,df):
+        
         for name in self.get_components().keys():
 
             if_match_import(getattr(self,name.lower()),df,name)
@@ -676,19 +669,27 @@ class LayoutPart(ABC) :
 
                 setattr(self,param_key,Point(old_point.x,df[param_label+"Y"]))
 
-    def import_call(self,df):
+    def set_params(self,df):
+        ''' Set instance parameters in a dict.
 
+        Parameters
+        ----------
+        df : dict.
+
+            Note: dict values can be functions of self.
+
+        '''
         stable=False
 
         while not stable:
 
-            pre_params=self.export_params()
+            pre_params=self.get_params()
 
             # pdb.set_trace()
 
             df_noncall={key:value for key,value in df.items() if not callable(value)}
 
-            self.import_params(df_noncall)
+            self._set_params(df_noncall)
 
             df_call={key:value for key,value in df.items() if callable(value)}
 
@@ -702,15 +703,15 @@ class LayoutPart(ABC) :
 
                     df_call[key]=fun(self)
 
-            self.import_params(df_call)
+            self._set_params(df_call)
 
-            if self.export_params()==pre_params:
+            if self.get_params()==pre_params:
 
                 stable=True
 
     def export_all(self):
 
-        df=self.export_params()
+        df=self.get_params()
 
         if hasattr(self,'resistance_squares'):
 
@@ -930,7 +931,7 @@ def if_match_import(obj : LayoutPart ,param : dict, tag : str ):
         if 'tag' is found in a key of 'param',
         'tag' it is removed from that key,
         A copy of 'param' with 'param' key changed into the new string
-        is passed to obj.import_params().
+        is passed to obj._set_params().
     '''
 
     from re import search
@@ -943,7 +944,7 @@ def if_match_import(obj : LayoutPart ,param : dict, tag : str ):
 
             varname=name.replace(tag,"")
 
-            obj.import_params({varname:value})
+            obj._set_params({varname:value})
 
 def add_prefix_dict(old_dict,tag) -> dict:
 

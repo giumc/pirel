@@ -1378,11 +1378,11 @@ class LFERes(LayoutPart):
 
         return cell
 
-    def export_params(self):
+    def get_params(self):
 
         self._set_relations()
 
-        t=super().export_params()
+        t=super().get_params()
 
         pop_all_dict(t,["IDT"+x for x in ["Name"]])
 
@@ -1394,9 +1394,9 @@ class LFERes(LayoutPart):
 
         return t
 
-    def import_params(self,df):
+    def _set_params(self,df):
 
-        super().import_params(df)
+        super()._set_params(df)
 
         self._set_relations()
 

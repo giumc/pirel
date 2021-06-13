@@ -435,7 +435,7 @@ class _SweepParamValidator:
 
                 raise ValueError("param needs to be a SweepParam")
 
-            self._set_valid_names([*obj.export_params().keys()])
+            self._set_valid_names([*obj.get_params().keys()])
 
             if not all([names in self._valid_names for names in layout_param.names]):
 
@@ -515,7 +515,7 @@ class PArray(LayoutPart):
         self.labels_top=None
 
         self.labels_bottom=None
-        
+
         self.text_params=copy(TextParam())
 
         # self.auto_labels()
@@ -538,9 +538,9 @@ class PArray(LayoutPart):
 
             self.device.name=self.name
 
-    def export_params(self):
+    def get_params(self):
 
-        return self.device.export_params()
+        return self.device.get_params()
 
     def export_all(self):
 
@@ -555,7 +555,7 @@ class PArray(LayoutPart):
 
         device=self.device
 
-        base_params=device.export_params()
+        base_params=device.get_params()
 
         data_tot=DataFrame()
 
@@ -565,7 +565,7 @@ class PArray(LayoutPart):
 
             for name in param.names:
 
-                device.import_params(param(i))
+                device._set_params(param(i))
 
             df=device.export_all()
 
@@ -581,19 +581,19 @@ class PArray(LayoutPart):
 
             data_tot=data_tot.append(Series(df,name=index))
 
-            device.import_params(base_params)
+            device._set_params(base_params)
 
         return data_tot
 
-    def import_params(self,df):
+    def _set_params(self,df):
 
-        self.device.import_params(df)
+        self.device._set_params(df)
 
     def draw(self):
 
         device=self.device
 
-        df_original=device.export_params()
+        df_original=device.get_params()
 
         master_cell=Device(name=self.name)
 
@@ -615,7 +615,7 @@ class PArray(LayoutPart):
 
                 df[name]=value[index]
 
-            device.import_params(df)
+            device._set_params(df)
 
             # print("drawing device {} of {}".format(index+1,len(param)),end="\r")
 
@@ -647,7 +647,7 @@ class PArray(LayoutPart):
 
         g.align(alignment='ymin')
 
-        device.import_params(df_original)
+        device._set_params(df_original)
 
         del device, cells ,g
 
@@ -736,7 +736,7 @@ class PArray(LayoutPart):
 
         sweep_param=self.x_param
 
-        df_original=self.export_params()
+        df_original=self.get_params()
 
         if isinstance(param,str):
 
@@ -748,7 +748,7 @@ class PArray(LayoutPart):
 
             for i in range(len(sweep_param)):
 
-                self.import_params(sweep_param(i))
+                self._set_params(sweep_param(i))
 
                 df=self.export_all()
 
@@ -771,7 +771,7 @@ class PArray(LayoutPart):
 
                 for i in range(len(sweep_param)):
 
-                    self.import_params(sweep_param(i))
+                    self._set_params(sweep_param(i))
 
                     df=self.export_all()
 
@@ -791,7 +791,7 @@ class PArray(LayoutPart):
 
         self.x_param.populate_plot_axis(ax)
 
-        self.import_params(df_original)
+        self._set_params(df_original)
 
         plt.show()
 
@@ -813,7 +813,7 @@ class PMatrix(PArray):
 
         device=self.device
 
-        df_original=device.export_params()
+        df_original=device.get_params()
 
         master_name=self.name
 
@@ -843,7 +843,7 @@ class PMatrix(PArray):
 
                 df[name]=value[index]
 
-            device.import_params(df)
+            device._set_params(df)
 
             print("drawing array {} of {}".format(index+1,len(y_param)),end='\r')
 
@@ -895,7 +895,7 @@ class PMatrix(PArray):
 
         g.align(alignment='x')
 
-        device.import_params(df_original)
+        device._set_params(df_original)
 
         del device, cells ,g
 
@@ -943,7 +943,7 @@ class PMatrix(PArray):
 
         device=self.device
 
-        df_original=device.export_params()
+        df_original=device.get_params()
 
         data_tot=DataFrame()
 
@@ -951,11 +951,11 @@ class PMatrix(PArray):
 
         for j in range(len(y_param)):
 
-            device.import_params(y_param(j))
+            device._set_params(y_param(j))
 
             for i in range(len(x_param)):
 
-                device.import_params(x_param(i))
+                device._set_params(x_param(i))
 
                 df=device.export_all()
 
@@ -975,7 +975,7 @@ class PMatrix(PArray):
 
                 data_tot=data_tot.append(Series(df,name=index))
 
-        device.import_params(df_original)
+        device._set_params(df_original)
 
         return data_tot
 
@@ -987,7 +987,7 @@ class PMatrix(PArray):
 
         sweep_param_y=self.y_param
 
-        df_original=self.export_params()
+        df_original=self.get_params()
 
         x=[*range(len(sweep_param_x))]
 
@@ -1003,8 +1003,8 @@ class PMatrix(PArray):
 
             for i in x:
 
-                self.import_params(sweep_param_x(i))
-                self.import_params(sweep_param_y(j))
+                self._set_params(sweep_param_x(i))
+                self._set_params(sweep_param_y(j))
 
                 df=self.export_all()
 
@@ -1033,6 +1033,6 @@ class PMatrix(PArray):
         self.x_param.populate_plot_axis(ax,'x')
         self.y_param.populate_plot_axis(ax,'y')
 
-        self.import_params(df_original)
+        self._set_params(df_original)
 
         return fig
