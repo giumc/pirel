@@ -644,7 +644,7 @@ class LayoutPart(ABC) :
         return out_dict
 
     def _set_params(self,df):
-        
+
         for name in self.get_components().keys():
 
             if_match_import(getattr(self,name.lower()),df,name)
@@ -722,8 +722,6 @@ class LayoutPart(ABC) :
         pop_all_match(modkeys,".*Layer*")
 
         pop_all_dict(df,[item for item in [*df.keys()] if item not in modkeys])
-
-        df.pop("Self")
 
         return df
 
