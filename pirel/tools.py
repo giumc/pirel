@@ -10,13 +10,7 @@ from phidl import set_quickplot_options
 
 from phidl import quickplot as qp
 
-import warnings
-
-import re
-
-import pathlib
-
-import gdspy
+import warnings, re, pathlib, gdspy, pdb
 
 import phidl.geometry as pg
 
@@ -668,39 +662,51 @@ class LayoutPart(ABC) :
 
             if param_label in df.keys():
 
-                if callable(df[param_label]):
-
-                    setattr(self,param_key,df[param_label]())
-
-                else :
-
-                     setattr(self,param_key,df[param_label])
+                setattr(self,param_key,df[param_label])
 
             if param_label+'X' in df.keys():
 
                 old_point=getattr(self,param_key)
 
-                if callable(df[param_label+"X"]):
-
-                    setattr(self,param_key,Point(df[param_label+"X"](),old_point.y))
-
-                else:
-
-                    setattr(self,param_key,Point(df[param_label+"X"],old_point.y))
+                setattr(self,param_key,Point(df[param_label+"X"],old_point.y))
 
             if param_label+'Y' in df.keys():
 
                 old_point=getattr(self,param_key)
 
-                if callable(df[param_label+"Y"]):
+                setattr(self,param_key,Point(old_point.x,df[param_label+"Y"]))
 
-                    setattr(self,param_key,Point(old_point.x,df[param_label+"Y"]()))
+    def import_call(self,df):
 
-                else:
+        stable=False
 
-                    setattr(self,param_key,Point(old_point.x,df[param_label+"Y"]))
+        while not stable:
 
+            pre_params=self.export_params()
 
+            # pdb.set_trace()
+
+            df_noncall={key:value for key,value in df.items() if not callable(value)}
+
+            self.import_params(df_noncall)
+
+            df_call={key:value for key,value in df.items() if callable(value)}
+
+            for key,fun in df_call.items():
+
+                if fun.__code__.co_argcount==0:
+
+                    df_call[key]=fun()
+
+                elif fun.__code__.co_argcount==1:
+
+                    df_call[key]=fun(self)
+
+            self.import_params(df_call)
+
+            if self.export_params()==pre_params:
+
+                stable=True
 
     def export_all(self):
 
@@ -715,6 +721,8 @@ class LayoutPart(ABC) :
         pop_all_match(modkeys,".*Layer*")
 
         pop_all_dict(df,[item for item in [*df.keys()] if item not in modkeys])
+
+        df.pop("Self")
 
         return df
 
