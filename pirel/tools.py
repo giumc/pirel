@@ -550,8 +550,13 @@ class LayoutPart(ABC) :
         if gds:
 
             lib=gdspy.GdsLibrary()
+
             cell=lib.new_cell("Output")
-            cell.add(self.draw())
+
+            cell.add(gdspy.CellReference(self.draw()))
+
+            cell.flatten()
+
             gdspy.LayoutViewer(lib)
 
         qp(self.draw())
