@@ -477,8 +477,14 @@ class PArray(LayoutPart):
 
                 NOTE: each of the x_param.names has to be a parameter of device.
 
+            dict_params : dict (default {})
+
+                arguments of set_params() to be passed before each element in array is drawn.
+
         Attributes
         ----------
+
+            x_spacing : float
 
             labels_top : list
 
@@ -496,19 +502,15 @@ class PArray(LayoutPart):
 
     x_param=_SweepParamValidator(LayoutDefault.Arrayx_param)
 
-    def __init__(self,device,x_param,*args,**kwargs):
+    def __init__(self,device,x_param,dict_param={},*a,**k):
 
-        if 'name' in kwargs.keys():
-
-            self.name=kwargs['name']
-
-        else:
-
-            self.name='Default'
+        super().__init__(*a,**k)
 
         self.device=device
 
         self.x_param=x_param
+
+        self.dict_param=dict_param
 
         self.x_spacing=LayoutDefault.Arrayx_spacing
 
@@ -567,6 +569,8 @@ class PArray(LayoutPart):
 
                 device._set_params(param(i))
 
+            device.draw()
+
             df=device.export_all()
 
             if self.labels_bottom is not None:
@@ -603,12 +607,6 @@ class PArray(LayoutPart):
 
         df={}
 
-        for key,val in df_original.items():
-
-            if callable(val):
-
-                df[key]=val
-
         for index in range(len(param)):
 
             for name,value in zip(param.names,param.values):
@@ -617,10 +615,14 @@ class PArray(LayoutPart):
 
             device._set_params(df)
 
+            device.set_params(self.dict_param)
+
             # print("drawing device {} of {}".format(index+1,len(param)),end="\r")
 
             new_cell=Device()
+
             new_cell.absorb(new_cell<<device.draw())
+
             new_cell=join(new_cell)
 
             master_cell<<new_cell
@@ -691,7 +693,7 @@ class PArray(LayoutPart):
 
         top_label=[top_label+" "+ x for x in param.labels]
 
-        bottom_label=[bottom_label+"{:03d} x {:03d}".format(col_index,y) for y in range(row_index,row_index+len(param))]
+        bottom_label=[bottom_label+"{:02d} x {:02d}".format(col_index,y) for y in range(row_index,row_index+len(param))]
 
         if top==True :
 
@@ -926,7 +928,7 @@ class PMatrix(PArray):
 
         if bottom==True :
 
-            self.labels_bottom=[[bottom_label+"{:03d} x {:03d}".format(x,y) \
+            self.labels_bottom=[[bottom_label+"{:02d} x {:02d}".format(x,y) \
             for x in range(col_index,col_index+len(self.x_param))] \
             for y in range(row_index,row_index+len(self.y_param))]
 
@@ -957,6 +959,8 @@ class PMatrix(PArray):
 
                 device._set_params(x_param(i))
 
+                device.draw()
+
                 df=device.export_all()
 
                 if self.labels_bottom is not None:
@@ -967,9 +971,9 @@ class PMatrix(PArray):
 
                     index=str(i)+str(j)
 
-                print("Generating table, item {0} of {1}".format(print_index,str(len(x_param)*len(y_param))),end="\r")
+                print(f"Generating table, item {print_index} of {str(len(x_param)*len(y_param))}",end="\r")
+
                 print("\033[K",end='')
-                # sys.stdout.flush()
 
                 print_index+=1
 
@@ -1036,3 +1040,46 @@ class PMatrix(PArray):
         self._set_params(df_original)
 
         return fig
+
+def export_matrix_data(pmatrix,param=None,path='./'):
+    ''' Writes PArray/PMatrix data in a .xlsx file.
+
+        Parameters
+        ----------
+            pmatrix : pt.LayoutPart (with table property)
+
+                pmatrix.name will be used as file name
+
+            param : str (default None)
+
+                if passed, a plot is generated for each param passed
+                and saved in the same folder as the table
+
+            path : pathlib.Path
+
+                path to save files.
+    '''
+
+    if isinstance(path,str):
+
+        path=pathlib.Path(path)
+
+    t_mat1=pmatrix.table
+
+    t_mat1.to_excel( path / " ".join([pmatrix.name,".xlsx"]))
+
+    if param is not None:
+
+        if isinstance(param,str):
+
+            param=[param]
+
+        for p in param:
+
+            fig=pmatrix.plot_param(p)
+
+            plt.figure(fig)
+
+            plt.savefig(os.path.join(path,pmatrix.name+p+".svg"),bbox_inches='tight')
+
+            plt.close(fig)

@@ -587,8 +587,6 @@ class EtchPit(LayoutPart) :
 class Anchor(LayoutPart):
     ''' Generates anchor structure.
 
-    Derived from LayoutPart.
-
     Attributes
     ----------
     size : PyResLayout.Point
@@ -608,6 +606,7 @@ class Anchor(LayoutPart):
 
     etch_layer : int
         etch layer.
+
     '''
 
     size=LayoutParamInterface()
@@ -713,13 +712,12 @@ class Anchor(LayoutPart):
 
         if self.metalized.x>=self.size.x:
 
-
-            warnings.warn(f"""Metalized X portion of anchor {self.metalized.x} is larger than Anchor X Size {self.size.x}, capped to {self.size.x*0.9}\n""")
+            warnings.warn(f"""Metalized X capped to {self.size.x*0.9 :.2f}\n""")
             self.metalized=Point(self.size.x*0.9,self.metalized.y)
 
         if self.metalized.y<=self.size.y:
 
-            warnings.warn(f"""Metalized Y portion of anchor {self.metalized.y} is smaller than Anchor Y Size {self.size.y}, capped to {self.size.y*1.1}""")
+            warnings.warn(f"""Metalized Y capped to {self.size.y*1.1 : .2f}""")
             self.metalized=Point(self.metalized.x,self.size.y*1.1)
 
 class Via(LayoutPart):
@@ -1420,13 +1418,13 @@ class LFERes(LayoutPart):
 
         self.anchor.layer=self.idt.layer
 
-        if self.anchor.metalized.x>self.bus.size.x:
-
-            # warnings.warn(f"Anchor metal is too wide ({self.anchor.metalized.x}), reduced to {self.bus.size.x*0.9}")
-
-            self.anchor.metalized=Point(\
-                self.bus.size.x*0.9,\
-                self.anchor.metalized.y)
+        # if self.anchor.metalized.x>self.bus.size.x:
+        #
+        #     warnings.warn(f"Anchor metalized X reduced to {self.bus.size.x}")
+        #
+        #     self.anchor.metalized=Point(\
+        #         self.bus.size.x,\
+        #         self.anchor.metalized.y)
 
     @property
     def resistance_squares(self):

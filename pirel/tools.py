@@ -553,7 +553,10 @@ class LayoutPart(ABC) :
 
             gdspy.LayoutViewer(lib)
 
-        qp(self.draw())
+        else:
+
+            qp(self.draw())
+
         return
 
     def _bbox_mod(self,bbox):
@@ -1157,5 +1160,65 @@ def import_gds(path,cellname=None,flatten=True,**kwargs):
         cell._internal_name=cellname
 
     return cell
+
+def magic_matrix(cells,master,overlap=Point(0,0)):
+    ''' Arranges N cells in a NxN matrix with staggered position.
+
+    Used in wafer positioning to have N cells in the center of the wafer.
+
+    Parameters
+    ----------
+        cells : list of phidl.Device
+
+        master : phidl.Device
+
+            container of the cell matrix
+
+        overlap : pt.Point (default (0,0))
+
+            overlapping of cells.
+    '''
+
+    from itertools import cycle
+
+    import phidl.device_layout as dl
+
+    g= dl.Group(cells)
+
+    g.align(alignment='ymin')
+    g.align(alignment='xmin')
+
+    l=len(cells)
+
+    indexes=cycle([*range(l)])
+
+    pos_matrix=[]
+
+    for k in range(l):
+
+        pos_matrix.append([next(indexes) for i in range(l)])
+
+        next(indexes)
+
+        for x in range(k):
+
+            next(indexes)
+
+    for j in range(l):
+
+        for i in range(l):
+
+            c=cells[pos_matrix[j][i]]
+
+            origin=Point(c.xmin,c.ymin)
+
+            transl=Point((c.xsize+overlap.x)*i,-(c.ysize+overlap.y)*j)
+
+            c_ref=master<<c
+
+            c_ref.move(origin=origin.coord,\
+                destination=(origin+transl).coord)
+
+    return master
 
 warnings.formatwarning = custom_formatwarning
