@@ -94,8 +94,6 @@ def verniers(scale=[1, 0.5, 0.1],layers=[1,2],label='TE',text_size=20,reversed=F
 
         if reversed:
 
-            # import gdspy
-
             tobedel=cal.get_polygons(by_spec=(layer2,0))
 
             cal=cal.remove_polygons(lambda pts, layer, datatype: layer == layer2)
