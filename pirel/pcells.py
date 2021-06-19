@@ -394,7 +394,7 @@ class PartialEtchIDT(IDT):
 
         o=self.origin
 
-        rect=pg.rectangle(size=(self.coverage*self.pitch,self.length),\
+        rect=pg.rectangle(size=(self.coverage*self.pitch,self.length),
             layer=self.layer)
 
         rect.move(origin=(0,0),destination=o.coord)
@@ -405,12 +405,12 @@ class PartialEtchIDT(IDT):
 
         unitcell.absorb(r1)
 
-        rect_partialetch=pg.rectangle(\
-            size=(\
-                (1-self.coverage)*self.pitch,self.length-self.y_offset),\
+        rect_partialetch=pg.rectangle(
+            size=(
+                (1-self.coverage)*self.pitch,self.length-self.y_offset),
             layer=LayoutDefault.layerPartialEtch)
 
-        rect_partialetch.move(origin=o.coord,\
+        rect_partialetch.move(origin=o.coord,
             destination=(self.pitch*self.coverage,self.y_offset))
 
         rp1=unitcell<<rect_partialetch
@@ -421,7 +421,7 @@ class PartialEtchIDT(IDT):
 
         r2 = unitcell << rect
 
-        r2.move(origin=o.coord,\
+        r2.move(origin=o.coord,
         destination=(o+Point(self.pitch,self.y_offset)).coord)
 
         r3= unitcell<< rect
@@ -429,9 +429,28 @@ class PartialEtchIDT(IDT):
         r3.move(origin=o.coord,\
             destination=(o+Point(2*self.pitch,0)).coord)
 
+        rect_partialetch_side=pg.rectangle(
+            size=(
+                (1-self.coverage)*self.pitch/2,self.length-self.y_offset),
+            layer=LayoutDefault.layerPartialEtch)
+
+        petch_side1=unitcell<<rect_partialetch_side
+
+        petch_side2=unitcell<<rect_partialetch_side
+
+        petch_side1.move(origin=o.coord,
+            destination=(-petch_side1.xsize,self.y_offset))
+
+        petch_side2.move(origin=o.coord,
+            destination=(self.pitch*2+self.pitch*self.coverage,self.y_offset))
+
         unitcell.absorb(r2)
 
         unitcell.absorb(r3)
+
+        unitcell.absorb(petch_side1)
+
+        unitcell.absorb(petch_side2)
 
         unitcell.name="UnitCell"
 
