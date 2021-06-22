@@ -2,13 +2,16 @@ import phidl.geometry as pg
 
 import phidl.device_layout as dl
 
+from phidl.device_layout import Group
+
 import pathlib
 
 import gdspy
 
 import numpy as np
 
-from pirel.tools import LayoutDefault,join
+from pirel.tools import *
+from pirel.pcells import *
 
 def resistivity_test_cell():
 
@@ -93,8 +96,6 @@ def verniers(scale=[1, 0.5, 0.1],layers=[1,2],label='TE',text_size=20,reversed=F
         cal.flatten()
 
         if reversed:
-
-            # import gdspy
 
             tobedel=cal.get_polygons(by_spec=(layer2,0))
 

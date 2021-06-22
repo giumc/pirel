@@ -394,7 +394,7 @@ class PartialEtchIDT(IDT):
 
         o=self.origin
 
-        rect=pg.rectangle(size=(self.coverage*self.pitch,self.length),\
+        rect=pg.rectangle(size=(self.coverage*self.pitch,self.length),
             layer=self.layer)
 
         rect.move(origin=(0,0),destination=o.coord)
@@ -405,12 +405,12 @@ class PartialEtchIDT(IDT):
 
         unitcell.absorb(r1)
 
-        rect_partialetch=pg.rectangle(\
-            size=(\
-                (1-self.coverage)*self.pitch,self.length-self.y_offset),\
+        rect_partialetch=pg.rectangle(
+            size=(
+                (1-self.coverage)*self.pitch,self.length-self.y_offset),
             layer=LayoutDefault.layerPartialEtch)
 
-        rect_partialetch.move(origin=o.coord,\
+        rect_partialetch.move(origin=o.coord,
             destination=(self.pitch*self.coverage,self.y_offset))
 
         rp1=unitcell<<rect_partialetch
@@ -421,7 +421,7 @@ class PartialEtchIDT(IDT):
 
         r2 = unitcell << rect
 
-        r2.move(origin=o.coord,\
+        r2.move(origin=o.coord,
         destination=(o+Point(self.pitch,self.y_offset)).coord)
 
         r3= unitcell<< rect
@@ -429,9 +429,28 @@ class PartialEtchIDT(IDT):
         r3.move(origin=o.coord,\
             destination=(o+Point(2*self.pitch,0)).coord)
 
+        rect_partialetch_side=pg.rectangle(
+            size=(
+                (1-self.coverage)*self.pitch/2,self.length-self.y_offset),
+            layer=LayoutDefault.layerPartialEtch)
+
+        petch_side1=unitcell<<rect_partialetch_side
+
+        petch_side2=unitcell<<rect_partialetch_side
+
+        petch_side1.move(origin=o.coord,
+            destination=(-petch_side1.xsize,self.y_offset))
+
+        petch_side2.move(origin=o.coord,
+            destination=(self.pitch*2+self.pitch*self.coverage,self.y_offset))
+
         unitcell.absorb(r2)
 
         unitcell.absorb(r3)
+
+        unitcell.absorb(petch_side1)
+
+        unitcell.absorb(petch_side2)
 
         unitcell.name="UnitCell"
 
@@ -712,12 +731,12 @@ class Anchor(LayoutPart):
 
         if self.metalized.x>=self.size.x:
 
-            warnings.warn(f"""Metalized X capped to {self.size.x*0.9 :.2f}\n""")
+            # warnings.warn(f"""Metalized X capped to {self.size.x*0.9 :.2f}\n""")
             self.metalized=Point(self.size.x*0.9,self.metalized.y)
 
         if self.metalized.y<=self.size.y:
 
-            warnings.warn(f"""Metalized Y capped to {self.size.y*1.1 : .2f}""")
+            # warnings.warn(f"""Metalized Y capped to {self.size.y*1.1 : .2f}""")
             self.metalized=Point(self.metalized.x,self.size.y*1.1)
 
 class Via(LayoutPart):
@@ -809,8 +828,12 @@ class Routing(LayoutPart):
         only 'auto','left','right'
 
     '''
+
     _radius=0.1
+
     _num_pts=30
+
+    _tol=1e-3
 
     clearance= LayoutParamInterface()
 
@@ -860,8 +883,6 @@ class Routing(LayoutPart):
     @property
     def path(self):
 
-        tol=1e-3
-
         bbox=pg.bbox(self.clearance)
 
         ll,lr,ul,ur=get_corners(bbox)
@@ -883,7 +904,7 @@ class Routing(LayoutPart):
 
             raise ValueError(f" Destination of routing{destination.midpoint} is in clearance area{bbox.bbox}")
 
-        if destination.y<=ll.y+tol  : # destination is below clearance
+        if destination.y<=ll.y+self._tol  : # destination is below clearance
 
             if not(destination.orientation==source.orientation+180 or \
                 destination.orientation==source.orientation-180):
@@ -1119,7 +1140,7 @@ class GSProbe(LayoutPart):
 
             pad_x=self.pitch*2/3
 
-            warnings.warn("Pad size too large, capped to pitch*2/3")
+            # warnings.warn("Pad size too large, capped to pitch*2/3")
 
         pad_cell=pg.rectangle(size=(pad_x,self.size.y),\
         layer=self.layer)
@@ -1189,7 +1210,7 @@ class GSGProbe(LayoutPart):
 
             pad_x=self.pitch*9/10
 
-            warnings.warn("Pad size too large, capped to pitch*9/10")
+            # warnings.warn("Pad size too large, capped to pitch*9/10")
 
         pad_cell=pg.rectangle(size=(pad_x,self.size.y),\
         layer=self.layer)

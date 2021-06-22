@@ -613,11 +613,7 @@ class PArray(LayoutPart):
 
                 df[name]=value[index]
 
-            device._set_params(df)
-
-            device.set_params(self.dict_param)
-
-            # print("drawing device {} of {}".format(index+1,len(param)),end="\r")
+            device.set_params(df)
 
             new_cell=Device()
 
@@ -649,7 +645,7 @@ class PArray(LayoutPart):
 
         g.align(alignment='ymin')
 
-        device._set_params(df_original)
+        device.set_params(df_original)
 
         del device, cells ,g
 
