@@ -72,7 +72,7 @@ class Point:
 
     def in_box(self,bbox):
 
-        tol=0
+        tol=1e-3
         ll=Point(bbox[0])
         ur=Point(bbox[1])
 
@@ -86,7 +86,6 @@ class Point:
         else:
 
             return False
-
 
     def __setattr__(self,name,value):
 

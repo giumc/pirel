@@ -731,12 +731,12 @@ class Anchor(LayoutPart):
 
         if self.metalized.x>=self.size.x:
 
-            warnings.warn(f"""Metalized X capped to {self.size.x*0.9 :.2f}\n""")
+            # warnings.warn(f"""Metalized X capped to {self.size.x*0.9 :.2f}\n""")
             self.metalized=Point(self.size.x*0.9,self.metalized.y)
 
         if self.metalized.y<=self.size.y:
 
-            warnings.warn(f"""Metalized Y capped to {self.size.y*1.1 : .2f}""")
+            # warnings.warn(f"""Metalized Y capped to {self.size.y*1.1 : .2f}""")
             self.metalized=Point(self.metalized.x,self.size.y*1.1)
 
 class Via(LayoutPart):
@@ -828,8 +828,12 @@ class Routing(LayoutPart):
         only 'auto','left','right'
 
     '''
+
     _radius=0.1
+
     _num_pts=30
+
+    _tol=1e-3
 
     clearance= LayoutParamInterface()
 
@@ -879,8 +883,6 @@ class Routing(LayoutPart):
     @property
     def path(self):
 
-        tol=1e-3
-
         bbox=pg.bbox(self.clearance)
 
         ll,lr,ul,ur=get_corners(bbox)
@@ -902,7 +904,7 @@ class Routing(LayoutPart):
 
             raise ValueError(f" Destination of routing{destination.midpoint} is in clearance area{bbox.bbox}")
 
-        if destination.y<=ll.y+tol  : # destination is below clearance
+        if destination.y<=ll.y+self._tol  : # destination is below clearance
 
             if not(destination.orientation==source.orientation+180 or \
                 destination.orientation==source.orientation-180):
@@ -1138,7 +1140,7 @@ class GSProbe(LayoutPart):
 
             pad_x=self.pitch*2/3
 
-            warnings.warn("Pad size too large, capped to pitch*2/3")
+            # warnings.warn("Pad size too large, capped to pitch*2/3")
 
         pad_cell=pg.rectangle(size=(pad_x,self.size.y),\
         layer=self.layer)
@@ -1208,7 +1210,7 @@ class GSGProbe(LayoutPart):
 
             pad_x=self.pitch*9/10
 
-            warnings.warn("Pad size too large, capped to pitch*9/10")
+            # warnings.warn("Pad size too large, capped to pitch*9/10")
 
         pad_cell=pg.rectangle(size=(pad_x,self.size.y),\
         layer=self.layer)
