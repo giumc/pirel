@@ -1221,4 +1221,30 @@ def magic_matrix(cells,master,overlap=Point(0,0)):
 
     return master
 
+def image_to_gds(p : pathlib.Path ,
+    layer :int = LayoutDefault.layerTop ,
+    *a,**k ):
+
+    try:
+
+        import nazca as nd
+
+    except Exception:
+
+        import subprocess
+
+        import sys
+
+        thispath=pathlib.Path(__file__).parent
+
+        nazcapath=thispath/"addOns"/"nazca"/"nazca-0.5.13.zip"
+
+        subprocess.check_call([sys.executable, "-m", "pip", "install", str(nazcapath.absolute())])
+
+        import nazca as nd
+
+    nd.image(str(p.absolute()),layer=layer, **k).put(0)
+
+    nd.export_gds(filename=str(p.parent/p.stem)+'.gds', flat=True)
+
 warnings.formatwarning = custom_formatwarning
