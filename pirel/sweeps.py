@@ -63,6 +63,10 @@ class SweepParam:
 
             return {x:y[args[0]] for x,y in zip(self.names,self.values)}
 
+    def __getitem__(self,key):
+
+        return {x:y[key] for x,y in zip(self.names,self.values)}
+
     def __len__(self):
         return len(self._dict[list(self._dict.keys())[0]])
 
