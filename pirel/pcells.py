@@ -747,10 +747,10 @@ class Via(LayoutPart):
     Attributes
     ----------
     size : float
-        if shape is 'rectangle', side of rectangle
-        if shape is 'circle',diameter of cirlce
+        if shape is 'square', side of square
+        if shape is 'circle', diameter of cirlce
 
-    shape : str (only 'rectangle' or 'circle')
+    shape : str (only 'square' or 'circle')
         via shape
     layer : int
         via layer.
@@ -761,7 +761,7 @@ class Via(LayoutPart):
     shape=LayoutParamInterface('square','circle')
 
     layer=LayoutParamInterface()
-
+  
     def __init__(self,*args,**kwargs):
 
         super().__init__(*args,**kwargs)
@@ -769,6 +769,7 @@ class Via(LayoutPart):
         self.layer=LayoutDefault.Vialayer
         self.shape=LayoutDefault.Viashape
         self.size=LayoutDefault.Viasize
+        self.conn_layer=(LayoutDefault.layerTop,LayoutDefault.layerBottom)
 
     def draw(self):
 
@@ -795,7 +796,7 @@ class Via(LayoutPart):
         orientation=90))
 
         return cell
-
+       
 class Routing(LayoutPart):
     ''' Generate automatic routing connection
 
@@ -1311,6 +1312,45 @@ class Pad(LayoutPart):
 
         return 1+self.distance/self.port.width
 
+class MultiLayerPad(Pad):
+    
+    __pad_base=Pad()
+    
+    def __init__(self,*a,**k):
+        
+        LayoutPart.__init__(self,*a,**k)
+        
+        self.size=LayoutDefault.Padsize
+        
+        self.distance=copy(LayoutDefault.Paddistance)
+        
+        self.port=LayoutDefault.Padport
+        
+        self.layer=(LayoutDefault.layerTop,
+                   LayoutDefault.layerBottom)
+        
+    def draw(self):
+        
+        cell=pg.Device(self.name)
+        
+        pars=self.get_params()
+        
+        pars.pop("Layer")
+        
+        p=self.__pad_base
+        
+        p.set_params(pars)
+        
+        for layer in self.layer:
+            
+            p.layer=layer
+                
+            cell.absorb(cell<<p.draw())
+            
+        cell.add_port(p.draw().ports['conn'])
+        
+        return cell          
+        
 class LFERes(LayoutPart):
 
     def __init__(self,*args,**kwargs):
@@ -1906,7 +1946,3 @@ class ParasiticAwareMultiRouting(MultiRouting):
 
 _allclasses=(IDT,PartialEtchIDT,Bus,EtchPit,Anchor,Via,Routing,GSProbe,GSGProbe,Pad,MultiRouting,\
 ParasiticAwareMultiRouting,LFERes,FBERes,TFERes)
-
-# for cls in _allclasses:
-#
-#     cls.draw=cached(cls)(cls.draw)

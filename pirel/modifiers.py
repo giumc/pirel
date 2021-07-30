@@ -4,7 +4,7 @@ import pirel.tools as pt
 
 import phidl.geometry as pg
 
-from phidl.device_layout import Port,CellArray,Device,DeviceReference
+from phidl.device_layout import Port,CellArray,Device,DeviceReference,Group
 
 from pirel.tools import *
 
@@ -192,7 +192,7 @@ def addVia(cls,side='top',bottom_conn=False):
 
             cell=Device(name=self.name)
 
-            super_ref=cell.add_ref(cls.draw(self))
+            super_ref=cell.add_ref(cls.draw(self),alias='Device')
 
             nvias_x,nvias_y=self.n_vias
 
@@ -236,7 +236,6 @@ def addVia(cls,side='top',bottom_conn=False):
             t=cls.get_params(self)
 
             pop_all_dict(t,['ViaName'])
-
 
             return t
 
@@ -365,21 +364,19 @@ def addPad(cls):
 
             cell.name=self.name
 
-            d_ref=cell.add_ref(cls.draw(self))
+            d_ref=cell.add_ref(cls.draw(self),alias='Device')
 
             for name,port in d_ref.ports.items():
 
                 self.pad.port=port
 
-                pad_ref=cell.add_ref(self.pad.draw())
+                pad_ref=cell.add_ref(self.pad.draw(),alias='Pad'+port.name)
 
                 pad_ref.connect(pad_ref.ports['conn'],
                     destination=port)
-
-                cell.absorb(pad_ref)
-
-                cell.add_port(port,name)
-
+                
+                cell.add_port(port)
+                
             return cell
 
         @staticmethod
@@ -555,7 +552,7 @@ def addProbe(cls,probe=pc.GSGProbe):
             device_cell=cls.draw(self)
 
             probe_cell=self.probe.draw()
-
+    
             probe_ref=self._move_probe_ref(DeviceReference(probe_cell))
 
             bbox=super()._bbox_mod(device_cell.bbox)
@@ -948,37 +945,86 @@ def fixture(cls,style='open'):
 
     return fixture
 
-def bondstack(cls,n=4,sharedpad=False):
+def n_paths(cls,n=4):
 
     if not isinstance(n,int):
 
         raise ValueError(" n needs to be integer")
 
-    padded_cls=addPad(cls)
-
-    class bondstack(padded_cls):
+    class n_paths(cls):
 
         n_copies=LayoutParamInterface()
 
-        sharedpad=LayoutParamInterface(True,False)
-
-        pitch=LayoutParamInterface()
+        spacing=LayoutParamInterface()
+        
+        comm_length=LayoutParamInterface()
+        
+        comm_layer=LayoutParamInterface()
 
         def __init__(self,*a,**k):
 
-            padded_cls.__init__(self,*a,**k)
+            cls.__init__(self,*a,**k)
             self.n_copies=n
-            self.sharedpad=sharedpad
-            self.pitch=150.0
+            self.spacing=pt.Point(0,0)
+            self.comm_length=LayoutDefault.Padsize*2
+            self.comm_layer=LayoutDefault.layerTop
 
         def draw(self):
 
-            cell=padded_cls.draw(self)
+            cell=cls.draw(self)
+            
+            out_cell=pg.Device(self.name)
+            
+            refs=[]
+            
+            for n in range(1,self.n_copies+1):
+                
+                refs.append(out_cell.add_ref(cell,alias='Dev'+str(n)))
+                
+                origin=pt.Point(refs[-1].xmin,refs[-1].ymin)
+                
+                transl=pt.Point(n*refs[-1].xsize,0)+n*self.spacing
 
-            return pt.draw_array(cell,n,1,0.0,self.pitch)
+                refs[-1].move(destination=transl.coord)
+                
+                if n%2==0 and n>0:
+                    
+                    refs[-1].rotate(
+                        angle=180,
+                        center=(refs[-1].center[0],refs[-1].ymin))
+                
+            comm_pad=pg.rectangle(size=(out_cell.xsize,self.comm_length),layer=self.comm_layer)
 
-    bondstack.__name__=" ".join([f"Bondstack of {n}",padded_cls.__name__])
+            comm_pad.move(origin=(comm_pad.xmin,comm_pad.ymin),
+                         destination=(out_cell.xmin,out_cell.ymin+(out_cell.ysize-self.comm_length)/2))
 
-    return bondstack
+            out_cell.add_ref(comm_pad,alias='CommPad')
+            
+            test_device=addProbe(cls,self.get_components()["TestProbe"])()
+            
+            test_device.probe.set_params(self.testprobe.get_params())
+        
+            g1=Group(out_cell.references)
+            
+            test_ref1=out_cell<<test_device.draw()
+            test_ref2=out_cell<<test_device.draw()
+            
+            g2=Group(test_ref1,g1,test_ref2)
+            
+            g2.distribute(direction='x')
 
-_allmodifiers=(Scaled,addVia,addPad,addPartialEtch,addProbe,addLargeGnd,array,fixture,bondstack)
+            return out_cell
+        
+        def get_components(self):
+            
+            pars=copy(super().get_components())
+            
+            pars.update({"TestProbe":pc.GSGProbe})
+            
+            return pars
+        
+    n_paths.__name__=" ".join([f"{n} paths of",cls.__name__])
+
+    return n_paths
+
+_allmodifiers=(Scaled,addVia,addPad,addPartialEtch,addProbe,addLargeGnd,array,fixture,n_paths)

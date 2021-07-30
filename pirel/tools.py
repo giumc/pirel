@@ -22,7 +22,7 @@ from IPython import get_ipython
 
 if get_ipython() is not None:
 
-    get_ipython().run_line_magic('matplotlib', 'inline')
+    get_ipython().run_line_magic('matplotlib', 'widget')
 
 class Point:
     ''' Handles 2-d coordinates.
@@ -101,7 +101,7 @@ class Point:
 
         if not isinstance(p,Point):
 
-            raise Exception("cannote add Point to non Point")
+            raise Exception(f"cannote add Point to {p}")
 
         x1=self.x+p.x
         y1=self.y+p.y
@@ -313,6 +313,9 @@ class LayoutDefault:
     Padport=Port(name='top',midpoint=(50,50),width=100,\
         orientation=-90)
 
+    #PaddedVia
+    
+    PaddedVia_over_via=2.0
     #array
 
     arraybusextlength=30.0
