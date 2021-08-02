@@ -336,7 +336,7 @@ def addVia(cls,side='top',bottom_conn=False):
 
     return addVia
 
-def addPad(cls):
+def addPad(cls,side='top'):
     ''' Class decorator to add probing pads to existing cells.
         Parameters
         ----------
@@ -347,10 +347,18 @@ def addPad(cls):
         ----------
         pad : PyResLayout.Pad
             pad design for the cell
-
+            
+        side : str ( or iterable of str)
+            tag for ports
         The pad design needs a port to attach to the existing cell,
             see help for more info.
         '''
+
+    if isinstance(side,str):
+
+        side=[side]
+
+    side=[(_).lower() for _ in side]
 
     class addPad(cls):
 
@@ -360,23 +368,25 @@ def addPad(cls):
 
         def draw(self):
 
-            cell=Device()
-
-            cell.name=self.name
+            cell=Device(self.name)
 
             d_ref=cell.add_ref(cls.draw(self),alias='Device')
-
+            
             for name,port in d_ref.ports.items():
-
-                self.pad.port=port
-
-                pad_ref=cell.add_ref(self.pad.draw(),alias='Pad'+port.name)
-
-                pad_ref.connect(pad_ref.ports['conn'],
-                    destination=port)
                 
                 cell.add_port(port)
+
+            for name,port in d_ref.ports.items():
                 
+                if any(_ in name for _ in side):
+                    
+                    self.pad.port=port
+
+                    pad_ref=cell.add_ref(self.pad.draw(),alias='Pad'+port.name)
+
+                    pad_ref.connect(pad_ref.ports['conn'],
+                        destination=port)
+                    
             return cell
 
         @staticmethod
@@ -409,11 +419,11 @@ def addPad(cls):
 
             ur=Point(bbox[1])
 
-            if any([_=='top' for _ in self.draw().ports]):
+            if any([_=='top' for _ in side]):
 
                 ur=ur-Point(0,float(self.pad.size+self.pad.distance))
 
-            if any([_=='bottom' for _ in self.draw().ports]):
+            if any([_=='bottom' for _ in side]):
 
                 ll=ll+Point(0,float(self.pad.size+self.pad.distance))
 
@@ -465,7 +475,7 @@ def addProbe(cls,probe=pc.GSGProbe):
             cls.__init__(self,*args,**kwargs)
 
             self.gnd_routing_width=100.0
-
+ 
             self._setup_routings()
 
         def draw(self):
@@ -963,13 +973,19 @@ def fixture(cls,style='open'):
 
     return fixture
 
-def n_paths(cls,n=4):
+def n_paths(cls, pad=pc.Pad, n=4):
 
     if not isinstance(n,int):
 
-        raise ValueError(" n needs to be integer")
+        raise ValueError(f"n needs to be integer, {n.__class__.__name__} was passed")
 
-    class n_paths(cls):
+    if not issubclass(pad,LayoutPart):
+        
+        raise ValueError(f"pad needs to be a LayoutPart, {pad.__class__.__name__} was passed")
+        
+    padded_cls=addPad(cls,side=('top','bottom'))
+    
+    class n_paths(padded_cls):
 
         n_copies=LayoutParamInterface()
 
@@ -977,19 +993,16 @@ def n_paths(cls,n=4):
         
         comm_length=LayoutParamInterface()
         
-        comm_layer=LayoutParamInterface()
-
         def __init__(self,*a,**k):
 
-            cls.__init__(self,*a,**k)
+            padded_cls.__init__(self,*a,**k)
             self.n_copies=n
             self.spacing=pt.Point(0,0)
-            self.comm_length=LayoutDefault.Padsize*2
-            self.comm_layer=LayoutDefault.layerTop
-
+            self.comm_length=self.pad.size
+        
         def draw(self):
 
-            cell=cls.draw(self)
+            cell=padded_cls.draw(self)
             
             out_cell=pg.Device(self.name)
             
@@ -997,7 +1010,7 @@ def n_paths(cls,n=4):
             
             for n in range(1,self.n_copies+1):
                 
-                refs.append(out_cell.add_ref(cell,alias='Dev'+str(n)))
+                refs.append(out_cell.add_ref(cell,alias='Device'+str(n)))
                 
                 origin=pt.Point(refs[-1].xmin,refs[-1].ymin)
                 
@@ -1011,7 +1024,7 @@ def n_paths(cls,n=4):
                         angle=180,
                         center=(refs[-1].center[0],refs[-1].ymin))
                 
-            comm_pad=pg.rectangle(size=(out_cell.xsize,self.comm_length),layer=self.comm_layer)
+            comm_pad=pg.rectangle(size=(out_cell.xsize,self.comm_length),layer=self.pad.layer)
 
             comm_pad.move(origin=(comm_pad.xmin,comm_pad.ymin),
                          destination=(out_cell.xmin,out_cell.ymin+(out_cell.ysize-self.comm_length)/2))

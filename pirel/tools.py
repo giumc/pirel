@@ -22,7 +22,7 @@ from IPython import get_ipython
 
 if get_ipython() is not None:
 
-    get_ipython().run_line_magic('matplotlib', 'widget')
+    get_ipython().run_line_magic('matplotlib', 'inline')
 
 class Point:
     ''' Handles 2-d coordinates.

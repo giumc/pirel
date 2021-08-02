@@ -1944,5 +1944,26 @@ class ParasiticAwareMultiRouting(MultiRouting):
 
                 return res
 
+class ViaInPad(Pad):
+    
+    def draw(self):
+        
+        via=self.via.draw()
+        
+        cell=super().draw()
+        
+        viaref=cell.add_ref(via,alias="Via")
+        
+        viaref.connect('conn',destination=cell.ports['conn'])
+        
+        viaref.move(destination=(0,self.size/2+self.distance))
+        
+        return cell
+        
+    @staticmethod
+    def get_components():
+        
+        return {"Via":Via}
+        
 _allclasses=(IDT,PartialEtchIDT,Bus,EtchPit,Anchor,Via,Routing,GSProbe,GSGProbe,Pad,MultiRouting,\
 ParasiticAwareMultiRouting,LFERes,FBERes,TFERes)
