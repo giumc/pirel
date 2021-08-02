@@ -400,6 +400,24 @@ def addPad(cls):
                 r0=r0+self.pad.resistance_squares
 
             return r0
+        
+        def _bbox_mod(self,bbox):
+
+            LayoutPart._bbox_mod(self,bbox)
+
+            ll=Point(bbox[0])
+
+            ur=Point(bbox[1])
+
+            if any([_=='top' for _ in self.draw().ports]):
+
+                ur=ur-Point(0,float(self.pad.size+self.pad.distance))
+
+            if any([_=='bottom' for _ in self.draw().ports]):
+
+                ll=ll+Point(0,float(self.pad.size+self.pad.distance))
+
+            return (ll.coord,ur.coord)
 
     # addPad.draw=cached(addPad)(addPad.draw)
 
