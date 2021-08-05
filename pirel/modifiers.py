@@ -144,8 +144,8 @@ def addVia(cls,side='top',bottom_conn=False):
     Attributes
     ----------
 
-        via : PyResLayout.Via
-            instance of a PyResLayout.Via class
+        via : pirel.Via
+            instance of a pirel.Via class
 
         pad_layers : lenght 2 iterable of int
             top/bottom layers to draw vias pads
@@ -156,7 +156,7 @@ def addVia(cls,side='top',bottom_conn=False):
         via_distance : float
             y distance between connecting port and via center
 
-        via_area : PyResLayout.Point
+        via_area : pirel.Point
             size (in coordinates) to be filled with vias.
     '''
 
@@ -340,12 +340,12 @@ def addPad(cls,side='top'):
     ''' Class decorator to add probing pads to existing cells.
         Parameters
         ----------
-        cls : PyResLayout.LayoutPart
+        cls : pirel.LayoutPart
             design where pads have to be added
 
         Attributes
         ----------
-        pad : PyResLayout.Pad
+        pad : pirel.Pad
             pad design for the cell
             
         side : str ( or iterable of str)
@@ -973,7 +973,7 @@ def fixture(cls,style='open'):
 
     return fixture
 
-def n_paths(cls, pad=pc.Pad, n=4):
+def n_paths(cls, pad=pc.Pad,probe=pc.GSGProbe, n=4):
 
     if not isinstance(n,int):
 
@@ -998,8 +998,8 @@ def n_paths(cls, pad=pc.Pad, n=4):
             padded_cls.__init__(self,*a,**k)
             self.n_copies=n
             self.spacing=pt.Point(0,0)
-            self.comm_length=self.pad.size
-        
+            self.comm_length=0
+            
         def draw(self):
 
             cell=padded_cls.draw(self)
@@ -1023,11 +1023,12 @@ def n_paths(cls, pad=pc.Pad, n=4):
                     refs[-1].rotate(
                         angle=180,
                         center=(refs[-1].center[0],refs[-1].ymin))
-                
-            comm_pad=pg.rectangle(size=(out_cell.xsize,self.comm_length),layer=self.pad.layer)
+                    refs[-1].move(destination=(0,self.pad.size-self.comm_length))
+        
+            comm_pad=pg.rectangle(size=(out_cell.xsize,self.comm_length+self.pad.size),layer=self.pad.layer)
 
             comm_pad.move(origin=(comm_pad.xmin,comm_pad.ymin),
-                         destination=(out_cell.xmin,out_cell.ymin+(out_cell.ysize-self.comm_length)/2))
+                         destination=(out_cell.xmin,out_cell.ymin+(out_cell.ysize-self.comm_length-self.pad.size)/2))
 
             out_cell.add_ref(comm_pad,alias='CommPad')
             
@@ -1050,7 +1051,7 @@ def n_paths(cls, pad=pc.Pad, n=4):
             
             pars=copy(super().get_components())
             
-            pars.update({"TestProbe":pc.GSGProbe})
+            pars.update({"TestProbe":probe})
             
             return pars
         

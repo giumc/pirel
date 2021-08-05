@@ -1,3 +1,5 @@
+import pandas as pd
+
 import phidl.geometry as pg
 
 import phidl.device_layout as dl
@@ -300,3 +302,36 @@ def dice(cell,width=100,layer=LayoutDefault.layerTop,spacing=150):
         'location':'bottom',\
         'distance':Point(0,-width-spacing/2),\
         'layer':layer}).add_text(cell)
+
+def prompt_param_table():
+    
+    import tkinter as tk
+
+    from tkinter import filedialog
+    
+    root = tk.Tk()
+    
+    root.withdraw()
+    
+    root.call('wm', 'attributes', '.', '-topmost', True)
+    
+    file_path = filedialog.askopenfilename()
+
+    from IPython import get_ipython
+
+    if get_ipython() is not None:
+    
+        get_ipython().run_line_magic('gui','qt')
+
+    tab=pd.read_excel(file_path)
+
+    tab.set_index(tab.columns[0],inplace=True)
+
+    tab.index.name='Tag'
+    
+    return tab
+
+def get_device_param_from_table(tab : pd.DataFrame, tag : str):
+    
+    return tab.loc[tag].to_dict()
+    
