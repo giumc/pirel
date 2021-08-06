@@ -336,7 +336,7 @@ def addVia(cls,side='top',bottom_conn=False):
 
     return addVia
 
-def addPad(cls,side='top'):
+def addPad(cls, pad=pc.Pad, side='top'):
     ''' Class decorator to add probing pads to existing cells.
         Parameters
         ----------
@@ -347,7 +347,7 @@ def addPad(cls,side='top'):
         ----------
         pad : pirel.Pad
             pad design for the cell
-            
+
         side : str ( or iterable of str)
             tag for ports
         The pad design needs a port to attach to the existing cell,
@@ -357,8 +357,6 @@ def addPad(cls,side='top'):
     if isinstance(side,str):
 
         side=[side]
-
-    side=[(_).lower() for _ in side]
 
     class addPad(cls):
 
@@ -371,22 +369,22 @@ def addPad(cls,side='top'):
             cell=Device(self.name)
 
             d_ref=cell.add_ref(cls.draw(self),alias='Device')
-            
+
             for name,port in d_ref.ports.items():
-                
+
                 cell.add_port(port)
 
             for name,port in d_ref.ports.items():
-                
+
                 if any(_ in name for _ in side):
-                    
+
                     self.pad.port=port
 
                     pad_ref=cell.add_ref(self.pad.draw(),alias='Pad'+port.name)
 
                     pad_ref.connect(pad_ref.ports['conn'],
                         destination=port)
-                    
+
             return cell
 
         @staticmethod
@@ -394,7 +392,7 @@ def addPad(cls,side='top'):
 
             supercomp=copy(cls.get_components())
 
-            supercomp.update({"Pad":pc.Pad})
+            supercomp.update({"Pad":pad})
 
             return supercomp
 
@@ -410,7 +408,7 @@ def addPad(cls,side='top'):
                 r0=r0+self.pad.resistance_squares
 
             return r0
-        
+
         def _bbox_mod(self,bbox):
 
             LayoutPart._bbox_mod(self,bbox)
@@ -475,7 +473,7 @@ def addProbe(cls,probe=pc.GSGProbe):
             cls.__init__(self,*args,**kwargs)
 
             self.gnd_routing_width=100.0
- 
+
             self._setup_routings()
 
         def draw(self):
@@ -580,7 +578,7 @@ def addProbe(cls,probe=pc.GSGProbe):
             device_cell=cls.draw(self)
 
             probe_cell=self.probe.draw()
-    
+
             probe_ref=self._move_probe_ref(DeviceReference(probe_cell))
 
             bbox=super()._bbox_mod(device_cell.bbox)
@@ -973,88 +971,132 @@ def fixture(cls,style='open'):
 
     return fixture
 
-def n_paths(cls, pad=pc.Pad,probe=pc.GSGProbe, n=4):
+def n_paths(cls, pad=pc.Pad, probe=pc.GSGProbe, n=4):
 
     if not isinstance(n,int):
 
         raise ValueError(f"n needs to be integer, {n.__class__.__name__} was passed")
 
     if not issubclass(pad,LayoutPart):
-        
+
         raise ValueError(f"pad needs to be a LayoutPart, {pad.__class__.__name__} was passed")
-        
-    padded_cls=addPad(cls,side=('top','bottom'))
-    
+
+    padded_cls=addPad(cls,pad=pad, side=('top','bottom'))
+
     class n_paths(padded_cls):
 
         n_copies=LayoutParamInterface()
 
         spacing=LayoutParamInterface()
-        
+
         comm_length=LayoutParamInterface()
-        
+
         def __init__(self,*a,**k):
 
             padded_cls.__init__(self,*a,**k)
+
             self.n_copies=n
+
             self.spacing=pt.Point(0,0)
+
             self.comm_length=0
-            
+
+            n_paths._set_relations(self)
+
         def draw(self):
 
+            n_paths._set_relations(self)
+
             cell=padded_cls.draw(self)
-            
+
             out_cell=pg.Device(self.name)
-            
+
             refs=[]
-            
+
             for n in range(1,self.n_copies+1):
-                
+
                 refs.append(out_cell.add_ref(cell,alias='Device'+str(n)))
-                
+
                 origin=pt.Point(refs[-1].xmin,refs[-1].ymin)
-                
+
                 transl=pt.Point(n*refs[-1].xsize,0)+n*self.spacing
 
                 refs[-1].move(destination=transl.coord)
-                
+
                 if n%2==0 and n>0:
-                    
+
                     refs[-1].rotate(
                         angle=180,
                         center=(refs[-1].center[0],refs[-1].ymin))
+
                     refs[-1].move(destination=(0,self.pad.size-self.comm_length))
-        
+
             comm_pad=pg.rectangle(size=(out_cell.xsize,self.comm_length+self.pad.size),layer=self.pad.layer)
 
             comm_pad.move(origin=(comm_pad.xmin,comm_pad.ymin),
                          destination=(out_cell.xmin,out_cell.ymin+(out_cell.ysize-self.comm_length-self.pad.size)/2))
 
             out_cell.add_ref(comm_pad,alias='CommPad')
-            
-            test_device=addProbe(cls,self.get_components()["TestProbe"])()
-            
-            test_device.probe.set_params(self.testprobe.get_params())
-        
+
+            self.testdevice.set_params(self.get_params())
+
+            self.pad.distance=self.testdevice.probe_dut_distance.y
+
+            test_device=self.testdevice
+
             g1=Group(out_cell.references)
-            
+
             test_ref1=out_cell<<test_device.draw()
+
             test_ref2=out_cell<<test_device.draw()
-            
+
             g2=Group(test_ref1,g1,test_ref2)
-            
+
             g2.distribute(direction='x')
 
             return out_cell
-        
+
         def get_components(self):
-            
+
             pars=copy(super().get_components())
-            
-            pars.update({"TestProbe":probe})
-            
+
+            pars.update({"TestDevice":addProbe(padded_cls,probe)})
+
             return pars
-        
+
+        def get_params(self):
+
+            pars=copy(super().get_params())
+
+            tbr=[]
+
+            for name in pars:
+
+                if "TestDevice" in name:
+
+                    if not "GndRoutingWidth" in name:
+
+                        tbr.append(name)
+
+            pt.pop_all_dict(pars,tbr)
+
+            return pars
+
+        def _set_relations(self):
+
+            try:
+
+                super()._set_relations()
+
+            except:
+
+                pass
+                
+            self.testdevice.set_params(self.get_params())
+
+            self.pad.distance=self.testdevice.probe_dut_distance.y
+
+
     n_paths.__name__=" ".join([f"{n} paths of",cls.__name__])
 
     return n_paths

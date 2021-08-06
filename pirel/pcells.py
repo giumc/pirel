@@ -761,7 +761,7 @@ class Via(LayoutPart):
     shape=LayoutParamInterface('square','circle')
 
     layer=LayoutParamInterface()
-  
+
     def __init__(self,*args,**kwargs):
 
         super().__init__(*args,**kwargs)
@@ -796,7 +796,7 @@ class Via(LayoutPart):
         orientation=90))
 
         return cell
-       
+
 class Routing(LayoutPart):
     ''' Generate automatic routing connection
 
@@ -1313,44 +1313,44 @@ class Pad(LayoutPart):
         return 1+self.distance/self.port.width
 
 class MultiLayerPad(Pad):
-    
+
     __pad_base=Pad()
-    
+
     def __init__(self,*a,**k):
-        
+
         LayoutPart.__init__(self,*a,**k)
-        
+
         self.size=LayoutDefault.Padsize
-        
+
         self.distance=copy(LayoutDefault.Paddistance)
-        
+
         self.port=LayoutDefault.Padport
-        
+
         self.layer=(LayoutDefault.layerTop,
                    LayoutDefault.layerBottom)
-        
+
     def draw(self):
-        
+
         cell=pg.Device(self.name)
-        
+
         pars=self.get_params()
-        
+
         pars.pop("Layer")
-        
+
         p=self.__pad_base
-        
+
         p.set_params(pars)
-        
+
         for layer in self.layer:
-            
+
             p.layer=layer
-                
+
             cell.absorb(cell<<p.draw())
-            
+
         cell.add_port(p.draw().ports['conn'])
-        
-        return cell          
-        
+
+        return cell
+
 class LFERes(LayoutPart):
 
     def __init__(self,*args,**kwargs):
@@ -1439,7 +1439,7 @@ class LFERes(LayoutPart):
 
     def get_params(self):
 
-        self._set_relations()
+        LFERes._set_relations(self)
 
         t=super().get_params()
 
@@ -1457,7 +1457,7 @@ class LFERes(LayoutPart):
 
         super()._set_params(df)
 
-        self._set_relations()
+        LFERes._set_relations(self)
 
     def _set_relations(self):
 
@@ -1945,25 +1945,25 @@ class ParasiticAwareMultiRouting(MultiRouting):
                 return res
 
 class ViaInPad(Pad):
-    
+
     def draw(self):
-        
+
         via=self.via.draw()
-        
+
         cell=super().draw()
-        
+
         viaref=cell.add_ref(via,alias="Via")
-        
+
         viaref.connect('conn',destination=cell.ports['conn'])
-        
+
         viaref.move(destination=(0,self.size/2+self.distance))
-        
+
         return cell
-        
+
     @staticmethod
     def get_components():
-        
+
         return {"Via":Via}
-        
+
 _allclasses=(IDT,PartialEtchIDT,Bus,EtchPit,Anchor,Via,Routing,GSProbe,GSGProbe,Pad,MultiRouting,\
 ParasiticAwareMultiRouting,LFERes,FBERes,TFERes)
