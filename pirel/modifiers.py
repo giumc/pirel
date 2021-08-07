@@ -12,6 +12,8 @@ import pandas as pd
 
 import warnings
 
+import numpy as np
+
 from copy import copy
 
 def Scaled(cls):
@@ -323,8 +325,6 @@ def addVia(cls,side='top',bottom_conn=False):
         @property
         def n_vias(self):
 
-            import numpy as np
-
             nvias_x=max(1,int(np.floor(self.via_area.x/self.via.size/self.over_via)))
             nvias_y=max(1,int(np.floor(self.via_area.y/self.via.size/self.over_via)))
 
@@ -548,7 +548,7 @@ def addProbe(cls,probe=pc.GSGProbe):
         @property
         def probe_dut_distance(self):
 
-            return Point(0,self.idt.active_area.x/2)
+            return self.idt.probe_distance
 
         def _move_probe_ref(self,probe_ref):
 
@@ -981,25 +981,23 @@ def n_paths(cls, pad=pc.Pad, probe=pc.GSGProbe, n=4):
 
         raise ValueError(f"pad needs to be a LayoutPart, {pad.__class__.__name__} was passed")
 
-    padded_cls=addPad(cls,pad=pad, side=('top','bottom'))
-
-    class n_paths(padded_cls):
+    class n_paths(cls):
 
         n_copies=LayoutParamInterface()
 
         spacing=LayoutParamInterface()
 
-        comm_length=LayoutParamInterface()
+        comm_pad_length=LayoutParamInterface()
 
         def __init__(self,*a,**k):
 
-            padded_cls.__init__(self,*a,**k)
+            cls.__init__(self,*a,**k)
 
             self.n_copies=n
 
             self.spacing=pt.Point(0,0)
 
-            self.comm_length=0
+            self.comm_pad_length=0
 
             n_paths._set_relations(self)
 
@@ -1007,7 +1005,22 @@ def n_paths(cls, pad=pc.Pad, probe=pc.GSGProbe, n=4):
 
             n_paths._set_relations(self)
 
-            cell=padded_cls.draw(self)
+            cell=pg.deepcopy(cls.draw(self))
+
+            try:
+
+                pt.add_pad(cell,self.pad,tags=['bottom'+str(_) for _ in range(self.n_blocks)])
+
+            except Exception:
+
+                pt.add_pad(cell,self.pad,tags=['bottom'])
+
+            pt.connect_ports(
+                cell,
+                conn_dist=self.idt.probe_distance,
+                tags='top')
+
+            pt.add_pad(cell,self.pad,tags='top')
 
             out_cell=pg.Device(self.name)
 
@@ -1029,18 +1042,16 @@ def n_paths(cls, pad=pc.Pad, probe=pc.GSGProbe, n=4):
                         angle=180,
                         center=(refs[-1].center[0],refs[-1].ymin))
 
-                    refs[-1].move(destination=(0,self.pad.size-self.comm_length))
+                    refs[-1].move(destination=(0,self.pad.size-self.comm_pad_length))
 
-            comm_pad=pg.rectangle(size=(out_cell.xsize,self.comm_length+self.pad.size),layer=self.pad.layer)
+            comm_pad=pg.rectangle(size=(out_cell.xsize,self.comm_pad_length+self.pad.size),layer=self.pad.layer)
 
             comm_pad.move(origin=(comm_pad.xmin,comm_pad.ymin),
-                         destination=(out_cell.xmin,out_cell.ymin+(out_cell.ysize-self.comm_length-self.pad.size)/2))
+                         destination=(out_cell.xmin,out_cell.ymin+(out_cell.ysize-self.comm_pad_length-self.pad.size)/2))
 
             out_cell.add_ref(comm_pad,alias='CommPad')
 
             self.testdevice.set_params(self.get_params())
-
-            self.pad.distance=self.testdevice.probe_dut_distance.y
 
             test_device=self.testdevice
 
@@ -1056,17 +1067,18 @@ def n_paths(cls, pad=pc.Pad, probe=pc.GSGProbe, n=4):
 
             return out_cell
 
-        def get_components(self):
+        @staticmethod
+        def get_components():
 
-            pars=copy(super().get_components())
+            pars=copy(cls.get_components())
 
-            pars.update({"TestDevice":addProbe(padded_cls,probe)})
+            pars.update({"TestDevice":addProbe(cls,probe),"Pad":pad})
 
             return pars
 
         def get_params(self):
 
-            pars=copy(super().get_params())
+            pars=copy(cls.get_params(self))
 
             tbr=[]
 
@@ -1078,6 +1090,10 @@ def n_paths(cls, pad=pc.Pad, probe=pc.GSGProbe, n=4):
 
                         tbr.append(name)
 
+                if "PadDistance" in name:
+
+                    tbr.append(name)
+
             pt.pop_all_dict(pars,tbr)
 
             return pars
@@ -1086,16 +1102,14 @@ def n_paths(cls, pad=pc.Pad, probe=pc.GSGProbe, n=4):
 
             try:
 
-                super()._set_relations()
+                cls._set_relations(self)
 
             except:
 
                 pass
-                
+
+            self.pad.distance=0
             self.testdevice.set_params(self.get_params())
-
-            self.pad.distance=self.testdevice.probe_dut_distance.y
-
 
     n_paths.__name__=" ".join([f"{n} paths of",cls.__name__])
 

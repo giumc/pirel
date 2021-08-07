@@ -1,3 +1,5 @@
+import pdb
+
 from abc import ABC, abstractmethod
 
 from copy import copy,deepcopy
@@ -39,8 +41,14 @@ class Point:
 
             if len(a[0])==2:
 
-                self._x=a[0][0]*1.0
-                self._y=a[0][1]*1.0
+                if  (isinstance(a[0][0],int) or isinstance(a[0][0],float)) and (isinstance(a[0][1],int) or isinstance(a[0][1],float) ):
+
+                    self._x=a[0][0]*1.0
+                    self._y=a[0][1]*1.0
+
+                else:
+
+                    raise ValueError("Bad point assignment")
 
             else:
 
@@ -48,8 +56,15 @@ class Point:
 
         elif len(a)==2:
 
-            self._x=a[0]*1.0
-            self._y=a[1]*1.0
+            if (isinstance(a[0],int) or isinstance(a[0],float)) and (isinstance(a[1],int) or isinstance(a[1],float)):
+
+                self._x=a[0]*1.0
+                self._y=a[1]*1.0
+
+            else:
+
+                raise ValueError("Bad point assignment")
+
 
         else:
 
@@ -314,7 +329,7 @@ class LayoutDefault:
         orientation=-90)
 
     #PaddedVia
-    
+
     PaddedVia_over_via=2.0
     #array
 
@@ -371,7 +386,7 @@ class _LayoutParam:
 
         else:
 
-            raise ValueError(f"Cannot assign type {new_value.__class__} to {self.label}")
+            raise ValueError(f"Cannot assign type {new_value.__class__.__name__} to {self.label}")
 
     @property
     def x(self):
@@ -526,7 +541,7 @@ class LayoutPart(ABC) :
 
             setattr(self,p.lower(),cls(name=self.name+p))
 
-    def view(self, blocking=False, gds=False):
+    def view(self, gds=False,blocking=True,joined=False):
         ''' Visualize cell layout with current parameters.
 
         Parameters
@@ -540,8 +555,6 @@ class LayoutPart(ABC) :
             if true, gdspy viewer is used.
             if false (default), phidl viewer is used.
         '''
-
-        set_quickplot_options(blocking=blocking)
 
         if gds:
 
@@ -557,7 +570,7 @@ class LayoutPart(ABC) :
 
         else:
 
-            qp(self.draw())
+            check(self.draw(),blocking=blocking,joined=joined)
 
         return
 
@@ -890,7 +903,7 @@ def get_corners(device : Device) :
 
     return ll,lr,ul,ur
 
-def check(device : Device, joined=False,blocking=True):
+def check(device : Device, joined=False, blocking=True):
     ''' Shows the device layout.
 
         If run by terminal, blocks script until window is closed.
@@ -1248,5 +1261,103 @@ def image_to_gds(p : pathlib.Path ,
     nd.image(str(p.absolute()),layer=layer, **k).put(0)
 
     nd.export_gds(filename=str(p.parent/p.stem)+'.gds', flat=True)
+
+def connect_ports(cell,tags='top',conn_dist=Point(0,100)):
+
+    if isinstance(tags,str):
+
+        tags=tuple([tags])
+
+    import pirel.pcells as pc
+
+    connector=pc.MultiRouting()
+
+    for tag in tags:
+
+        if 'top' in tag:
+
+            top_ports=[]
+
+            for name,port in cell.ports.items():
+
+                if tag in name:
+
+                    top_ports.append(port)
+
+            top_conn=Port('top')
+
+            top_conn.width=top_ports[0].width
+
+            top_conn.midpoint=(Point(cell.x,cell.ymax)+conn_dist).coord
+
+            top_conn.orientation=270
+
+            connector.source=tuple([top_conn])
+
+            connector.destination=tuple(top_ports)
+
+            connector.trace_width=top_ports[0].width
+
+            connector.clearance=tuple(tuple(_) for _ in cell.bbox.tolist())
+
+            tracecell=connector.draw()
+
+            top_trace_ref=cell.add_ref(tracecell,alias='TopTrace')
+
+            top_conn.orientation=90
+
+            cell.add_port(top_conn)
+
+        if 'bottom' in tag:
+
+            bottom_conn=Port('bottom')
+
+            bottom_ports=[]
+
+            for name,port in cell.ports.items():
+
+                if tag in name:
+
+                    bottom_ports.append(port)
+
+            bottom_conn.width=bottom_ports[0].width
+
+            bottom_conn.midpoint=(Point(cell.x,cell.ymin)-conn_dist).coord
+
+            bottom_conn.orientation=90
+
+            connector.source=tuple([bottom_conn])
+
+            connector.destination=tuple(bottom_ports)
+
+            connector.trace_width=bottom_ports[0].width
+
+            connector.clearance=tuple(tuple(_) for _ in cell.bbox.tolist())
+
+            tracecell=connector.draw()
+
+            bottom_trace_ref=cell.add_ref(tracecell,alias='BottomTrace')
+
+            bottom_conn.orientation=270
+
+            cell.add_port(bottom_conn)
+
+def add_pad(cell,pad,tags='top'):
+
+    if isinstance(tags,str):
+
+        tags=tuple([tags])
+
+    for tag in tags:
+
+        for name,port in cell.ports.items():
+
+            if tag==name:
+
+                pad.port=port
+
+                pad_ref=cell.add_ref(pad.draw())
+
+                pad_ref.connect('conn',destination=port)
 
 warnings.formatwarning = custom_formatwarning
