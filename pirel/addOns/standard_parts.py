@@ -15,6 +15,8 @@ import numpy as np
 from pirel.tools import *
 from pirel.pcells import *
 
+import pirel.tools as pt
+
 def resistivity_test_cell():
 
     """Create cell with standard Resisistivity Test
@@ -28,7 +30,7 @@ def resistivity_test_cell():
 
     with open(str(pathlib.Path(__file__).parent/'ResistivityTest.gds'), 'rb') as infile:
 
-        cell=pg.import_gds(infile)
+        cell=pg.import_gds(infile,cellname='TestCell')
 
         cell=join(cell)
 
@@ -280,7 +282,7 @@ def align_TE_on_via():
 
     return cell
 
-def dice(cell,width=100,layer=LayoutDefault.layerTop,spacing=150):
+def dice(cell,width=100,layer=LayoutDefault.layerTop,spacing=150,print_name=True):
 
     street_length=min(cell.xsize,cell.ysize)/2.5
 
@@ -296,12 +298,14 @@ def dice(cell,width=100,layer=LayoutDefault.layerTop,spacing=150):
 
     cell.add(die_cell)
 
-    TextParam(\
-        {'size':700,\
-        'label':cell.name,\
-        'location':'bottom',\
-        'distance':Point(0,-width-spacing/2),\
-        'layer':layer}).add_text(cell)
+    if print_name:
+
+        TextParam(\
+            {'size':700,\
+            'label':cell.name,\
+            'location':'bottom',\
+            'distance':Point(0,-width-spacing/2),\
+            'layer':layer}).add_text(cell)
 
 def prompt_param_table():
 
@@ -344,5 +348,5 @@ def get_device_param_from_table(tab : pd.DataFrame, tag : str):
         except:
 
             pass
-            
+
     return pars

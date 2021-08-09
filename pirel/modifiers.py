@@ -6,15 +6,21 @@ import phidl.geometry as pg
 
 from phidl.device_layout import Port,CellArray,Device,DeviceReference,Group
 
-from pirel.tools import *
+from pirel.tools import Point,LayoutDefault,LayoutParamInterface,LayoutPart
+
+import pirel.addOns.standard_parts as ps
+
+import pdb
 
 import pandas as pd
 
-import warnings
-
 import numpy as np
 
-from copy import copy
+import warnings, re
+
+from copy import copy,deepcopy
+
+# Classes decorators
 
 def Scaled(cls):
 
@@ -78,15 +84,15 @@ def Scaled(cls):
 
             # self.idt.length=self.idt.length/p
 
-            self.bus.size=Point(self.bus.size.x,self.bus.size.y/p)
+            self.bus.size=pt.Point(self.bus.size.x,self.bus.size.y/p)
 
             self.etchpit.x=self.etchpit.x/active_area_x
 
-            self.anchor.size=Point(
+            self.anchor.size=pt.Point(
                 self.anchor.size.x/active_area_x,
                 self.anchor.size.y/p)
 
-            self.anchor.metalized=Point(
+            self.anchor.metalized=pt.Point(
                 self.anchor.metalized.x/anchor_x,
                 self.anchor.metalized.y/anchor_y)
 
@@ -102,17 +108,17 @@ def Scaled(cls):
 
             self.idt.y_offset=self.idt.y_offset*p
 
-            self.bus.size=Point(self.bus.size.x,self.bus.size.y*p)
+            self.bus.size=pt.Point(self.bus.size.x,self.bus.size.y*p)
 
             active_area_x=self.idt.active_area.x
 
             self.etchpit.x=self.etchpit.x*active_area_x
 
-            self.anchor.size=Point(\
+            self.anchor.size=pt.Point(\
                 self.anchor.size.x*active_area_x,\
                 self.anchor.size.y*p)
 
-            self.anchor.metalized=Point(
+            self.anchor.metalized=pt.Point(
                 self.anchor.metalized.x*self.anchor.size.x,
                 self.anchor.metalized.y*self.anchor.size.y)
 
@@ -237,7 +243,7 @@ def addVia(cls,side='top',bottom_conn=False):
 
             t=cls.get_params(self)
 
-            pop_all_dict(t,['ViaName'])
+            pt.pop_all_dict(t,['ViaName'])
 
             return t
 
@@ -245,19 +251,19 @@ def addVia(cls,side='top',bottom_conn=False):
 
             LayoutPart._bbox_mod(self,bbox)
 
-            ll=Point(bbox[0])
+            ll=pt.Point(bbox[0])
 
-            ur=Point(bbox[1])
+            ur=pt.Point(bbox[1])
 
             nvias_x,nvias_y=self.n_vias
 
             if any([_=='top' for _ in side]):
 
-                ur=ur-Point(0,float(self.via.size*self.over_via*nvias_y+self.via_distance))
+                ur=ur-pt.Point(0,float(self.via.size*self.over_via*nvias_y+self.via_distance))
 
             if any([_=='bottom' for _ in side]):
 
-                ll=ll+Point(0,float(self.via.size*self.over_via*nvias_y+self.via_distance))
+                ll=ll+pt.Point(0,float(self.via.size*self.over_via*nvias_y+self.via_distance))
 
             return (ll.coord,ur.coord)
 
@@ -413,17 +419,17 @@ def addPad(cls, pad=pc.Pad, side='top'):
 
             LayoutPart._bbox_mod(self,bbox)
 
-            ll=Point(bbox[0])
+            ll=pt.Point(bbox[0])
 
-            ur=Point(bbox[1])
+            ur=pt.Point(bbox[1])
 
             if any([_=='top' for _ in side]):
 
-                ur=ur-Point(0,float(self.pad.size+self.pad.distance))
+                ur=ur-pt.Point(0,float(self.pad.size+self.pad.distance))
 
             if any([_=='bottom' for _ in side]):
 
-                ll=ll+Point(0,float(self.pad.size+self.pad.distance))
+                ll=ll+pt.Point(0,float(self.pad.size+self.pad.distance))
 
             return (ll.coord,ur.coord)
 
@@ -492,7 +498,11 @@ def addProbe(cls,probe=pc.GSGProbe):
 
             self._move_probe_ref(probe_ref)
 
-            cell.add_ref(self._draw_probe_routing(),alias=self.name+"GndTrace")
+            routing_cell=self._draw_probe_routing()
+
+            add_vias(routing_cell,routing_cell.bbox,self.via,spacing=self.via.size*2)
+
+            cell.add_ref(routing_cell,alias=self.name+"GndTrace")
 
             return cell
 
@@ -500,11 +510,11 @@ def addProbe(cls,probe=pc.GSGProbe):
 
             t=cls.get_params(self)
 
-            pop_all_dict(t, ["ProbeName"])
+            pt.pop_all_dict(t, ["ProbeName"])
 
-            pop_all_dict(t, [k for k in t if re.search('SigTrace',k) ])
-            pop_all_dict(t, [k for k in t if re.search('GndLeftTrace',k) ])
-            pop_all_dict(t, [k for k in t if re.search('GndRightTrace',k) ])
+            pt.pop_all_dict(t, [k for k in t if re.search('SigTrace',k) ])
+            pt.pop_all_dict(t, [k for k in t if re.search('GndLeftTrace',k) ])
+            pt.pop_all_dict(t, [k for k in t if re.search('GndRightTrace',k) ])
 
             return t
 
@@ -532,7 +542,8 @@ def addProbe(cls,probe=pc.GSGProbe):
                     "Probe":probe,
                     "SigTrace":pc.ParasiticAwareMultiRouting,
                     "GndLeftTrace":pc.MultiRouting,
-                    "GndRightTrace":pc.MultiRouting})
+                    "GndRightTrace":pc.MultiRouting,
+                    "Via":pc.Via})
 
             else:
 
@@ -707,7 +718,7 @@ def addLargeGnd(probe):
             groundpad=pg.compass(size=(self.ground_size,self.ground_size),\
             layer=self.layer)
 
-            [_,_,ul,ur]=get_corners(groundpad)
+            [_,_,ul,ur]=pt.get_corners(groundpad)
 
             for name,p in oldprobe.ports.items():
 
@@ -1007,25 +1018,17 @@ def n_paths(cls, pad=pc.Pad, probe=pc.GSGProbe, n=4):
 
             cell=pg.deepcopy(cls.draw(self))
 
-            try:
-
-                pt.add_pad(cell,self.pad,tags=['bottom'+str(_) for _ in range(self.n_blocks)])
-
-            except Exception:
-
-                pt.add_pad(cell,self.pad,tags=['bottom'])
-
-            pt.connect_ports(
+            connect_ports(
                 cell,
                 conn_dist=self.idt.probe_distance,
                 tags='top')
 
-            pt.add_pad(cell,self.pad,tags='top')
+            add_pad(cell,self.pad,tags='top')
 
             out_cell=pg.Device(self.name)
 
             refs=[]
-
+            
             for n in range(1,self.n_copies+1):
 
                 refs.append(out_cell.add_ref(cell,alias='Device'+str(n)))
@@ -1042,28 +1045,34 @@ def n_paths(cls, pad=pc.Pad, probe=pc.GSGProbe, n=4):
                         angle=180,
                         center=(refs[-1].center[0],refs[-1].ymin))
 
-                    refs[-1].move(destination=(0,self.pad.size-self.comm_pad_length))
+                    refs[-1].move(destination=(0,-self.comm_pad_length))
 
-            comm_pad=pg.rectangle(size=(out_cell.xsize,self.comm_pad_length+self.pad.size),layer=self.pad.layer)
+            comm_pad=pg.rectangle(size=(out_cell.xsize,self.comm_pad_length),layer=self.pad.layer)
+
+            add_vias(comm_pad,comm_pad.bbox,self.via,self.via.size*2)
 
             comm_pad.move(origin=(comm_pad.xmin,comm_pad.ymin),
-                         destination=(out_cell.xmin,out_cell.ymin+(out_cell.ysize-self.comm_pad_length-self.pad.size)/2))
+                         destination=(out_cell.xmin,out_cell.ymin+(out_cell.ysize-self.comm_pad_length)/2))
 
             out_cell.add_ref(comm_pad,alias='CommPad')
 
-            self.testdevice.set_params(self.get_params())
+            # self.testdevice.set_params(self.get_params())
 
-            test_device=self.testdevice
+            # test_device=self.testdevice
 
-            g1=Group(out_cell.references)
+            # g1=Group(out_cell.references)
 
-            test_ref1=out_cell<<test_device.draw()
+            # testdevice_cell=test_device.draw()
 
-            test_ref2=out_cell<<test_device.draw()
+            # test_ref1=out_cell.add_ref(testdevice_cell,alias='TestLeft')
 
-            g2=Group(test_ref1,g1,test_ref2)
+            # test_ref2=out_cell.add_ref(testdevice_cell,alias='TestRight')
 
-            g2.distribute(direction='x')
+            # g2=Group(test_ref1,g1,test_ref2)
+#
+            # g2.distribute(direction='x')
+
+            # ps.dice(out_cell,width=50,layer=self.pad.layer,print_name=False)
 
             return out_cell
 
@@ -1072,7 +1081,9 @@ def n_paths(cls, pad=pc.Pad, probe=pc.GSGProbe, n=4):
 
             pars=copy(cls.get_components())
 
-            pars.update({"TestDevice":addProbe(cls,probe),"Pad":pad})
+            pars.update({
+            # "TestDevice":addProbe(cls,probe),
+            "Pad":pad,"Via":pc.Via})
 
             return pars
 
@@ -1109,10 +1120,250 @@ def n_paths(cls, pad=pc.Pad, probe=pc.GSGProbe, n=4):
                 pass
 
             self.pad.distance=0
-            self.testdevice.set_params(self.get_params())
+
+            # self.testdevice.set_params(self.get_params())
 
     n_paths.__name__=" ".join([f"{n} paths of",cls.__name__])
 
     return n_paths
+
+# Device decorator
+
+def add_compass(device : Device) -> Device:
+    ''' add four ports at the bbox of a cell.
+
+    Parameters
+    ----------
+    device : phidl.Device
+
+    Returns
+    -------
+    device : phidl.Device.
+    '''
+
+    bound_cell=pg.compass(size=device.size).move(\
+    origin=(0,0),destination=device.center)
+
+    ports=port=bound_cell.get_ports()
+
+    device.add_port(port=ports[0],name='N')
+    device.add_port(port=ports[1],name='S')
+    device.add_port(port=ports[2],name='E')
+    device.add_port(port=ports[3],name='W')
+
+    return device
+
+def draw_array(
+    cell : Device,
+    x : int, y : int,
+    row_spacing : float = 0 ,
+    column_spacing : float = 0 ) -> Device:
+
+    ''' returns a spaced matrix of identical cells, copying ports in the original cells.
+
+    Parameters
+    ----------
+    cell : phidl.Device
+
+    x : int
+        columns of copies
+
+    y : int
+        rows of copies
+
+    row_spacing: float
+
+    column_spacing: float
+
+    Returns
+    -------
+    cell : phidl.Device.
+    '''
+
+    new_cell=pg.Device(cell.name+"array")
+
+    cell_size=pt.Point(cell.size)+pt.Point(column_spacing,row_spacing)
+
+    cellmat=[]
+
+    ports=[]
+
+    for j in range(y):
+
+        cellvec=[]
+
+        for i in range(x):
+
+            cellvec.append(new_cell.add_ref(cell,alias=cell.name+str(i)+str(j)))
+
+            cellvec[i].move(
+                destination=(pt.Point(cell_size.x*i,cell_size.y*j)).coord)
+
+            for p in cellvec[i].ports.values():
+
+                ports.append(Port(name=p.name+'_'+str(i)+'_'+str(j),\
+                    midpoint=p.midpoint,\
+                    width=p.width,\
+                    orientation=p.orientation))
+
+        cellmat.append(cellvec)
+
+    for p in ports:
+
+        new_cell.add_port(p)
+
+    del cellmat
+
+    return new_cell
+
+def connect_ports(cell,tags='top',conn_dist=pt.Point(0,100)):
+
+    if isinstance(tags,str):
+
+        tags=tuple([tags])
+
+    import pirel.pcells as pc
+
+    connector=pc.MultiRouting()
+
+    for tag in tags:
+
+        if 'top' in tag:
+
+            top_ports=[]
+
+            for name,port in cell.ports.items():
+
+                if tag in name:
+
+                    top_ports.append(port)
+
+            top_conn=Port('top')
+
+            top_conn.width=top_ports[0].width
+
+            top_conn.midpoint=(pt.Point(cell.x,cell.ymax)+conn_dist).coord
+
+            top_conn.orientation=270
+
+            connector.source=tuple([top_conn])
+
+            connector.destination=tuple(top_ports)
+
+            connector.trace_width=top_ports[0].width
+
+            connector.clearance=tuple(tuple(_) for _ in cell.bbox.tolist())
+
+            tracecell=connector.draw()
+
+            top_trace_ref=cell.add_ref(tracecell,alias='TopTrace')
+
+            top_conn.orientation=90
+
+            cell.add_port(top_conn)
+
+        if 'bottom' in tag:
+
+            bottom_conn=Port('bottom')
+
+            bottom_ports=[]
+
+            for name,port in cell.ports.items():
+
+                if tag in name:
+
+                    bottom_ports.append(port)
+
+            bottom_conn.width=bottom_ports[0].width
+
+            bottom_conn.midpoint=(pt.Point(cell.x,cell.ymin)-conn_dist).coord
+
+            bottom_conn.orientation=90
+
+            connector.source=tuple([bottom_conn])
+
+            connector.destination=tuple(bottom_ports)
+
+            connector.trace_width=bottom_ports[0].width
+
+            connector.clearance=tuple(tuple(_) for _ in cell.bbox.tolist())
+
+            tracecell=connector.draw()
+
+            bottom_trace_ref=cell.add_ref(tracecell,alias='BottomTrace')
+
+            bottom_conn.orientation=270
+
+            cell.add_port(bottom_conn)
+
+def add_pad(cell,pad,tags='top'):
+
+    if isinstance(tags,str):
+
+        tags=tuple([tags])
+
+    for tag in tags:
+
+        for name,port in cell.ports.items():
+
+            if tag==name:
+
+                pad.port=port
+
+                pad_ref=cell.add_ref(pad.draw())
+
+                pad_ref.connect('conn',destination=port)
+
+def attach_taper(cell : Device , port : Port , length : float , \
+    width2 : float, layer=LayoutDefault.layerTop) :
+
+    t=pg.taper(length=length,width1=port.width,width2=width2,layer=layer)
+
+    t_ref=cell.add_ref(t)
+
+    t_ref.connect(1,destination=port)
+
+    new_port=t_ref.ports[2]
+
+    new_port.name=port.name
+
+    cell.absorb(t_ref)
+
+    cell.remove(port)
+
+    cell.add_port(new_port)
+
+def add_vias(cell : Device, bbox, via : pt.LayoutPart, spacing : float = 0):
+
+    bbox_cell=pg.bbox(bbox)
+
+    nvias_x=int(np.floor(bbox_cell.xsize/(via.size+spacing)))
+
+    nvias_y=int(np.floor(bbox_cell.ysize/(via.size+spacing)))
+
+    if nvias_x==0 or nvias_y==0:
+
+        raise ValueError("Via is too large for bbox !")
+
+    via_cell=draw_array(via.draw(),
+        nvias_x,nvias_y,
+        row_spacing=spacing,
+        column_spacing=spacing)
+
+    via_cell.move(
+        origin=(via_cell.x,via_cell.y),
+        destination=(bbox_cell.x,bbox_cell.y))
+
+    tbr=[]
+
+    for elem in via_cell.references:
+
+        if not pt.is_cell_within(elem,cell):
+
+            tbr.append(elem)
+
+    via_cell.remove(tbr)
+
+    cell.add_ref(via_cell,alias="Vias")
 
 _allmodifiers=(Scaled,addVia,addPad,addPartialEtch,addProbe,addLargeGnd,array,fixture,n_paths)

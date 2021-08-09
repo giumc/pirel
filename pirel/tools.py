@@ -16,7 +16,7 @@ import warnings, re, pathlib, gdspy, pdb
 
 import phidl.geometry as pg
 
-from phidl.device_layout import Port,CellArray,Device
+from phidl.device_layout import Port,CellArray,Device,DeviceReference
 
 import phidl.device_layout as dl
 
@@ -649,8 +649,6 @@ class LayoutPart(ABC) :
 
             if not hasattr(self,param_name):
 
-                import pdb; pdb.set_trace()
-
                 raise AttributeError(f" no {param_name} in {self.__class__.__name__}")
 
             else:
@@ -702,8 +700,6 @@ class LayoutPart(ABC) :
         while not stable:
 
             pre_params=self.get_params()
-
-            # pdb.set_trace()
 
             df_noncall={key:value for key,value in df.items() if not callable(value)}
 
@@ -765,92 +761,6 @@ class LayoutPart(ABC) :
         df=Series(self.export_all())
 
         return df.to_string()
-
-def add_compass(device : Device) -> Device:
-    ''' add four ports at the bbox of a cell.
-
-    Parameters
-    ----------
-    device : phidl.Device
-
-    Returns
-    -------
-    device : phidl.Device.
-    '''
-
-    bound_cell=pg.compass(size=device.size).move(\
-    origin=(0,0),destination=device.center)
-
-    ports=port=bound_cell.get_ports()
-
-    device.add_port(port=ports[0],name='N')
-    device.add_port(port=ports[1],name='S')
-    device.add_port(port=ports[2],name='E')
-    device.add_port(port=ports[3],name='W')
-
-    return device
-
-def draw_array(
-    cell : Device, x : int, y : int,
-    row_spacing : float = 0 ,
-    column_spacing : float = 0 ) -> Device:
-
-    ''' returns a spaced matrix of identical cells, copying ports in the original cells.
-
-    Parameters
-    ----------
-    cell : phidl.Device
-
-    x : int
-        columns of copies
-
-    y : int
-        rows of copies
-
-    row_spacing: float
-
-    column_spacing: float
-
-    Returns
-    -------
-    cell : phidl.Device.
-    '''
-
-    new_cell=pg.Device(cell.name+"array")
-
-    cell_size=Point(cell.size)+Point(column_spacing,row_spacing)
-
-    cellmat=[]
-
-    ports=[]
-
-    for j in range(y):
-
-        cellvec=[]
-
-        for i in range(x):
-
-            cellvec.append(new_cell.add_ref(cell,alias=cell.name+str(i)+str(j)))
-
-            cellvec[i].move(
-                destination=(Point(cell_size.x*i,cell_size.y*j)).coord)
-
-            for p in cellvec[i].ports.values():
-
-                ports.append(Port(name=p.name+str(i),\
-                    midpoint=p.midpoint,\
-                    width=p.width,\
-                    orientation=p.orientation))
-
-        cellmat.append(cellvec)
-
-    for p in ports:
-
-        new_cell.add_port(p)
-
-    del cellmat
-
-    return new_cell
 
 def print_ports(device : Device):
     ''' print a list of ports in the cell.
@@ -1054,25 +964,6 @@ def cached(cls):
 
     return cache_dec
 
-def attach_taper(cell : Device , port : Port , length : float , \
-    width2 : float, layer=LayoutDefault.layerTop) :
-
-    t=pg.taper(length=length,width1=port.width,width2=width2,layer=layer)
-
-    t_ref=cell.add_ref(t)
-
-    t_ref.connect(1,destination=port)
-
-    new_port=t_ref.ports[2]
-
-    new_port.name=port.name
-
-    cell.absorb(t_ref)
-
-    cell.remove(port)
-
-    cell.add_port(new_port)
-
 def custom_formatwarning(msg, *args, **kwargs):
     # ignore everything except the message
     return str(msg) + '\n'
@@ -1262,102 +1153,44 @@ def image_to_gds(p : pathlib.Path ,
 
     nd.export_gds(filename=str(p.parent/p.stem)+'.gds', flat=True)
 
-def connect_ports(cell,tags='top',conn_dist=Point(0,100)):
+def is_cell_within(cell_in : Device ,cell_out : Device):
+    ''' Checks whether cell_in is contained in cell_out.
 
-    if isinstance(tags,str):
+    Parameters:
+    ---------
+    cell_in : Device
 
-        tags=tuple([tags])
+    cell_out : Device
 
-    import pirel.pcells as pc
+    Returns:
+        True (if strictly cell_in<cell_out)
+        False (otherwise).
+    '''
 
-    connector=pc.MultiRouting()
+    c_flat=pg.union(cell_out, by_layer=False, layer=100)
 
-    for tag in tags:
+    area_pre=c_flat.area()
 
-        if 'top' in tag:
+    if isinstance(cell_in,Device):
 
-            top_ports=[]
+        c_flat.add_ref(cell_in)
 
-            for name,port in cell.ports.items():
+    else:
 
-                if tag in name:
+        if isinstance(cell_in,DeviceReference):
 
-                    top_ports.append(port)
+            c_flat.add(cell_in)
 
-            top_conn=Port('top')
+    c_flat=pg.union(c_flat, by_layer=False, layer=100)
 
-            top_conn.width=top_ports[0].width
+    area_post=c_flat.area()
 
-            top_conn.midpoint=(Point(cell.x,cell.ymax)+conn_dist).coord
+    if area_pre >= area_post:
 
-            top_conn.orientation=270
+        return True
 
-            connector.source=tuple([top_conn])
+    else:
 
-            connector.destination=tuple(top_ports)
-
-            connector.trace_width=top_ports[0].width
-
-            connector.clearance=tuple(tuple(_) for _ in cell.bbox.tolist())
-
-            tracecell=connector.draw()
-
-            top_trace_ref=cell.add_ref(tracecell,alias='TopTrace')
-
-            top_conn.orientation=90
-
-            cell.add_port(top_conn)
-
-        if 'bottom' in tag:
-
-            bottom_conn=Port('bottom')
-
-            bottom_ports=[]
-
-            for name,port in cell.ports.items():
-
-                if tag in name:
-
-                    bottom_ports.append(port)
-
-            bottom_conn.width=bottom_ports[0].width
-
-            bottom_conn.midpoint=(Point(cell.x,cell.ymin)-conn_dist).coord
-
-            bottom_conn.orientation=90
-
-            connector.source=tuple([bottom_conn])
-
-            connector.destination=tuple(bottom_ports)
-
-            connector.trace_width=bottom_ports[0].width
-
-            connector.clearance=tuple(tuple(_) for _ in cell.bbox.tolist())
-
-            tracecell=connector.draw()
-
-            bottom_trace_ref=cell.add_ref(tracecell,alias='BottomTrace')
-
-            bottom_conn.orientation=270
-
-            cell.add_port(bottom_conn)
-
-def add_pad(cell,pad,tags='top'):
-
-    if isinstance(tags,str):
-
-        tags=tuple([tags])
-
-    for tag in tags:
-
-        for name,port in cell.ports.items():
-
-            if tag==name:
-
-                pad.port=port
-
-                pad_ref=cell.add_ref(pad.draw())
-
-                pad_ref.connect('conn',destination=port)
+        return False
 
 warnings.formatwarning = custom_formatwarning

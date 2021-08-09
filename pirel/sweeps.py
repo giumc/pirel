@@ -481,7 +481,7 @@ class PArray(LayoutPart):
 
                 NOTE: each of the x_param.names has to be a parameter of device.
 
-            dict_params : dict (default {})
+            base_params : dict (default {})
 
                 arguments of set_params() to be passed before each element in array is drawn.
 
@@ -506,7 +506,7 @@ class PArray(LayoutPart):
 
     x_param=_SweepParamValidator(LayoutDefault.Arrayx_param)
 
-    def __init__(self,device,x_param,dict_param={},*a,**k):
+    def __init__(self,device,x_param,base_params={},*a,**k):
 
         super().__init__(*a,**k)
 
@@ -514,7 +514,7 @@ class PArray(LayoutPart):
 
         self.x_param=x_param
 
-        self.dict_param=dict_param
+        self.base_params=base_params
 
         self.x_spacing=LayoutDefault.Arrayx_spacing
 
@@ -524,33 +524,10 @@ class PArray(LayoutPart):
 
         self.text_params=copy(TextParam())
 
-        # self.auto_labels()
-
     @property
     def device(self):
 
         return self._device
-
-    @device.setter
-    def device(self,value):
-
-        if not isinstance(value,LayoutPart):
-
-            raise Exception("{} is an invalid entry for object of {}".format(value,self.device.__class__.__name__))
-
-        else:
-
-            self._device=value
-
-            self.device.name=self.name
-
-    def get_params(self):
-
-        return self.device.get_params()
-
-    def export_all(self):
-
-        return self.device.export_all()
 
     @property
     def table(self):
@@ -593,6 +570,55 @@ class PArray(LayoutPart):
 
         return data_tot
 
+    @property
+    def base_params(self):
+
+        if hasattr(self,'_base_params'):
+
+            return self._base_params
+
+        else:
+
+            return {}
+
+    @base_params.setter
+    def base_params(self,vals):
+
+        if not isinstance(vals,dict):
+
+            raise ValueError(f"{self.__class__.__name__} base_params needs to be a dict, you passed a {vals.__class__.__name__}")
+
+        else:
+
+            for par_name in vals:
+
+                if not par_name in self.device.get_params():
+
+                    raise ValueError(f"{par_name} key not present in {self.device.__class__.__name__}")
+
+            self._base_params=vals
+
+    @device.setter
+    def device(self,value):
+
+        if not isinstance(value,LayoutPart):
+
+            raise Exception("{} is an invalid entry for object of {}".format(value,self.device.__class__.__name__))
+
+        else:
+
+            self._device=value
+
+            self.device.name=self.name
+
+    def get_params(self):
+
+        return self.device.get_params()
+
+    def export_all(self):
+
+        return self.device.export_all()
+
     def _set_params(self,df):
 
         self.device._set_params(df)
@@ -616,6 +642,10 @@ class PArray(LayoutPart):
             for name,value in zip(param.names,param.values):
 
                 df[name]=value[index]
+
+            if self.base_params:
+
+                device.set_params(self.base_params)
 
             device.set_params(df)
 
@@ -805,7 +835,7 @@ class PMatrix(PArray):
 
     def __init__(self,device,x_param,y_param,*a,**k):
 
-        super().__init__(device,x_param,*a,*k)
+        super().__init__(device,x_param,*a,**k)
         self.y_spacing=LayoutDefault.Matrixy_spacing
         self.y_param=y_param
         self.labels_top=None
