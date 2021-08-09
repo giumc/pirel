@@ -1,5 +1,3 @@
-import pdb
-
 from abc import ABC, abstractmethod
 
 from copy import copy,deepcopy
@@ -924,45 +922,45 @@ def get_class_param(cls : LayoutPart.__class__ ) -> list:
 
     return out_list
 
-def cached(cls):
+def pirel_cache(fun):
 
-    def cache_dec(fun):
+    from functools import wraps
 
-        from functools import wraps
+    @wraps(fun)
 
-        @wraps(fun)
+    def wrapper(self):
 
-        def wrapper(self):
+        import pdb; pdb.set_trace()
 
-            params=get_class_param(cls)
+        cls=fun.__class__
 
-            pop_all_match(params,'.*name*')
+        params=get_class_param(cls)
 
-            dict_name="_"+fun.__name__+"_lookup"
+        pop_all_match(params,'.*name*')
 
-            paramhash=_get_hashable_params(self,params)
+        dict_name="_"+fun.__name__+"_lookup"
 
-            if not hasattr(cls,dict_name):
+        paramhash=_get_hashable_params(self,params)
 
-                setattr(cls,dict_name,{})
+        if not hasattr(cls,dict_name):
 
-            dict_lookup=getattr(cls,dict_name)
+            setattr(cls,dict_name,{})
 
-            if paramhash in dict_lookup.keys():
+        dict_lookup=getattr(cls,dict_name)
 
-                return dict_lookup[paramhash]
+        if paramhash in dict_lookup.keys():
 
-            else:
+            return dict_lookup[paramhash]
 
-                xout=fun(self)
+        else:
 
-                dict_lookup[paramhash]=xout
+            xout=fun(self)
 
-                return xout
+            dict_lookup[paramhash]=xout
 
-        return wrapper
+            return xout
 
-    return cache_dec
+    return wrapper
 
 def custom_formatwarning(msg, *args, **kwargs):
     # ignore everything except the message
@@ -1185,12 +1183,24 @@ def is_cell_within(cell_in : Device ,cell_out : Device):
 
     area_post=c_flat.area()
 
-    if area_pre >= area_post:
+    if round(area_pre,3) >= round(area_post,3):
 
         return True
 
     else:
 
         return False
+
+def pick_callable_param(pars : dict):
+
+    out_pars={}
+
+    for key,value in pars.items():
+
+        if callable(value):
+
+            out_pars.update({key:value})
+
+    return out_pars
 
 warnings.formatwarning = custom_formatwarning

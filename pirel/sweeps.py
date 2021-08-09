@@ -464,7 +464,7 @@ class _SweepParamValidator:
 
         if isinstance(opts, str):
 
-            opts=list(opts)
+            opts=[opts]
 
         self._valid_names=opts
 
@@ -480,10 +480,6 @@ class PArray(LayoutPart):
             x_param : PyResLayout.SweepParam
 
                 NOTE: each of the x_param.names has to be a parameter of device.
-
-            base_params : dict (default {})
-
-                arguments of set_params() to be passed before each element in array is drawn.
 
         Attributes
         ----------
@@ -506,7 +502,7 @@ class PArray(LayoutPart):
 
     x_param=_SweepParamValidator(LayoutDefault.Arrayx_param)
 
-    def __init__(self,device,x_param,base_params={},*a,**k):
+    def __init__(self,device,x_param,base_params=None,*a,**k):
 
         super().__init__(*a,**k)
 
@@ -514,7 +510,9 @@ class PArray(LayoutPart):
 
         self.x_param=x_param
 
-        self.base_params=base_params
+        if base_params is not None:
+
+            self.base_params=base_params
 
         self.x_spacing=LayoutDefault.Arrayx_spacing
 
@@ -579,7 +577,7 @@ class PArray(LayoutPart):
 
         else:
 
-            return {}
+            return None
 
     @base_params.setter
     def base_params(self,vals):
@@ -643,11 +641,11 @@ class PArray(LayoutPart):
 
                 df[name]=value[index]
 
+            device.set_params(df)
+
             if self.base_params:
 
                 device.set_params(self.base_params)
-
-            device.set_params(df)
 
             new_cell=Device()
 
@@ -862,12 +860,6 @@ class PMatrix(PArray):
         x_param=self.x_param
 
         df={}
-
-        for key in df_original.keys():
-
-            if callable(df_original[key]):
-
-                df.update({key:df_original[key]})
 
         for index in range(len(y_param)):
 

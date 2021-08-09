@@ -34,6 +34,8 @@ def resistivity_test_cell():
 
         cell=join(cell)
 
+        cell.name='ResistivityTest'
+
         return cell
 
 def verniers(scale=[1, 0.5, 0.1],layers=[1,2],label='TE',text_size=20,reversed=False):

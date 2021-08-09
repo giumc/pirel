@@ -1008,7 +1008,7 @@ def n_paths(cls, pad=pc.Pad, probe=pc.GSGProbe, n=4):
 
             self.spacing=pt.Point(0,0)
 
-            self.comm_pad_length=0
+            self.comm_pad_length=0.0
 
             n_paths._set_relations(self)
 
@@ -1028,7 +1028,7 @@ def n_paths(cls, pad=pc.Pad, probe=pc.GSGProbe, n=4):
             out_cell=pg.Device(self.name)
 
             refs=[]
-            
+
             for n in range(1,self.n_copies+1):
 
                 refs.append(out_cell.add_ref(cell,alias='Device'+str(n)))
@@ -1055,24 +1055,6 @@ def n_paths(cls, pad=pc.Pad, probe=pc.GSGProbe, n=4):
                          destination=(out_cell.xmin,out_cell.ymin+(out_cell.ysize-self.comm_pad_length)/2))
 
             out_cell.add_ref(comm_pad,alias='CommPad')
-
-            # self.testdevice.set_params(self.get_params())
-
-            # test_device=self.testdevice
-
-            # g1=Group(out_cell.references)
-
-            # testdevice_cell=test_device.draw()
-
-            # test_ref1=out_cell.add_ref(testdevice_cell,alias='TestLeft')
-
-            # test_ref2=out_cell.add_ref(testdevice_cell,alias='TestRight')
-
-            # g2=Group(test_ref1,g1,test_ref2)
-#
-            # g2.distribute(direction='x')
-
-            # ps.dice(out_cell,width=50,layer=self.pad.layer,print_name=False)
 
             return out_cell
 
@@ -1120,8 +1102,6 @@ def n_paths(cls, pad=pc.Pad, probe=pc.GSGProbe, n=4):
                 pass
 
             self.pad.distance=0
-
-            # self.testdevice.set_params(self.get_params())
 
     n_paths.__name__=" ".join([f"{n} paths of",cls.__name__])
 
@@ -1361,6 +1341,16 @@ def add_vias(cell : Device, bbox, via : pt.LayoutPart, spacing : float = 0):
         if not pt.is_cell_within(elem,cell):
 
             tbr.append(elem)
+    #
+    # if len(tbr)==len(via_cell.references):
+    #
+    #     import pdb; pdb.set_trace()
+    #
+    #     for elem in via_cell.references:
+    #
+    #         if not pt.is_cell_within(elem,cell):
+    #
+    #             pass
 
     via_cell.remove(tbr)
 

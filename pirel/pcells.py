@@ -2023,3 +2023,5 @@ class ParasiticAwareMultiRouting(MultiRouting):
 
 _allclasses=(IDT,PartialEtchIDT,Bus,EtchPit,Anchor,Via,Routing,GSProbe,GSGProbe,Pad,MultiRouting,\
 ParasiticAwareMultiRouting,LFERes,FBERes,TFERes)
+
+# IDT.draw=pirel_cache(IDT.draw)
