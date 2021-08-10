@@ -10,7 +10,7 @@ from phidl import set_quickplot_options
 
 from phidl import quickplot as qp
 
-import warnings, re, pathlib, gdspy, pdb
+import warnings, re, pathlib, gdspy, pdb, functools, inspect
 
 import phidl.geometry as pg
 
@@ -20,9 +20,9 @@ import phidl.device_layout as dl
 
 from IPython import get_ipython
 
-if get_ipython() is not None:
-
-    get_ipython().run_line_magic('matplotlib', 'inline')
+# if get_ipython() is not None:
+#
+#     get_ipython().run_line_magic('matplotlib', 'inline')
 
 class Point:
     ''' Handles 2-d coordinates.
@@ -922,6 +922,39 @@ def get_class_param(cls : LayoutPart.__class__ ) -> list:
 
     return out_list
 
+def _get_class_that_defined_method(meth):
+    #from stackoverflow
+
+    import pdb; pdb.set_trace()
+    
+    if isinstance(meth, functools.partial):
+
+        return get_class_that_defined_method(meth.func)
+
+    if inspect.ismethod(meth) or (inspect.isbuiltin(meth) and getattr(meth, '__self__', None) is not None and getattr(meth.__self__, '__class__', None)):
+
+        for cls in inspect.getmro(meth.__self__.__class__):
+
+            if meth.__name__ in cls.__dict__:
+
+                return cls
+
+        meth = getattr(meth, '__func__', meth)  # fallback to __qualname__ parsing
+
+    if inspect.isfunction(meth):
+
+        cls = getattr(inspect.getmodule(meth),
+
+                      meth.__qualname__.split('.<locals>', 1)[0].rsplit('.', 1)[0],
+
+                      None)
+
+        if isinstance(cls, type):
+
+            return cls
+
+    return getattr(meth, '__objclass__', None)  # handle special descriptor objects
+
 def pirel_cache(fun):
 
     from functools import wraps
@@ -930,9 +963,7 @@ def pirel_cache(fun):
 
     def wrapper(self):
 
-        import pdb; pdb.set_trace()
-
-        cls=fun.__class__
+        cls=_get_class_that_defined_method(fun)
 
         params=get_class_param(cls)
 
@@ -950,9 +981,13 @@ def pirel_cache(fun):
 
         if paramhash in dict_lookup.keys():
 
+            print(f"found {cls.__name__} cell !")
+
             return dict_lookup[paramhash]
 
         else:
+
+            print(f"building {cls.__name__} cell !")
 
             xout=fun(self)
 

@@ -48,6 +48,7 @@ def Scaled(cls):
         def __init__(self,*args,**kwargs):
 
             cls.__init__(self,*args,**kwargs)
+
             self._normalized=False
 
         def _set_params(self,df):
@@ -127,8 +128,6 @@ def Scaled(cls):
             return self
 
     Scaled.__name__=" ".join(["Scaled",cls.__name__])
-
-    # Scaled.draw=cached(Scaled)(Scaled.draw)
 
     return Scaled
 
@@ -1356,4 +1355,4 @@ def add_vias(cell : Device, bbox, via : pt.LayoutPart, spacing : float = 0):
 
     cell.add_ref(via_cell,alias="Vias")
 
-_allmodifiers=(Scaled,addVia,addPad,addPartialEtch,addProbe,addLargeGnd,array,fixture,n_paths)
+_allmodifiers=(Scaled,addPad,addPartialEtch,addProbe,addLargeGnd,array,fixture,n_paths)

@@ -2021,7 +2021,9 @@ class ParasiticAwareMultiRouting(MultiRouting):
 
                 return res
 
-_allclasses=(IDT,PartialEtchIDT,Bus,EtchPit,Anchor,Via,Routing,GSProbe,GSGProbe,Pad,MultiRouting,\
-ParasiticAwareMultiRouting,LFERes,FBERes,TFERes)
+_allclasses=(IDT,PartialEtchIDT,Bus,EtchPit,Anchor,Via,Routing,GSProbe,GSGProbe,
+Pad,MultiLayerPad,ViaInPad,LFERes,FBERes,TFERes,MultiRouting,ParasiticAwareMultiRouting)
 
-# IDT.draw=pirel_cache(IDT.draw)
+for cls in _allclasses:
+
+    cls.draw=pirel_cache(cls.draw)
