@@ -575,21 +575,18 @@ class EtchPit(LayoutPart) :
         '''
         o=self.origin
 
-        b_main=Bus()
+        main=pg.rectangle(size=(self.x,self.active_area.y),
+            layer=self.layer)
 
-        b_main.origin=o
-
-        b_main.layer=self.layer
-
-        b_main.size=Point(self.x,self.active_area.y)
-
-        b_main.distance=Point(self.active_area.x+self.x,0)
-
-        main_etch=b_main.draw()
+        main.move(destination=o.coord)
 
         etch=Device(self.name)
 
-        etch.absorb(etch<<main_etch)
+        etch_lx=etch<<main
+
+        etch_rx=etch<<main
+
+        etch_rx.move(destination=(self.x+self.active_area.x,0))
 
         port_up=Port('top',\
         midpoint=(o+Point(self.x+self.active_area.x/2,self.active_area.y)).coord,\
@@ -603,8 +600,6 @@ class EtchPit(LayoutPart) :
 
         etch.add_port(port_up)
         etch.add_port(port_down)
-
-        del main_etch
 
         return etch
 

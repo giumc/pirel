@@ -20,9 +20,9 @@ import phidl.device_layout as dl
 
 from IPython import get_ipython
 
-# if get_ipython() is not None:
-#
-#     get_ipython().run_line_magic('matplotlib', 'inline')
+if get_ipython() is not None:
+
+    get_ipython().run_line_magic('matplotlib', 'inline')
 
 class Point:
     ''' Handles 2-d coordinates.
@@ -925,8 +925,6 @@ def get_class_param(cls : LayoutPart.__class__ ) -> list:
 def _get_class_that_defined_method(meth):
     #from stackoverflow
 
-    import pdb; pdb.set_trace()
-    
     if isinstance(meth, functools.partial):
 
         return get_class_that_defined_method(meth.func)
@@ -979,15 +977,12 @@ def pirel_cache(fun):
 
         dict_lookup=getattr(cls,dict_name)
 
-        if paramhash in dict_lookup.keys():
 
-            print(f"found {cls.__name__} cell !")
+        if paramhash in dict_lookup.keys():
 
             return dict_lookup[paramhash]
 
         else:
-
-            print(f"building {cls.__name__} cell !")
 
             xout=fun(self)
 

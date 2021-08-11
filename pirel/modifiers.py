@@ -337,8 +337,6 @@ def addVia(cls,side='top',bottom_conn=False):
 
     addVia.__name__=" ".join([cls.__name__,"w Via"])
 
-    # addVia.draw=cached(addVia)(addVia.draw)
-
     return addVia
 
 def addPad(cls, pad=pc.Pad, side='top'):
@@ -431,8 +429,6 @@ def addPad(cls, pad=pc.Pad, side='top'):
                 ll=ll+pt.Point(0,float(self.pad.size+self.pad.distance))
 
             return (ll.coord,ur.coord)
-
-    # addPad.draw=cached(addPad)(addPad.draw)
 
     addPad.__name__=" ".join([cls.__name__,"w Pad"])
 
