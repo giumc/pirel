@@ -972,6 +972,8 @@ class Pad(LayoutPart):
 
     layer=LayoutParamInterface()
 
+    port=LayoutParamInterface()
+
     def __init__(self,*args,**kwargs):
 
         super().__init__(*args,**kwargs)
@@ -1054,7 +1056,7 @@ class ViaInPad(Pad):
 
         via=self.via.draw()
 
-        cell=super().draw()
+        cell=pg.deepcopy(super().draw())
 
         viaref=cell.add_ref(via,alias="Via")
 
@@ -2022,3 +2024,5 @@ Pad,MultiLayerPad,ViaInPad,LFERes,FBERes,TFERes,MultiRouting,ParasiticAwareMulti
 for cls in _allclasses:
 
     cls.draw=pirel_cache(cls.draw)
+
+    cls() # to init _params_dict

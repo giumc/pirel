@@ -131,214 +131,6 @@ def Scaled(cls):
 
     return Scaled
 
-def addVia(cls,side='top',bottom_conn=False):
-    ''' Class decorator to add vias to resonators.
-
-    you can select side (top,bottom or both) and if keep the bottom pad of the via.
-
-    Parameters
-    ----------
-    cls : class
-        the class that needs vias
-
-    side : 'top','bottom', or iterable of both
-        decides the port to attach vias to.
-
-    bottom_conn : boolean
-        as the vias are drawn by default with top-bottom pads, you can decide here to
-        remove the second pad by default from all the designs.
-
-    Attributes
-    ----------
-
-        via : pirel.Via
-            instance of a pirel.Via class
-
-        pad_layers : lenght 2 iterable of int
-            top/bottom layers to draw vias pads
-
-        over_via : float
-            ratio pad size / via size
-
-        via_distance : float
-            y distance between connecting port and via center
-
-        via_area : pirel.Point
-            size (in coordinates) to be filled with vias.
-    '''
-
-    if isinstance(side,str):
-
-        side=[side]
-
-    side=[(_).lower() for _ in side]
-
-    class addVia(cls):
-
-        over_via=LayoutParamInterface()
-
-        via_distance=LayoutParamInterface()
-
-        via_area=LayoutParamInterface()
-
-        pad_layers=LayoutParamInterface()
-
-        def __init__(self,*args,**kwargs):
-
-            cls.__init__(self,*args,**kwargs)
-
-            self.pad_layers=[LayoutDefault.layerTop,LayoutDefault.layerBottom]
-
-            self.over_via=LayoutDefault.addVia_over_via
-
-            self.via_distance=LayoutDefault.addVia_via_distance
-
-            self.via_area=LayoutDefault.addVia_via_area
-
-        def draw(self):
-
-            cell=Device(name=self.name)
-
-            super_ref=cell.add_ref(cls.draw(self),alias='Device')
-
-            nvias_x,nvias_y=self.n_vias
-
-            unit_cell=self._draw_padded_via()
-
-            viacell=join(CellArray(unit_cell,\
-                columns=nvias_x,rows=nvias_y,\
-                spacing=(unit_cell.xsize,unit_cell.ysize)))
-
-            viacell.add_port(Port(name='conn',\
-                midpoint=(viacell.x,viacell.ymax),\
-                width=viacell.xsize,\
-                orientation=90))
-
-            for sides in side:
-
-                for p_name in super_ref.ports.keys():
-
-                    if re.search(sides,p_name):
-
-                        p=super_ref.ports[p_name]
-
-                        pad=pg.compass(size=(p.width,self.via_distance),layer=self.pad_layers[0])
-
-                        if sides=='top':
-
-                            self._attach_instance(cell, pad, pad.ports['S'], viacell,p)
-
-                        if sides=='bottom':
-
-                            self._attach_instance(cell, pad, pad.ports['N'], viacell,p)
-
-            for p_name,p_value in super_ref.ports.items():
-
-                cell.add_port(p_value)
-
-            return cell
-
-        def get_params(self):
-
-            t=cls.get_params(self)
-
-            pt.pop_all_dict(t,['ViaName'])
-
-            return t
-
-        def _bbox_mod(self,bbox):
-
-            LayoutPart._bbox_mod(self,bbox)
-
-            ll=pt.Point(bbox[0])
-
-            ur=pt.Point(bbox[1])
-
-            nvias_x,nvias_y=self.n_vias
-
-            if any([_=='top' for _ in side]):
-
-                ur=ur-pt.Point(0,float(self.via.size*self.over_via*nvias_y+self.via_distance))
-
-            if any([_=='bottom' for _ in side]):
-
-                ll=ll+pt.Point(0,float(self.via.size*self.over_via*nvias_y+self.via_distance))
-
-            return (ll.coord,ur.coord)
-
-        def _draw_padded_via(self):
-
-            viaref=DeviceReference(self.via.draw())
-
-            size=float(self.via.size*self.over_via)
-
-            port=viaref.ports['conn']
-
-            trace=pg.rectangle(size=(size,size),layer=self.pad_layers[0])
-
-            trace.move(origin=trace.center,\
-                destination=viaref.center)
-
-            trace2=pg.copy_layer(trace,layer=self.pad_layers[0],new_layer=self.pad_layers[1])
-
-            cell=Device(self.name)
-
-            cell.absorb(cell<<trace)
-
-            cell.absorb(cell<<trace2)
-
-            cell.add(viaref)
-
-            port.midpoint=(port.midpoint[0],cell.ymax)
-
-            port.width=size
-
-            cell.add_port(port)
-
-            if bottom_conn==False:
-
-                cell.remove_layers(layers=[self.pad_layers[1]])
-
-            return cell
-
-        def _attach_instance(self,cell,padcell,padport,viacell,port):
-
-            padref=cell<<padcell
-
-            padref.connect(padport,\
-                    destination=port)
-
-            cell.absorb(padref)
-
-            viaref=cell.add_ref(viacell,alias=self.name+'Via'+port.name)
-
-            viaref.connect(viacell.ports["conn"],\
-            destination=port,\
-            overlap=-self.via_distance)
-
-            return port
-
-        @staticmethod
-        def get_components():
-
-            supercomp=copy(cls.get_components())
-
-            supercomp.update({"Via":pc.Via})
-
-            return supercomp
-
-        @property
-        def n_vias(self):
-
-            nvias_x=max(1,int(np.floor(self.via_area.x/self.via.size/self.over_via)))
-            nvias_y=max(1,int(np.floor(self.via_area.y/self.via.size/self.over_via)))
-
-            return nvias_x,nvias_y
-
-    addVia.__name__=" ".join([cls.__name__,"w Via"])
-
-    return addVia
-
 def addPad(cls, pad=pc.Pad, side='top'):
     ''' Class decorator to add probing pads to existing cells.
         Parameters
@@ -495,9 +287,12 @@ def addProbe(cls,probe=pc.GSGProbe):
 
             routing_cell=self._draw_probe_routing()
 
-            add_vias(routing_cell,routing_cell.bbox,self.via,spacing=self.via.size*2)
+            routing_cell_vias=add_vias(routing_cell,
+                routing_cell.bbox,
+                self.via,
+                spacing=self.via.size*2)
 
-            cell.add_ref(routing_cell,alias=self.name+"GndTrace")
+            cell.add_ref(routing_cell_vias,alias=self.name+"GndTrace")
 
             return cell
 
@@ -682,8 +477,6 @@ def addProbe(cls,probe=pc.GSGProbe):
 
     addProbe.__name__=" ".join([cls.__name__,"w Probe"])
 
-    # addProbe.draw=cached(addProbe)(addProbe.draw)
-
     return addProbe
 
 def addLargeGnd(probe):
@@ -752,7 +545,7 @@ def addLargeGnd(probe):
                         if self.pad_position=='side':
 
                             left_port=Port(name=name,\
-                                midpoint=(left_port.midpoint[0]+self.ground_size/2,\
+                                midpoint=(left_port.midpoint[0]-self.ground_size/2,\
                                 left_port.midpoint[1]-self.ground_size/2),\
                                 orientation=180,\
                                 width=self.ground_size)
@@ -776,7 +569,7 @@ def addLargeGnd(probe):
                         if self.pad_position=='side':
 
                             right_port=Port(name=name,\
-                            midpoint=(right_port.midpoint[0]-self.ground_size/2,\
+                            midpoint=(right_port.midpoint[0]+self.ground_size/2,\
                                 right_port.midpoint[1]-self.ground_size/2),\
                             orientation=0,\
                             width=self.ground_size)
@@ -1044,12 +837,12 @@ def n_paths(cls, pad=pc.Pad, probe=pc.GSGProbe, n=4):
 
             comm_pad=pg.rectangle(size=(out_cell.xsize,self.comm_pad_length),layer=self.pad.layer)
 
-            add_vias(comm_pad,comm_pad.bbox,self.via,self.via.size*2)
+            comm_pad_via=add_vias(comm_pad,comm_pad.bbox,self.via,self.via.size*2)
 
-            comm_pad.move(origin=(comm_pad.xmin,comm_pad.ymin),
+            comm_pad_via.move(origin=(comm_pad.xmin,comm_pad.ymin),
                          destination=(out_cell.xmin,out_cell.ymin+(out_cell.ysize-self.comm_pad_length)/2))
 
-            out_cell.add_ref(comm_pad,alias='CommPad')
+            out_cell.add_ref(comm_pad_via,alias='CommPad')
 
             return out_cell
 
@@ -1169,7 +962,7 @@ def draw_array(
 
         for i in range(x):
 
-            cellvec.append(new_cell.add_ref(cell,alias=cell.name+str(i)+str(j)))
+            cellvec.append(new_cell.add_ref(cell,alias=cell.name+'_'+str(i)+'_'+str(j)))
 
             cellvec[i].move(
                 destination=(pt.Point(cell_size.x*i,cell_size.y*j)).coord)
@@ -1186,8 +979,12 @@ def draw_array(
     for p in ports:
 
         new_cell.add_port(p)
-
-    del cellmat
+    #
+    # for cellvec in cellmat:
+    #
+    #     for dr in cellvec:
+    #
+    #         new_cell.absorb(dr)
 
     return new_cell
 
@@ -1336,19 +1133,13 @@ def add_vias(cell : Device, bbox, via : pt.LayoutPart, spacing : float = 0):
         if not pt.is_cell_within(elem,cell):
 
             tbr.append(elem)
-    #
-    # if len(tbr)==len(via_cell.references):
-    #
-    #     import pdb; pdb.set_trace()
-    #
-    #     for elem in via_cell.references:
-    #
-    #         if not pt.is_cell_within(elem,cell):
-    #
-    #             pass
 
     via_cell.remove(tbr)
 
-    cell.add_ref(via_cell,alias="Vias")
+    cell_out=deepcopy(cell)
+
+    cell_out.add_ref(via_cell,alias="Vias")
+
+    return cell_out
 
 _allmodifiers=(Scaled,addPad,addPartialEtch,addProbe,addLargeGnd,array,fixture,n_paths)

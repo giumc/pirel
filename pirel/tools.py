@@ -22,7 +22,11 @@ from IPython import get_ipython
 
 if get_ipython() is not None:
 
+    import matplotlib.pyplot as plt
+
     get_ipython().run_line_magic('matplotlib', 'inline')
+
+    plt.rcParams["figure.figsize"]=15,15
 
 class Point:
     ''' Handles 2-d coordinates.
@@ -906,7 +910,53 @@ def parallel_res(*args) -> float:
 
     return 1/sum_y
 
-def get_class_param(cls : LayoutPart.__class__ ) -> list:
+def pirel_cache(fun):
+
+    from functools import wraps
+
+    @wraps(fun)
+
+    def wrapper(self):
+
+        cls=_get_class_that_defined_method(fun)
+
+        params=_get_class_param(cls)
+
+        pop_all_match(params,'.*name*')
+
+        dict_name="_"+fun.__name__+"_lookup"
+
+        paramhash=_get_hashable_params(self,params)
+
+        if not hasattr(cls,dict_name):
+
+            setattr(cls,dict_name,{})
+
+        dict_lookup=getattr(cls,dict_name)
+
+        if paramhash in dict_lookup.keys():
+
+            # print(f"found {cls.__name__} cell")
+
+            return dict_lookup[paramhash]
+
+        else:
+
+            # print(f"build {cls.__name__} cell")
+
+            xout=fun(self)
+
+            dict_lookup[paramhash]=xout
+
+            return xout
+
+    return wrapper
+
+def custom_formatwarning(msg, *args, **kwargs):
+    # ignore everything except the message
+    return str(msg) + '\n'
+
+def _get_class_param(cls : LayoutPart.__class__ ) -> list:
 
     out_list=[]
 
@@ -916,9 +966,7 @@ def get_class_param(cls : LayoutPart.__class__ ) -> list:
 
                 out_list.append(p.lstrip('_'))
 
-    for p,c in cls.get_components().items():
-
-        [out_list.append(p+x) for x in get_class_param(c)]
+    [out_list.append(x.lower()) for x in cls.get_components()]
 
     return out_list
 
@@ -953,49 +1001,6 @@ def _get_class_that_defined_method(meth):
 
     return getattr(meth, '__objclass__', None)  # handle special descriptor objects
 
-def pirel_cache(fun):
-
-    from functools import wraps
-
-    @wraps(fun)
-
-    def wrapper(self):
-
-        cls=_get_class_that_defined_method(fun)
-
-        params=get_class_param(cls)
-
-        pop_all_match(params,'.*name*')
-
-        dict_name="_"+fun.__name__+"_lookup"
-
-        paramhash=_get_hashable_params(self,params)
-
-        if not hasattr(cls,dict_name):
-
-            setattr(cls,dict_name,{})
-
-        dict_lookup=getattr(cls,dict_name)
-
-
-        if paramhash in dict_lookup.keys():
-
-            return dict_lookup[paramhash]
-
-        else:
-
-            xout=fun(self)
-
-            dict_lookup[paramhash]=xout
-
-            return xout
-
-    return wrapper
-
-def custom_formatwarning(msg, *args, **kwargs):
-    # ignore everything except the message
-    return str(msg) + '\n'
-
 def _get_hashable_params( obj : LayoutPart , params : list) ->tuple:
 
     paramdict={}
@@ -1004,15 +1009,21 @@ def _get_hashable_params( obj : LayoutPart , params : list) ->tuple:
 
         value=getattr(obj,name)
 
-        try:
+        if isinstance(value, LayoutPart ):
 
-            port_list=tuple([(p.name,Point(p.midpoint).coord,p.width,p.orientation) for p in value])
+            paramdict.update({name:_get_hashable_params(value,_get_class_param(value.__class__))})
 
-            paramdict.update({name:port_list})
+        else:
 
-        except Exception:
+            try:
 
-            paramdict.update({name:value})
+                port_list=tuple([(p.name,Point(p.midpoint).coord,p.width,p.orientation) for p in value])
+
+                paramdict.update({name:port_list})
+
+            except Exception:
+
+                paramdict.update({name:value})
 
     return tuple(paramdict.items())
 
