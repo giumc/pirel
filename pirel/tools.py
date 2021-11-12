@@ -1,7 +1,5 @@
 from abc import ABC, abstractmethod
 
-from copy import copy,deepcopy
-
 import numpy as np
 
 from pandas import Series,DataFrame
@@ -688,13 +686,14 @@ class LayoutPart(ABC) :
                 setattr(self,param_key,Point(old_point.x,df[param_label+"Y"]))
 
     def set_params(self,df):
-        ''' Set instance parameters in a dict.
+        ''' Set instance parameters, passed from a dict.
 
         Parameters
         ----------
         df : dict.
 
-            Note: dict values can be functions of self.
+            Note: dict value can be a function.
+            In that case, it has to be function of self, so to set the parameter in a dynamic fashion.
 
         '''
         stable=False
@@ -726,6 +725,15 @@ class LayoutPart(ABC) :
                 stable=True
 
     def export_all(self):
+        ''' Exports all cell parameters.
+
+        Returns
+        ----------
+        df : dict.
+
+            Note: dict values can be function of self.
+
+        '''
 
         df=self.get_params()
 
@@ -736,6 +744,31 @@ class LayoutPart(ABC) :
         modkeys=[*df.keys()]
 
         # pop_all_match(modkeys,".*Layer*")
+
+        pop_all_dict(df,[item for item in [*df.keys()] if item not in modkeys])
+
+        return df
+
+    def export_summary(self):
+        ''' Exports summary of cell parameters.
+
+        Returns
+        ----------
+        df : dict.
+
+            Note: dict values can be function of self.
+
+        '''
+
+        df=self.get_params()
+
+        modkeys=[*df.keys()]
+
+        pop_all_match(modkeys,".*Layer*")
+
+        pop_all_match(modkeys,".*Resistance*")
+
+        pop_all_match(modkeys,".*Capacitance*")
 
         pop_all_dict(df,[item for item in [*df.keys()] if item not in modkeys])
 
@@ -760,7 +793,7 @@ class LayoutPart(ABC) :
 
     def __repr__(self):
 
-        df=Series(self.export_all())
+        df=Series(self.export_summary())
 
         return df.to_string()
 
@@ -1192,33 +1225,72 @@ def image_to_gds(p : pathlib.Path ,
 
     nd.export_gds(filename=str(p.parent/p.stem)+'.gds', flat=True)
 
-def is_cell_within(cell_in : Device ,cell_out : Device):
-    ''' Checks whether cell_in is contained in cell_out.
+def is_cell_within(
+    cell_test : Device ,
+    cell_ref : Device,
+    tolerance: float =0):
+    ''' Checks whether cell_test is contained in cell_ref.
 
     Parameters:
     ---------
-    cell_in : Device
+    cell_test : Device
 
-    cell_out : Device
+    cell_ref : Device
+
+    tolerance : float (optional)
 
     Returns:
-        True (if strictly cell_in<cell_out)
+        True (if strictly cell_test<cell_ref)
         False (otherwise).
+
+    Note:
+        if tolerance is not zero, then function returns True if cell<cell_ref+-tolerance
+        in all direction
     '''
 
-    c_flat=pg.union(cell_out, by_layer=False, layer=100)
+    if tolerance==0:
 
-    area_pre=c_flat.area()
-
-    if isinstance(cell_in,Device):
-
-        c_flat.add_ref(cell_in)
+        return _is_cell_within(cell_test,cell_ref)
 
     else:
 
-        if isinstance(cell_in,DeviceReference):
+        shifts_set=np.array([[1,1],[-1,-1],[1,-1],[-1,1]])*tolerance
 
-            c_flat.add(cell_in)
+        for shift in shifts_set:
+
+            cell_test.move(destination=shift)
+
+            if not _is_cell_within(
+                cell_test,
+                cell_ref):
+
+                cell_test.move(destination=-shift)
+
+                return False
+
+            else:
+
+                cell_test.move(destination=-shift)
+
+        else:
+
+            return True
+
+def _is_cell_within(cell_test,cell_ref):
+
+    c_flat=pg.union(cell_ref, by_layer=False, layer=100)
+
+    area_pre=c_flat.area()
+
+    if isinstance(cell_test,Device):
+
+        c_flat.add_ref(cell_test)
+
+    else:
+
+        if isinstance(cell_test,DeviceReference):
+
+            c_flat.add(cell_test)
 
     c_flat=pg.union(c_flat, by_layer=False, layer=100)
 

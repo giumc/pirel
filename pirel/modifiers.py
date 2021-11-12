@@ -290,8 +290,9 @@ def addProbe(cls,probe=pc.GSGProbe):
             routing_cell_vias=add_vias(routing_cell,
                 routing_cell.bbox,
                 self.via,
-                spacing=self.via.size*2)
-
+                spacing=self.via.size*2,
+                tolerance=self.via.size*1.5)
+                
             cell.add_ref(routing_cell_vias,alias=self.name+"GndTrace")
 
             return cell
@@ -656,7 +657,7 @@ def array(cls,n=2):
 
                 if n_blocks%2==1 :
 
-                    return parallel_res(r+l/w,(r+2*x_dist/l)/(n_blocks-1))
+                    return pt.parallel_res(r+l/w,(r+2*x_dist/l)/(n_blocks-1))
 
                 if n_blocks%2==0 :
 
@@ -666,7 +667,7 @@ def array(cls,n=2):
 
                     else:
 
-                        return parallel_res((r+x_dist/l)/2,(r+2*x_dist/l)/(n_blocks-2))
+                        return pt.parallel_res((r+x_dist/l)/2,(r+2*x_dist/l)/(n_blocks-2))
 
         def export_all(self):
 
@@ -1105,7 +1106,30 @@ def attach_taper(cell : Device , port : Port , length : float , \
 
     cell.add_port(new_port)
 
-def add_vias(cell : Device, bbox, via : pt.LayoutPart, spacing : float = 0):
+def add_vias(cell : Device, bbox, via : pt.LayoutPart, spacing : float = 0,tolerance: float = 0):
+
+    ''' adds via pattern to cell with constraints.
+
+    Parameters:
+    -----------
+
+    cell : Device
+        where the vias will be located
+
+    bbox : iterable
+        x,y coordinates of box ll and ur to define vias patterns size
+
+    via : pt.LayoutPart
+
+    spacing : float
+
+    tolerance : float (default 0)
+        if not 0, used to determine via distance from target object border
+
+    Returns:
+    --------
+    cell_out : Device
+    '''
 
     bbox_cell=pg.bbox(bbox)
 
@@ -1130,7 +1154,7 @@ def add_vias(cell : Device, bbox, via : pt.LayoutPart, spacing : float = 0):
 
     for elem in via_cell.references:
 
-        if not pt.is_cell_within(elem,cell):
+        if not pt.is_cell_within(elem,cell,tolerance):
 
             tbr.append(elem)
 
