@@ -2014,6 +2014,7 @@ class ParasiticAwareMultiRouting(MultiRouting):
 
                 return res
 
+class
 _allclasses=(IDT,PartialEtchIDT,Bus,EtchPit,Anchor,Via,Routing,GSProbe,GSGProbe,
 Pad,MultiLayerPad,ViaInPad,LFERes,FBERes,TFERes,MultiRouting,ParasiticAwareMultiRouting)
 

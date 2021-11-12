@@ -588,7 +588,7 @@ def addLargeGnd(probe):
 
     return addLargeGnd
 
-def array(cls,n=2):
+def makeArray(cls,n=2):
 
     if not isinstance(n,int):
 
@@ -672,7 +672,7 @@ def array(cls,n=2):
 
     return array
 
-def fixture(cls,style='open'):
+def makeFixture(cls,style='open'):
 
     class fixture(cls):
 
@@ -762,7 +762,7 @@ def fixture(cls,style='open'):
 
     return fixture
 
-def n_paths(cls, pad=pc.Pad, probe=pc.GSGProbe, n=4):
+def makeNpaths(cls, pad=pc.Pad, probe=pc.GSGProbe, n=4):
 
     if not isinstance(n,int):
 
@@ -918,8 +918,7 @@ def draw_array(
     x : int, y : int,
     row_spacing : float = 0 ,
     column_spacing : float = 0 ) -> Device:
-
-    ''' returns a spaced matrix of identical cells, copying ports in the original cells.
+    ''' returns a spaced matrix of identical cells, including ports in the output cell.
 
     Parameters
     ----------
@@ -981,6 +980,17 @@ def draw_array(
     return new_cell
 
 def connect_ports(cell,tags='top',conn_dist=pt.Point(0,100)):
+    ''' connects all the ports in the cell with name matching a tag.
+
+    Parameters:
+    -----------
+        cell : Device
+
+        tags: tuple of str
+
+        conn_dist: pt.Point
+            offset from port location.
+    '''
 
     if isinstance(tags,str):
 
