@@ -249,17 +249,17 @@ def addPartialEtch(cls):
 def addOnePortProbe(cls,probe=pc.GSGProbe):
 
     class OnePortProbed(cls):
-    ''' adds a one port probe to existing LayoutClass.
+        ''' adds a one port probe to existing LayoutClass.
 
-    Parameters:
-    -----------
-        cls : pt.LayoutPart
-            the layout drawn with this LayoutPart needs to have
-            a 'bottom' and 'top' port.
+        Parameters:
+        -----------
+            cls : pt.LayoutPart
+                the layout drawn with this LayoutPart needs to have
+                a 'bottom' and 'top' port.
 
-        probe: pt.LayoutPart
-            currently working only on pc.GSGProbe.
-    '''
+            probe: pt.LayoutPart
+                currently working only on pc.GSGProbe.
+        '''
 
         gnd_routing_width=LayoutParamInterface()
 
@@ -289,13 +289,19 @@ def addOnePortProbe(cls,probe=pc.GSGProbe):
 
             routing_cell=self._draw_probe_routing()
 
-            routing_cell_vias=add_vias(routing_cell,
-                routing_cell.bbox,
-                self.via,
-                spacing=self.via.size*2,
-                tolerance=self.via.size*1.5)
+            if hasattr(self,'via'):
 
-            cell.add_ref(routing_cell_vias,alias=self.name+"GroundTrace")
+                routing_cell_vias=add_vias(routing_cell,
+                    routing_cell.bbox,
+                    self.via,
+                    spacing=self.via.size*2,
+                    tolerance=self.via.size*1.5)
+
+                cell.add_ref(routing_cell_vias,alias=self.name+"GroundTrace")
+
+            else:
+
+                cell.add_ref(routing_cell,alias=self.name+"GroundTrace")
 
             return cell
 
@@ -930,6 +936,14 @@ def makeTwoPortProbe(cls):
 
             p2.move(destination=self.offset.coord)
 
+            for n,p in p1.ports.items():
+
+                cell.add_port(port=p,name=n+'_1')
+
+            for n,p in p2.ports.items():
+
+                cell.add_port(port=p,name=n+'_2')
+
             return cell
 
     TwoPort.__name__=f"Two Port {cls.__name__}"
@@ -944,6 +958,28 @@ def addTwoPortProbe(cls,probe=makeTwoPortProbe(pc.GSGProbe)):
 
             super().__init__(*a,**kw)
 
+        def draw(self):
+
+            self._setup_routings()
+
+            device_cell=cls.draw(self)
+
+            probe_cell=self.probe.draw()
+
+            cell=Device(name=self.name)
+
+            cell.add_ref(device_cell, alias=self.name+"Device")
+
+            probe_ref=cell.add_ref(probe_cell, alias=self.name+"Probe")
+
+            self._move_probe_ref(probe_ref)
+
+            return cell
+
+        def _draw_probe_routing(self):
+
+            return Device()
+
         def _setup_routings(self):
 
             device_cell=cls.draw(self)
@@ -952,15 +988,34 @@ def addTwoPortProbe(cls,probe=makeTwoPortProbe(pc.GSGProbe)):
 
             bottom_port=device_cell.ports['bottom']
 
+            top_port_midpoint=pt.Point(top_port.midpoint)
+            bottom_port_midpoint=pt.Point(bottom_port.midpoint)
+
+            self.probe.offset=pt.Point(
+                (top_port_midpoint.x+bottom_port_midpoint.x)/2,
+                (top_port_midpoint.y-bottom_port_midpoint.y))
+
             probe_cell=self.probe.draw()
 
             probe_ref=self._move_probe_ref(DeviceReference(probe_cell))
 
             bbox=super()._bbox_mod(device_cell.bbox)
 
+        def _move_probe_ref(self,probe_ref):
+
+            probe_dut_distance=self.probe_dut_distance
+
+            device_cell=cls.draw(self)
+
+            bottom_port=device_cell.ports['bottom']
+
+            # probe_ref.connect()
+            return probe_ref
+
     TwoPortProbed.__name__=f"TwoPortProbed {cls.__name__} with {probe.__name__}"
 
     return TwoPortProbed
+
 # Device decorator
 
 def add_compass(device : Device) -> Device:
