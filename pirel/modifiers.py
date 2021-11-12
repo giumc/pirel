@@ -249,6 +249,17 @@ def addPartialEtch(cls):
 def addOnePortProbe(cls,probe=pc.GSGProbe):
 
     class OnePortProbed(cls):
+    ''' adds a one port probe to existing LayoutClass.
+
+    Parameters:
+    -----------
+        cls : pt.LayoutPart
+            the layout drawn with this LayoutPart needs to have
+            a 'bottom' and 'top' port.
+
+        probe: pt.LayoutPart
+            currently working only on pc.GSGProbe.
+    '''
 
         gnd_routing_width=LayoutParamInterface()
 
@@ -925,6 +936,31 @@ def makeTwoPortProbe(cls):
 
     return TwoPort
 
+def addTwoPortProbe(cls,probe=makeTwoPortProbe(pc.GSGProbe)):
+
+    class TwoPortProbed(addOnePortProbe(cls,probe)):
+
+        def __init__(self,*a,**kw):
+
+            super().__init__(*a,**kw)
+
+        def _setup_routings(self):
+
+            device_cell=cls.draw(self)
+
+            top_port=device_cell.ports['top']
+
+            bottom_port=device_cell.ports['bottom']
+
+            probe_cell=self.probe.draw()
+
+            probe_ref=self._move_probe_ref(DeviceReference(probe_cell))
+
+            bbox=super()._bbox_mod(device_cell.bbox)
+
+    TwoPortProbed.__name__=f"TwoPortProbed {cls.__name__} with {probe.__name__}"
+
+    return TwoPortProbed
 # Device decorator
 
 def add_compass(device : Device) -> Device:
