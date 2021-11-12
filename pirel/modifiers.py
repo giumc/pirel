@@ -22,7 +22,7 @@ from copy import copy,deepcopy
 
 # Classes decorators
 
-def Scaled(cls):
+def makeScaled(cls):
 
     ''' Class Decorator that accept normalized parameters for resonator designs.
 
@@ -594,7 +594,7 @@ def makeArray(cls,n=2):
 
         raise ValueError(" n needs to be integer")
 
-    class makeArray(cls):
+    class Array(cls):
 
         n_blocks=LayoutParamInterface()
 
@@ -668,13 +668,13 @@ def makeArray(cls,n=2):
 
             return df
 
-    makeArray.__name__= " ".join([f"{n} array of",cls.__name__])
+    Array.__name__= " ".join([f"{n} array of",cls.__name__])
 
-    return makeArray
+    return Array
 
 def makeFixture(cls,style='open'):
 
-    class makeFixture(cls):
+    class Fixture(cls):
 
         style=LayoutParamInterface('short','open')
 
@@ -758,9 +758,9 @@ def makeFixture(cls,style='open'):
 
                 return l/w
 
-    makeFixture.__name__=f"fixture for {cls.__name__}"
+    Fixture.__name__=f"fixture for {cls.__name__}"
 
-    return makeFixture
+    return Fixture
 
 def makeNpaths(cls, pad=pc.Pad, probe=pc.GSGProbe, n=4):
 
@@ -772,7 +772,7 @@ def makeNpaths(cls, pad=pc.Pad, probe=pc.GSGProbe, n=4):
 
         raise ValueError(f"pad needs to be a LayoutPart, {pad.__class__.__name__} was passed")
 
-    class makeNpaths(cls):
+    class Npaths(cls):
 
         n_copies=LayoutParamInterface()
 
@@ -883,9 +883,9 @@ def makeNpaths(cls, pad=pc.Pad, probe=pc.GSGProbe, n=4):
 
             self.pad.distance=0
 
-    makeNpaths.__name__=" ".join([f"{n} paths of",cls.__name__])
+    Npaths.__name__=" ".join([f"{n} paths of",cls.__name__])
 
-    return makeNpaths
+    return Npaths
 
 # Device decorator
 
