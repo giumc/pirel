@@ -594,7 +594,7 @@ def makeArray(cls,n=2):
 
         raise ValueError(" n needs to be integer")
 
-    class array(cls):
+    class makeArray(cls):
 
         n_blocks=LayoutParamInterface()
 
@@ -668,13 +668,13 @@ def makeArray(cls,n=2):
 
             return df
 
-    array.__name__= " ".join([f"{n} array of",cls.__name__])
+    makeArray.__name__= " ".join([f"{n} array of",cls.__name__])
 
-    return array
+    return makeArray
 
 def makeFixture(cls,style='open'):
 
-    class fixture(cls):
+    class makeFixture(cls):
 
         style=LayoutParamInterface('short','open')
 
@@ -758,9 +758,9 @@ def makeFixture(cls,style='open'):
 
                 return l/w
 
-    fixture.__name__=f"fixture for {cls.__name__}"
+    makeFixture.__name__=f"fixture for {cls.__name__}"
 
-    return fixture
+    return makeFixture
 
 def makeNpaths(cls, pad=pc.Pad, probe=pc.GSGProbe, n=4):
 
@@ -772,7 +772,7 @@ def makeNpaths(cls, pad=pc.Pad, probe=pc.GSGProbe, n=4):
 
         raise ValueError(f"pad needs to be a LayoutPart, {pad.__class__.__name__} was passed")
 
-    class n_paths(cls):
+    class makeNpaths(cls):
 
         n_copies=LayoutParamInterface()
 
@@ -790,11 +790,11 @@ def makeNpaths(cls, pad=pc.Pad, probe=pc.GSGProbe, n=4):
 
             self.comm_pad_length=0.0
 
-            n_paths._set_relations(self)
+            makeNpaths._set_relations(self)
 
         def draw(self):
 
-            n_paths._set_relations(self)
+            makeNpaths._set_relations(self)
 
             cell=pg.deepcopy(cls.draw(self))
 
@@ -883,9 +883,9 @@ def makeNpaths(cls, pad=pc.Pad, probe=pc.GSGProbe, n=4):
 
             self.pad.distance=0
 
-    n_paths.__name__=" ".join([f"{n} paths of",cls.__name__])
+    makeNpaths.__name__=" ".join([f"{n} paths of",cls.__name__])
 
-    return n_paths
+    return makeNpaths
 
 # Device decorator
 
@@ -1175,4 +1175,4 @@ def attach_taper(cell : Device , port : Port , length : float , \
 
     cell.add_port(new_port)
 
-_allmodifiers=(Scaled,addPad,addPartialEtch,addProbe,addLargeGnd,array,fixture,n_paths)
+_allmodifiers=(Scaled,addPad,addPartialEtch,addProbe,addLargeGnd,makeArray,makeFixture,makeNpaths)
