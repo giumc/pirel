@@ -328,19 +328,10 @@ class LayoutDefault:
     Padport=Port(name='top',midpoint=(50,50),width=100,\
         orientation=-90)
 
-    #PaddedVia
+    #TwoPortProbe
 
-    PaddedVia_over_via=2.0
-    #array
-
-    arraybusextlength=30.0
-
-    #addVia
-
-    addVia_over_via=2.0
-    addVia_via_area=Point(100,100)
-    addVia_via_distance=40
-
+    TwoPortProbeoffset=Point(0,200)
+    
 class _LayoutParam:
 
     def __init__(self,name,value):

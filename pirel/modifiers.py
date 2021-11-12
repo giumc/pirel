@@ -153,7 +153,7 @@ def addPad(cls, pad=pc.Pad, side='top'):
 
         side=[side]
 
-    class addPad(cls):
+    class Padded(cls):
 
         def __init__(self,*args,**kwargs):
 
@@ -213,13 +213,13 @@ def addPad(cls, pad=pc.Pad, side='top'):
 
             return (ll.coord,ur.coord)
 
-    addPad.__name__=" ".join([cls.__name__,"w Pad"])
+    Padded.__name__=" ".join([cls.__name__,"w Pad"])
 
-    return addPad
+    return Padded
 
 def addPartialEtch(cls):
 
-    class addPartialEtch(cls):
+    class PartialEtched(cls):
 
         @staticmethod
         def get_components():
@@ -240,15 +240,15 @@ def addPartialEtch(cls):
 
             return original_comp
 
-    return addPartialEtch
+    return PartialEtched
 
-    # addPartialEtch.draw=cached(addPartialEtch)(addPartialEtch.draw)
+    # PartialEtched.draw=cached(PartialEtched)(PartialEtched.draw)
 
     adddPartialEtch.__name__=cls.__name__+' w PartialEtching'
 
-def addProbe(cls,probe=pc.GSGProbe):
+def addOnePortProbe(cls,probe=pc.GSGProbe):
 
-    class addProbe(cls):
+    class OnePortProbed(cls):
 
         gnd_routing_width=LayoutParamInterface()
 
@@ -284,7 +284,7 @@ def addProbe(cls,probe=pc.GSGProbe):
                 spacing=self.via.size*2,
                 tolerance=self.via.size*1.5)
 
-            cell.add_ref(routing_cell_vias,alias=self.name+"GndTrace")
+            cell.add_ref(routing_cell_vias,alias=self.name+"GroundTrace")
 
             return cell
 
@@ -443,11 +443,11 @@ def addProbe(cls,probe=pc.GSGProbe):
 
             elif isinstance(self.probe,pc.GSProbe):
 
-                raise ValueError("addProbe with GSprobe to be implemented ")
+                raise ValueError("OnePortProbed with GSprobe to be implemented ")
 
             else:
 
-                raise ValueError("addProbe without GSG/GSprobe to be implemented ")
+                raise ValueError("OnePortProbed without GSG/GSprobe to be implemented ")
 
         def _draw_probe_routing(self):
 
@@ -467,13 +467,13 @@ def addProbe(cls,probe=pc.GSGProbe):
 
                 raise ValueError("To be implemented")
 
-    addProbe.__name__=" ".join([cls.__name__,"w Probe"])
+    OnePortProbed.__name__=" ".join([cls.__name__,"w Probe"])
 
-    return addProbe
+    return OnePortProbed
 
-def addLargeGnd(probe):
+def addLargeGround(probe):
 
-    class addLargeGnd(probe):
+    class LargeGrounded(probe):
 
         ground_size=LayoutParamInterface()
 
@@ -582,11 +582,11 @@ def addLargeGnd(probe):
 
             return cell
 
-    # addLargeGnd.draw=pt.cached(addLargeGnd)(addLargeGnd.draw)
+    # LargeGnd.draw=pt.cached(LargeGnd)(LargeGnd.draw)
 
-    addLargeGnd.__name__=" ".join([probe.__name__,"w Large Ground"])
+    LargeGrounded.__name__=" ".join([probe.__name__,"w Large Ground"])
 
-    return addLargeGnd
+    return LargeGrounded
 
 def makeArray(cls,n=2):
 
@@ -594,7 +594,7 @@ def makeArray(cls,n=2):
 
         raise ValueError(" n needs to be integer")
 
-    class Array(cls):
+    class Arrayed(cls):
 
         n_blocks=LayoutParamInterface()
 
@@ -668,9 +668,9 @@ def makeArray(cls,n=2):
 
             return df
 
-    Array.__name__= " ".join([f"{n} array of",cls.__name__])
+    Arrayed.__name__= " ".join([f"{n} array of",cls.__name__])
 
-    return Array
+    return Arrayed
 
 def makeFixture(cls,style='open'):
 
@@ -772,7 +772,7 @@ def makeNpaths(cls, pad=pc.Pad, probe=pc.GSGProbe, n=4):
 
         raise ValueError(f"pad needs to be a LayoutPart, {pad.__class__.__name__} was passed")
 
-    class Npaths(cls):
+    class NpathsOf(cls):
 
         n_copies=LayoutParamInterface()
 
@@ -844,7 +844,7 @@ def makeNpaths(cls, pad=pc.Pad, probe=pc.GSGProbe, n=4):
             pars=copy(cls.get_components())
 
             pars.update({
-            # "TestDevice":addProbe(cls,probe),
+            # "TestDevice":OnePortProbed(cls,probe),
             "Pad":pad,"Via":pc.Via})
 
             return pars
@@ -883,9 +883,47 @@ def makeNpaths(cls, pad=pc.Pad, probe=pc.GSGProbe, n=4):
 
             self.pad.distance=0
 
-    Npaths.__name__=" ".join([f"{n} paths of",cls.__name__])
+    NpathsOf.__name__=" ".join([f"{n} paths of",cls.__name__])
 
-    return Npaths
+    return NpathsOf
+
+def makeTwoPortProbe(cls):
+
+    class TwoPort(cls):
+
+        offset=LayoutParamInterface()
+
+        def __init__(self,*a,**kw):
+
+            if not issubclass(cls,(pc.GSGProbe,pc.GSProbe)):
+
+                raise TypeError(f"passed probe class is invalid ({cls.__name__})")
+
+            cls.__init__(self,*a,*kw)
+
+            self.offset=LayoutDefault.TwoPortProbeoffset
+
+        def draw(self):
+
+            cell=Device(name=self.name)
+
+            probe_cell=super().draw()
+
+            p1=cell.add_ref(probe_cell,alias='Port1')
+
+            p2=cell.add_ref(probe_cell,alias='Port2')
+
+            p2.rotate(
+                center=(p1.x,p1.ymax),
+                angle=180)
+
+            p2.move(destination=self.offset.coord)
+
+            return cell
+
+    TwoPort.__name__=f"Two Port {cls.__name__}"
+
+    return TwoPort
 
 # Device decorator
 
@@ -1175,4 +1213,4 @@ def attach_taper(cell : Device , port : Port , length : float , \
 
     cell.add_port(new_port)
 
-_allmodifiers=(Scaled,addPad,addPartialEtch,addProbe,addLargeGnd,makeArray,makeFixture,makeNpaths)
+_allmodifiers=(makeScaled,Padded,addPartialEtch,addOnePortProbe,addLargeGround,makeArray,makeFixture,makeNpaths)
