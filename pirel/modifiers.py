@@ -169,16 +169,7 @@ def addPad(cls, pad=pc.Pad, side='top'):
 
                 cell.add_port(port)
 
-            for name,port in d_ref.ports.items():
-
-                if any(_ in name for _ in side):
-
-                    self.pad.port=port
-
-                    pad_ref=cell.add_ref(self.pad.draw(),alias='Pad'+port.name)
-
-                    pad_ref.connect(pad_ref.ports['conn'],
-                        destination=port)
+            add_pad(cell,self.pad,side)
 
             return cell
 
@@ -292,7 +283,7 @@ def addProbe(cls,probe=pc.GSGProbe):
                 self.via,
                 spacing=self.via.size*2,
                 tolerance=self.via.size*1.5)
-                
+
             cell.add_ref(routing_cell_vias,alias=self.name+"GndTrace")
 
             return cell
@@ -1070,7 +1061,17 @@ def connect_ports(cell,tags='top',conn_dist=pt.Point(0,100)):
             cell.add_port(bottom_conn)
 
 def add_pad(cell,pad,tags='top'):
+    ''' add pad designs to a cell, connecting it to selected ports.
 
+    Parameters:
+    -----------
+        cell : Device
+
+        pad : pt.LayoutPart
+
+        tags : iterable of str
+            used to find ports
+    '''
     if isinstance(tags,str):
 
         tags=tuple([tags])
@@ -1079,7 +1080,7 @@ def add_pad(cell,pad,tags='top'):
 
         for name,port in cell.ports.items():
 
-            if tag==name:
+            if tag in name:
 
                 pad.port=port
 
