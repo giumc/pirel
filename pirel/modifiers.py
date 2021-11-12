@@ -269,13 +269,13 @@ def addOnePortProbe(cls,probe=pc.GSGProbe):
 
             self.gnd_routing_width=100.0
 
-            self._setup_routings()
+            self._setup_routings(cls.draw(self))
 
         def draw(self):
 
-            self._setup_routings()
-
             device_cell=cls.draw(self)
+
+            self._setup_routings(device_cell)
 
             probe_cell=self.probe.draw()
 
@@ -360,36 +360,23 @@ def addOnePortProbe(cls,probe=pc.GSGProbe):
 
             return self.idt.probe_distance
 
-        def _move_probe_ref(self,probe_ref):
+        def _move_probe_ref(self,device_cell,probe_ref):
 
             probe_dut_distance=self.probe_dut_distance
 
-            device_cell=cls.draw(self)
-
-            for p_name in device_cell.ports.keys():
-
-                if re.search('bottom',p_name):
-
-                    probe_ref.move(origin=(probe_ref.center[0],probe_ref.ymax),\
-                    destination=(\
-                        device_cell.center[0],\
-                        device_cell.ports[p_name].midpoint[1]-probe_dut_distance.y))
-
-                    break
-
-            else:
-
-                raise ValueError(f"no bottom port in {cls.__name__} cell")
+            probe_ref.move(
+                origin=(probe_ref.center[0],probe_ref.ymax),
+                destination=(
+                    device_cell.center[0],
+                    device_cell.ports['bottom'].midpoint[1]-probe_dut_distance.y))
 
             return probe_ref
 
-        def _setup_routings(self):
-
-            device_cell=cls.draw(self)
+        def _setup_routings(self,device_cell):
 
             probe_cell=self.probe.draw()
 
-            probe_ref=self._move_probe_ref(DeviceReference(probe_cell))
+            probe_ref=self._move_probe_ref(device_cell,DeviceReference(probe_cell))
 
             bbox=super()._bbox_mod(device_cell.bbox)
 
@@ -960,9 +947,9 @@ def addTwoPortProbe(cls,probe=makeTwoPortProbe(pc.GSGProbe)):
 
         def draw(self):
 
-            self._setup_routings()
-
             device_cell=cls.draw(self)
+
+            self._setup_routings(device_cell)
 
             probe_cell=self.probe.draw()
 
@@ -972,7 +959,7 @@ def addTwoPortProbe(cls,probe=makeTwoPortProbe(pc.GSGProbe)):
 
             probe_ref=cell.add_ref(probe_cell, alias=self.name+"Probe")
 
-            self._move_probe_ref(probe_ref)
+            self._move_probe_ref(device_cell,probe_ref)
 
             return cell
 
@@ -980,37 +967,32 @@ def addTwoPortProbe(cls,probe=makeTwoPortProbe(pc.GSGProbe)):
 
             return Device()
 
-        def _setup_routings(self):
-
-            device_cell=cls.draw(self)
+        def _setup_routings(self,device_cell):
 
             top_port=device_cell.ports['top']
 
             bottom_port=device_cell.ports['bottom']
 
             top_port_midpoint=pt.Point(top_port.midpoint)
+
             bottom_port_midpoint=pt.Point(bottom_port.midpoint)
 
             self.probe.offset=pt.Point(
-                (top_port_midpoint.x+bottom_port_midpoint.x)/2,
-                (top_port_midpoint.y-bottom_port_midpoint.y))
+                (top_port_midpoint.x-bottom_port_midpoint.x),
+                (top_port_midpoint.y-bottom_port_midpoint.y)+
+                2*self.probe_dut_distance.y)
 
-            probe_cell=self.probe.draw()
-
-            probe_ref=self._move_probe_ref(DeviceReference(probe_cell))
-
-            bbox=super()._bbox_mod(device_cell.bbox)
-
-        def _move_probe_ref(self,probe_ref):
+        def _move_probe_ref(self,device_cell,probe_ref):
 
             probe_dut_distance=self.probe_dut_distance
 
-            device_cell=cls.draw(self)
-
             bottom_port=device_cell.ports['bottom']
 
-            # probe_ref.connect()
-            return probe_ref
+            top_port=probe_ref.ports['sig_1']
+
+            probe_ref.connect(top_port,
+                destination=bottom_port,
+                overlap=-probe_dut_distance.y)
 
     TwoPortProbed.__name__=f"TwoPortProbed {cls.__name__} with {probe.__name__}"
 
