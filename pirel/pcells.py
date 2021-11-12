@@ -1054,15 +1054,11 @@ class ViaInPad(MultiLayerPad):
 
     def draw(self):
 
-        via=self.via.draw()
+        from pirel.modifiers import add_vias
 
         cell=pg.deepcopy(super().draw())
 
-        viaref=cell.add_ref(via,alias="Via")
-
-        viaref.connect('conn',destination=cell.ports['conn'])
-
-        viaref.move(destination=(0,self.size/2+self.distance))
+        add_vias(cell,cell.bbox,self.via,self.via.size*2,self.via.size)
 
         return cell
 

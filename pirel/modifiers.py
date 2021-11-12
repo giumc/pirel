@@ -1088,25 +1088,6 @@ def add_pads(cell,pad,tags='top'):
 
                 pad_ref.connect('conn',destination=port)
 
-def attach_taper(cell : Device , port : Port , length : float , \
-    width2 : float, layer=LayoutDefault.layerTop) :
-
-    t=pg.taper(length=length,width1=port.width,width2=width2,layer=layer)
-
-    t_ref=cell.add_ref(t)
-
-    t_ref.connect(1,destination=port)
-
-    new_port=t_ref.ports[2]
-
-    new_port.name=port.name
-
-    cell.absorb(t_ref)
-
-    cell.remove(port)
-
-    cell.add_port(new_port)
-
 def add_vias(cell : Device, bbox, via : pt.LayoutPart, spacing : float = 0,tolerance: float = 0):
 
     ''' adds via pattern to cell with constraints.
@@ -1161,10 +1142,27 @@ def add_vias(cell : Device, bbox, via : pt.LayoutPart, spacing : float = 0,toler
 
     via_cell.remove(tbr)
 
-    cell_out=deepcopy(cell)
+    cell.add_ref(via_cell,alias="Vias")
 
-    cell_out.add_ref(via_cell,alias="Vias")
+    # return cell_out
 
-    return cell_out
+def attach_taper(cell : Device , port : Port , length : float , \
+    width2 : float, layer=LayoutDefault.layerTop) :
+
+    t=pg.taper(length=length,width1=port.width,width2=width2,layer=layer)
+
+    t_ref=cell.add_ref(t)
+
+    t_ref.connect(1,destination=port)
+
+    new_port=t_ref.ports[2]
+
+    new_port.name=port.name
+
+    cell.absorb(t_ref)
+
+    cell.remove(port)
+
+    cell.add_port(new_port)
 
 _allmodifiers=(Scaled,addPad,addPartialEtch,addProbe,addLargeGnd,array,fixture,n_paths)
