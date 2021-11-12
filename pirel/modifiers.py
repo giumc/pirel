@@ -1213,4 +1213,4 @@ def attach_taper(cell : Device , port : Port , length : float , \
 
     cell.add_port(new_port)
 
-_allmodifiers=(makeScaled,Padded,addPartialEtch,addOnePortProbe,addLargeGround,makeArray,makeFixture,makeNpaths)
+_allmodifiers=(makeScaled,addPad,addPartialEtch,addOnePortProbe,addLargeGround,makeArray,makeFixture,makeNpaths)
