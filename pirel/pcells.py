@@ -1050,7 +1050,7 @@ class MultiLayerPad(Pad):
 
         return cell
 
-class ViaInPad(Pad):
+class ViaInPad(MultiLayerPad):
 
     def draw(self):
 

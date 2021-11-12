@@ -169,7 +169,7 @@ def addPad(cls, pad=pc.Pad, side='top'):
 
                 cell.add_port(port)
 
-            add_pad(cell,self.pad,side)
+            add_pads(cell,self.pad,side)
 
             return cell
 
@@ -803,7 +803,7 @@ def n_paths(cls, pad=pc.Pad, probe=pc.GSGProbe, n=4):
                 conn_dist=self.idt.probe_distance,
                 tags='top')
 
-            add_pad(cell,self.pad,tags='top')
+            add_pads(cell,self.pad,tags='top')
 
             out_cell=pg.Device(self.name)
 
@@ -1060,7 +1060,7 @@ def connect_ports(cell,tags='top',conn_dist=pt.Point(0,100)):
 
             cell.add_port(bottom_conn)
 
-def add_pad(cell,pad,tags='top'):
+def add_pads(cell,pad,tags='top'):
     ''' add pad designs to a cell, connecting it to selected ports.
 
     Parameters:
