@@ -269,7 +269,7 @@ def addOnePortProbe(cls,probe=pc.GSGProbe):
 
             self.gnd_routing_width=100.0
 
-            self._setup_routings(cls.draw(self))
+            self._setup_routings(cls.draw(self),self.probe.draw())
 
         def draw(self):
 
@@ -372,9 +372,7 @@ def addOnePortProbe(cls,probe=pc.GSGProbe):
 
             return probe_ref
 
-        def _setup_routings(self,device_cell):
-
-            probe_cell=self.probe.draw()
+        def _setup_routings(self,device_cell,probe_cell):
 
             probe_ref=self._move_probe_ref(device_cell,DeviceReference(probe_cell))
 
@@ -929,7 +927,19 @@ def makeTwoPortProbe(cls):
 
             for n,p in p2.ports.items():
 
-                cell.add_port(port=p,name=n+'_2')
+                if 'left' in n:
+
+                    cell.add_port(port=p,name=n.replace('left','right')+'_2')
+
+                else:
+
+                    if 'right' in n:
+
+                        cell.add_port(port=p,name=n.replace('right','left')+'_2')
+
+                    else:
+
+                        cell.add_port(port=p,name=n+'_2')
 
             return cell
 
@@ -949,8 +959,6 @@ def addTwoPortProbe(cls,probe=makeTwoPortProbe(pc.GSGProbe)):
 
             device_cell=cls.draw(self)
 
-            self._setup_routings(device_cell)
-
             probe_cell=self.probe.draw()
 
             cell=Device(name=self.name)
@@ -961,13 +969,35 @@ def addTwoPortProbe(cls,probe=makeTwoPortProbe(pc.GSGProbe)):
 
             self._move_probe_ref(device_cell,probe_ref)
 
+            self._setup_routings(device_cell,probe_ref)
+
+            probe_routing_cell=self._draw_probe_routing()
+
+            cell.add_ref(probe_routing_cell, alias=self.name+"ProbeRouting")
+
             return cell
 
         def _draw_probe_routing(self):
 
-            return Device()
+            if isinstance(self.probe,pc.GSGProbe):
 
-        def _setup_routings(self,device_cell):
+                routing_cell=Device()
+
+                routing_cell<<self.gndlefttrace.draw()
+
+                routing_cell<<self.gndrighttrace.draw()
+
+                routing_cell<<self.sig1trace.draw()
+
+                routing_cell<<self.sig2trace.draw()
+
+                return routing_cell
+
+            else :
+
+                raise ValueError("To be implemented")
+
+        def _setup_routings(self,device_cell,probe_cell):
 
             top_port=device_cell.ports['top']
 
@@ -982,6 +1012,88 @@ def addTwoPortProbe(cls,probe=makeTwoPortProbe(pc.GSGProbe)):
                 (top_port_midpoint.y-bottom_port_midpoint.y)+
                 2*self.probe_dut_distance.y)
 
+            bbox=super()._bbox_mod(device_cell.bbox)
+
+            if isinstance(self.probe,pc.GSGProbe):
+
+                #ground routing setup
+                for index,groundroute in enumerate([self.gndlefttrace,self.gndrighttrace]):
+
+                    groundroute.layer=self.probe.layer
+
+                    groundroute.clearance=bbox
+
+                    groundroute.trace_width=self.gnd_routing_width
+
+                    if index==0:
+
+                        groundroute.side='left'
+
+                        groundroute.source=(probe_cell.ports['gnd_left_1'],)
+
+                        groundroute.destination=(probe_cell.ports['gnd_left_2'],)
+
+                    elif index==1:
+
+                        groundroute.side='right'
+
+                        groundroute.source=(probe_cell.ports['gnd_right_1'],)
+
+                        groundroute.destination=(probe_cell.ports['gnd_right_2'],)
+
+                #signal routing
+                for index,sigroute in enumerate([self.sig1trace,self.sig2trace]):
+
+                    sigroute.side='auto'
+
+                    if index==0:
+
+                        sigroute.source=(probe_cell.ports['sig_1'],)
+
+                        dest_port=[]
+
+                        for port_name,cell_port in probe_cell.ports.items():
+
+                            if 'bottom' in port_name:
+
+                                dest_port.append(cell_port)
+
+                        sigroute.source=(probe_cell.ports['sig_1'],)
+
+                        sigroute.destination=tuple(dest_port)
+
+                        sigroute.trace_width=device_cell.ports['bottom'].width
+
+                    elif index==1:
+
+                        sigroute.source=(probe_cell.ports['sig_2'],)
+
+                        dest_port=[]
+
+                        for port_name,cell_port in probe_cell.ports.items():
+
+                            if 'top' in port_name:
+
+                                dest_port.append(cell_port)
+
+                        sigroute.source=(probe_cell.ports['sig_2'],)
+
+                        sigroute.destination=tuple(dest_port)
+
+                        sigroute.trace_width=device_cell.ports['top'].width
+
+                    sigroute.layer=self.probe.layer
+
+                    sigroute.clearance=bbox
+
+            elif isinstance(self.probe,pc.GSProbe):
+
+                raise ValueError("OnePortProbed with GSprobe to be implemented ")
+
+            else:
+
+                raise ValueError("OnePortProbed without GSG/GSprobe to be implemented ")
+
         def _move_probe_ref(self,device_cell,probe_ref):
 
             probe_dut_distance=self.probe_dut_distance
@@ -993,6 +1105,18 @@ def addTwoPortProbe(cls,probe=makeTwoPortProbe(pc.GSGProbe)):
             probe_ref.connect(top_port,
                 destination=bottom_port,
                 overlap=-probe_dut_distance.y)
+
+        def get_components(self):
+
+            supercomp=copy(super().get_components())
+
+            supercomp.pop("SigTrace")
+
+            supercomp.update({
+                "Sig1Trace":pc.ParasiticAwareMultiRouting,
+                "Sig2Trace":pc.ParasiticAwareMultiRouting})
+
+            return supercomp
 
     TwoPortProbed.__name__=f"TwoPortProbed {cls.__name__} with {probe.__name__}"
 

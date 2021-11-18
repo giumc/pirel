@@ -18,6 +18,7 @@ from phidl import Path,CrossSection
 
 import os
 
+
 import gdspy
 
 import numpy as np
@@ -1530,8 +1531,6 @@ class Routing(LayoutPart):
 
         x.add(layer=self.layer,width=self.trace_width)
 
-        import pdb; pdb.set_trace()
-
         path_cell=join(x.extrude(p,simplify=0.1))
 
         path_cell.name=self.name
@@ -1557,7 +1556,7 @@ class Routing(LayoutPart):
 
         if Point(source.midpoint).in_box(bbox.bbox) :
 
-            raise ValueError(f" Source of routing {source.midport} is in clearance area {bbox.bbox}")
+            raise ValueError(f" Source of routing {source.midpoint} is in clearance area {bbox.bbox}")
 
         if Point(destination.midpoint).in_box(bbox.bbox):
 
@@ -1605,7 +1604,7 @@ class Routing(LayoutPart):
 
                             raise ValueError("error in +0 source, rx path")
 
-                if source.orientation==90 :
+                if source.orientation==90 : 
 
                     if source.x+self.trace_width>ll.x and source.x-self.trace_width<lr.x: #source tucked inside clearance
 
@@ -1789,6 +1788,8 @@ class MultiRouting(Routing):
 
         p=[]
 
+        import pdb; pdb.set_trace()
+
         for s in self.source:
 
             for d in self.destination:
@@ -1819,13 +1820,7 @@ class MultiRouting(Routing):
 
             r.destination=d
 
-            try:
-
-                return r.path
-
-            except Exception as e:
-
-                raise e
+            return r.path
 
     def _draw_frame(self):
 
