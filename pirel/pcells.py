@@ -1604,7 +1604,7 @@ class Routing(LayoutPart):
 
                             raise ValueError("error in +0 source, rx path")
 
-                if source.orientation==90 : 
+                if source.orientation==90 :
 
                     if source.x+self.trace_width>ll.x and source.x-self.trace_width<lr.x: #source tucked inside clearance
 
@@ -1736,24 +1736,18 @@ class Routing(LayoutPart):
 
         return cell_frame
 
-    def _draw_non_hindered_path(self,source,destination):
+    def _draw_non_hindered_path(self,s,d):
 
-        if not(destination.orientation==source.orientation+180 or \
-            destination.orientation==source.orientation-180):
+        distance=Point(d.midpoint)-\
+            Point(s.midpoint)
 
-                raise Exception("Routing error: non-hindered routing needs +90 -> -90 oriented ports")
+        p1=Point(s.midpoint)
 
-        distance=Point(destination.midpoint)-\
-            Point(source.midpoint)
+        p1_proj=p1+s.normal*abs(distance)/5
 
-        p1=Point(source.midpoint)
+        p2_proj=p2+s.normal*abs(distance)/5
 
-        p1a=p1+Point(0,distance.y/5)
-        p2=p1a+Point(distance.x,distance.y*(3/5))
-
-        p3=p2+Point(0,distance.y/5)
-
-        list_points=_check_points_path(p1,p1a,p2,p3,trace_width=self.trace_width)
+        list_points=_check_points_path(p1,p1_proj,p2_proj,p2,trace_width=self.trace_width)
 
         try:
 
