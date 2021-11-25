@@ -169,6 +169,8 @@ def addPad(cls, pad=pc.Pad, side='top'):
 
                 cell.add_port(port)
 
+            import pdb; pdb.set_trace()
+
             add_pads(cell,self.pad,side)
 
             return cell
@@ -999,13 +1001,15 @@ def addTwoPortProbe(cls,probe=makeTwoPortProbe(pc.GSGProbe)):
 
         def _setup_routings(self,device_cell,probe_cell):
 
-            top_port=device_cell.ports['top']
+            import pdb; pdb.set_trace()
 
-            bottom_port=device_cell.ports['bottom']
+            top_port=[p for p in device_cell.port if 'top' in p.name]
 
-            top_port_midpoint=pt.Point(top_port.midpoint)
+            bottom_port=[p for p in device_cell.port if 'bottom' in p.name]
 
-            bottom_port_midpoint=pt.Point(bottom_port.midpoint)
+            top_port_midpoint=pt._get_centroid(top_port)
+
+            bottom_port_midpoint=pt._get_centroid(bottom_port)
 
             self.probe.offset=pt.Point(
                 (top_port_midpoint.x-bottom_port_midpoint.x),
@@ -1317,6 +1321,9 @@ def add_pads(cell,pad,tags='top'):
         tags : iterable of str
             used to find ports
     '''
+
+    import pdb; pdb.set_trace()
+
     if isinstance(tags,str):
 
         tags=tuple([tags])

@@ -1370,6 +1370,17 @@ def _get_cell_area(cell):
 
     return c_flat.area()
 
+def _get_centroid(*points):
+
+    x_c=0
+    y_c=0
+
+    for p in points:
+
+        x_c=x_c+p.x
+        y_c=y_c+p.y
+
+    return Point(x_c,y_c)/length(p)
 
 def pick_callable_param(pars : dict):
 

@@ -18,7 +18,6 @@ from phidl import Path,CrossSection
 
 import os
 
-
 import gdspy
 
 import numpy as np
@@ -1492,6 +1491,8 @@ class Routing(LayoutPart):
 
     _tol=1e-3
 
+    _simplification=10
+
     clearance= LayoutParamInterface()
 
     side=LayoutParamInterface('left','right','auto')
@@ -1527,206 +1528,62 @@ class Routing(LayoutPart):
 
         p=self.path
 
-        x=CrossSection()
-
-        x.add(layer=self.layer,width=self.trace_width)
-
-        path_cell=join(x.extrude(p,simplify=0.1))
+        path_cell=self._make_path_cell(p)
 
         path_cell.name=self.name
 
         return path_cell
 
+    def _make_path_cell(self,p):
+
+        x=CrossSection()
+
+        x.add(layer=self.layer,width=self.trace_width)
+
+        return join(x.extrude(p,simplify=self._simplification))
+
     @property
     def path(self):
 
-        bbox=pg.bbox(self.clearance)
+        s=self.source
 
-        ll,lr,ul,ur=get_corners(bbox)
+        d=self.destination
 
-        source=self.source
+        if Point(s.midpoint).in_box(self.clearance) :
 
-        destination=self.destination
+            raise ValueError(f" Source of routing {s.midpoint} is in clearance area {bbox.bbox}")
 
-        if source.y>destination.y:
+        if Point(d.midpoint).in_box(self.clearance):
 
-            source=copy(self.destination)
+            raise ValueError(f" Destination of routing{d.midpoint} is in clearance area{bbox.bbox}")
 
-            destination=copy(self.source)
+        try:
 
-        if Point(source.midpoint).in_box(bbox.bbox) :
+            p=_draw_non_hindered_path(s,d)
 
-            raise ValueError(f" Source of routing {source.midpoint} is in clearance area {bbox.bbox}")
+            return p
 
-        if Point(destination.midpoint).in_box(bbox.bbox):
+        except:
 
-            raise ValueError(f" Destination of routing{destination.midpoint} is in clearance area{bbox.bbox}")
+            try:
 
-        if destination.y<=ll.y+self._tol  : # destination is below clearance
+                if s.orientation==0 :
 
-            p=self._draw_non_hindered_path(source,destination)
+                    p=self._draw_hindered_path(s,d,'right')
 
-        else: #destination is above clearance
+                elif s.orientation==90 :
 
-            if source.y>ul.y-self._tol: #source is above clearance:
+                     p=self._draw_hindered_path(s,d,'auto')
 
-                p=self._draw_non_hindered_path(source,destination)
+                elif s.orientation==180 :
 
-            else: #hindered case
+                    p=self._draw_hindered_path(s,d,'left')
 
-                if not destination.orientation==90 :
+                return p
 
-                    raise ValueError("Routing case not covered yet")
+            except:
 
-                elif source.orientation==0 : #right pad
-
-                        source.name='source'
-
-                        destination.name='destination'
-
-                        p0=Point(source.midpoint)
-
-                        p1=Point(ur.x+self.trace_width,p0.y)
-
-                        p2=Point(p1.x,ur.y+self.trace_width)
-
-                        p3=Point(destination.x,p2.y)
-
-                        p4=Point(destination.x,destination.y)
-
-                        list_points_rx=_check_points_path(p0,p1,p2,p3,p4,trace_width=self.trace_width)
-
-                        try:
-
-                            p=pp.smooth(points=list_points_rx,radius=self._radius,num_pts=self._num_pts)
-
-                        except Exception :
-
-                            raise ValueError("error in +0 source, rx path")
-
-                if source.orientation==90 :
-
-                    if source.x+self.trace_width>ll.x and source.x-self.trace_width<lr.x: #source tucked inside clearance
-
-                        p0=Point(source.midpoint)
-
-                        center_box=Point(bbox.center)
-
-                        #left path
-                        p1=p0-Point(0,source.width/2)
-
-                        p2=Point(ll.x-self.trace_width,p1.y)
-
-                        p3=Point(p2.x,self.trace_width+destination.y)
-
-                        p4=Point(destination.x,p3.y)
-
-                        p5=Point(destination.x,destination.y)
-
-                        list_points_lx=_check_points_path(p0,p1,p2,p3,p4,p5,trace_width=self.trace_width)
-
-                        try:
-
-                            p_lx=pp.smooth(points=list_points_lx,radius=self._radius,num_pts=self._num_pts)
-
-                        except:
-
-                            raise ValueError("error in +90 hindered tucked path, lx path")
-
-                        #right path
-
-                        p1=p0-Point(0,source.width/2)
-
-                        p2=Point(lr.x+self.trace_width,p1.y)
-
-                        p3=Point(p2.x,self.trace_width+destination.y)
-
-                        p4=Point(destination.x,p3.y)
-
-                        p5=Point(destination.x,destination.y)
-
-                        list_points_rx=_check_points_path(p0,p1,p2,p3,p4,p5,trace_width=self.trace_width)
-
-                        try:
-
-                            p_rx=pp.smooth(points=list_points_rx,radius=self._radius,num_pts=self._num_pts)
-
-                        except:
-
-                            raise ValueError("error in +90 source, rx path")
-
-                        if self.side=='auto':
-
-                            if p_lx.length()<p_rx.length():
-
-                                p=p_lx
-
-                            else:
-
-                                p=p_rx
-
-                        elif self.side=='left':
-
-                            p=p_lx
-
-                        elif self.side=='right':
-
-                            p=p_rx
-
-                        else:
-
-                            raise ValueError("Invalid option for side :{}".format(self.side))
-
-                    else:   # source is not tucked under the clearance
-
-                        p0=Point(source.midpoint)
-
-                        ll,lr,ul,ur=get_corners(bbox)
-
-                        center_box=Point(bbox.center)
-
-                        #left path
-                        p1=Point(p0.x,destination.y+self.trace_width)
-
-                        p2=Point(destination.x,p1.y)
-
-                        p3=Point(destination.x,destination.y)
-
-                        list_points=_check_points_path(p0,p1,p2,p3,trace_width=self.trace_width)
-
-                        try:
-
-                            p=pp.smooth(points=list_points,radius=self._radius,num_pts=self._num_pts)#source tucked inside clearance
-
-                        except Exception:
-
-                            raise ValueError("error for non-tucked hindered p ,90 deg")
-
-                elif source.orientation==180 : #left path
-
-                    p0=Point(source.midpoint)
-
-                    p1=Point(ll.x-self.trace_width,p0.y)
-
-                    p2=Point(p1.x,ur.y+self.trace_width)
-
-                    p3=Point(destination.x,p2.y)
-
-                    p4=Point(destination.x,destination.y)
-
-                    list_points_lx=_check_points_path(p0,p1,p2,p3,p4,trace_width=self.trace_width)
-
-                    try:
-
-                        p=pp.smooth(points=list_points_lx,radius=self._radius,num_pts=self._num_pts)
-
-                    except Exception:
-
-                        import pdb; pdb.set_trace()
-
-                        raise ValueError("error in +180 source, lx path")
-
-        return p
+                import pdb; pdb.set_trace()
 
     def _draw_with_frame(self):
 
@@ -1758,6 +1615,48 @@ class Routing(LayoutPart):
             raise ValueError("error for non-hindered path ")
 
         return p
+
+    def _draw_hindered_path(self,s,d,side='auto'):
+
+        ll,lr,ul,ur=get_corners(self.clearance)
+
+        if side=='auto':
+
+            path1=self._draw_hindered_path(s,d,'left')
+
+            path2=self._draw_hindered_path(s,d,'right')
+
+            if path2.length()<path1.length() : return path2
+
+            else : return path1
+
+        p0=Point(s.midpoint)
+
+        if side=='left':
+
+            p1=Point(ll.x-self.trace_width,p0.y)
+
+        elif side=='right':
+
+            p1=Point(lr.x+self.trace_width,p0.y)
+
+        p2=Point(p1.x,ur.y+self.trace_width)
+
+        p3=Point(d.x,p2.y)
+
+        p4=Point(d.x,d.y)
+
+        list_points=_check_points_path(p0,p1,p2,p3,p4,trace_width=self.trace_width)
+
+        try :
+
+            p=pp.smooth(points=list_points,radius=self._radius,num_pts=self._num_pts)
+
+            return p
+
+        except :
+
+            import pdb; pdb.set_trace()
 
     @property
     def resistance_squares(self):
