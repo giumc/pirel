@@ -1394,4 +1394,10 @@ def pick_callable_param(pars : dict):
 
     return out_pars
 
+def _copy_ports(source,dest):
+
+    for name,port in source.ports.items():
+
+        dest.add_port(port,name)
+        
 warnings.formatwarning = custom_formatwarning

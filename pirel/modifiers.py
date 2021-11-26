@@ -165,9 +165,7 @@ def addPad(cls, pad=pc.Pad, side='top'):
 
             d_ref=cell.add_ref(cls.draw(self),alias='Device')
 
-            for name,port in d_ref.ports.items():
-
-                cell.add_port(port)
+            pt._copy_ports(d_ref,cell)
 
             add_pads(cell,self.pad,side)
 

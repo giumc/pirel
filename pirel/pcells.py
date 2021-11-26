@@ -1,6 +1,6 @@
 from pirel.tools import *
 
-from pirel.tools import _check_points_path
+from pirel.tools import _check_points_path, _copy_ports
 
 from phidl.device_layout import Device, Port, DeviceReference, Group
 
@@ -1378,10 +1378,6 @@ class FBERes(LFERes):
 
             del plate
 
-        for name,port in supercell.ports.items():
-
-            cell.add_port(port,name)
-
         return cell
 
 class TwoPortRes(FBERes):
@@ -1390,7 +1386,7 @@ class TwoPortRes(FBERes):
 
         super().__init__(*a,**k)
 
-        self.plate_position='in, longpow'
+        self.plate_position='in, long'
 
         self.platelayer=LayoutDefault.layerBottom
 
@@ -1415,9 +1411,7 @@ class TwoPortRes(FBERes):
                     by_spec=(self.idt.layer,0)),
                 layer=self.platelayer)
 
-        for n,p in supercell.ports.items():
-
-            cell.add_port(p,n)
+        _copy_ports(supercell,cell)
 
         return cell
 
