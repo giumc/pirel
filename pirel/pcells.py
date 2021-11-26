@@ -1559,11 +1559,11 @@ class Routing(LayoutPart):
 
         try:
 
-            p=_draw_non_hindered_path(s,d)
+            p=self._draw_non_hindered_path(s,d)
 
-            return p
+        except BaseException as e_non_hind:
 
-        except:
+            import pdb; pdb.set_trace()
 
             try:
 
@@ -1579,11 +1579,11 @@ class Routing(LayoutPart):
 
                     p=self._draw_hindered_path(s,d,'left')
 
-                return p
-
-            except:
+            except BaseException as e_hind:
 
                 import pdb; pdb.set_trace()
+
+        return p
 
     def _draw_with_frame(self):
 
@@ -1600,9 +1600,15 @@ class Routing(LayoutPart):
 
         p1=Point(s.midpoint)
 
-        p1_proj=p1+s.normal*abs(distance)/5
+        p2=Point(d.midpoint)
 
-        p2_proj=p2+s.normal*abs(distance)/5
+        import pdb; pdb.set_trace()
+
+        dt_norm=Point(s.normal[1])-Point(s.normal[0])
+
+        p1_proj=p1+dt_norm*(abs(distance)/5)
+
+        p2_proj=p2+dt_norm*(abs(distance)/5)
 
         list_points=_check_points_path(p1,p1_proj,p2_proj,p2,trace_width=self.trace_width)
 

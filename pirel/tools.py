@@ -147,7 +147,7 @@ class Point:
 
         else:
 
-            raise Exception("Division Point/x0 is not possible here")
+            raise ValueError("Point dividion is only possible to a scalar")
 
     def __repr__(self):
 
@@ -166,7 +166,7 @@ class Point:
 
         else:
 
-            raise Exception("Division Point/x0 is not possible here")
+            raise ValueError("Point multiplication is only possible to a scalar")
 
     def __eq__(self,p2):
 
@@ -190,9 +190,11 @@ class Point:
 
         return hash(self.coord)
 
-    def __abs___(self):
+    def __abs__(self):
 
-        return sqrt(self.x^2+self.y^2)
+        from math import sqrt
+
+        return sqrt(self.x**2+self.y**2)
 
 class LayoutDefault:
     '''container of pirel constants.'''
