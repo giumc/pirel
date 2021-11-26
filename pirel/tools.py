@@ -196,6 +196,14 @@ class Point:
 
         return sqrt(self.x**2+self.y**2)
 
+    def dot(self,b):
+
+        if not isinstance(b,Point):
+
+            raise ValueError(f"{b} needs to be a Point")
+
+        return self.x*b.x+self.y*b.y
+
 class LayoutDefault:
     '''container of pirel constants.'''
 
@@ -1395,5 +1403,19 @@ def pick_callable_param(pars : dict):
             out_pars.update({key:value})
 
     return out_pars
+
+def _get_angle(p1,p2):
+
+    if not (isinstance(p1,Point) and isinstance(p2,Point)):
+
+        raise ValueError(f"{p1} and {p2} have to be pirel Points")
+
+    import numpy as np
+
+    ang1 = np.arctan2(p1.y,p1.x)
+    
+    ang2 = np.arctan2(p2.y,p2.x)
+
+    return np.rad2deg((ang1 - ang2) % (2 * np.pi))
 
 warnings.formatwarning = custom_formatwarning

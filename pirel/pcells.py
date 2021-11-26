@@ -1491,6 +1491,8 @@ class Routing(LayoutPart):
 
     _tol=1e-3
 
+    _overhang=5
+
     _simplification=10
 
     clearance= LayoutParamInterface()
@@ -1602,25 +1604,25 @@ class Routing(LayoutPart):
 
         p2=Point(d.midpoint)
 
-        import pdb; pdb.set_trace()
+        dt1_norm=Point(s.normal[1])-Point(s.normal[0])
 
-        dt_norm=Point(s.normal[1])-Point(s.normal[0])
+        p1_proj=p1+dt1_norm*(abs(distance)/self._overhang)
 
-        p1_proj=p1+dt_norm*(abs(distance)/5)
+        dt2_norm=Point(d.normal[1])-Point(d.normal[0])
 
-        p2_proj=p2+dt_norm*(abs(distance)/5)
+        p2_proj=p2+dt2_norm*(abs(distance)/self._overhang)
 
-        list_points=_check_points_path(p1,p1_proj,p2_proj,p2,trace_width=self.trace_width)
+        for p_mid in (Point(p1_proj.x,p2_proj.y),Point(p2_proj.x,p1_proj.y)):
 
-        try:
+            p=self._make_path(p1,p1_proj,p_mid,p2_proj,p2)
 
-            p=pp.smooth(points=list_points,radius=self._radius,num_pts=self._num_pts)
+            if not self._is_hindered(p):
 
-        except Exception:
+                return p
 
-            raise ValueError("error for non-hindered path ")
+        else:
 
-        return p
+            raise AttributeError("path is hindered")
 
     def _draw_hindered_path(self,s,d,side='auto'):
 
@@ -1663,6 +1665,24 @@ class Routing(LayoutPart):
         except :
 
             import pdb; pdb.set_trace()
+
+    def _is_hindered(self,path):
+
+        test_path_cell=self._make_path_cell(path)
+
+        return not is_cell_outside(test_path_cell,pg.bbox(self.clearance))
+
+    def _make_path(self,*p):
+
+        list_points=_check_points_path(*p,trace_width=self.trace_width)
+
+        try:
+
+            return pp.smooth(points=list_points,radius=self._radius,num_pts=self._num_pts)
+
+        except Exception:
+
+            raise ValueError("error for non-hindered path ")
 
     @property
     def resistance_squares(self):
