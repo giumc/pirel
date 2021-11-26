@@ -331,7 +331,7 @@ class LayoutDefault:
     #TwoPortProbe
 
     TwoPortProbeoffset=Point(0,200)
-    
+
 class _LayoutParam:
 
     def __init__(self,name,value):
@@ -1269,9 +1269,86 @@ def is_cell_within(
 
 def _is_cell_within(cell_test,cell_ref):
 
-    c_flat=pg.union(cell_ref, by_layer=False, layer=100)
+    area_pre,area_post=_calculate_pre_post_area(cell_test,cell_ref)
 
-    area_pre=c_flat.area()
+    if round(area_pre,3) >= round(area_post,3):
+
+        return True
+
+    else:
+
+        return False
+
+def is_cell_outside(
+    cell_test : Device ,
+    cell_ref : Device,
+    tolerance: float =0):
+    ''' Checks whether cell_test is not overlap with cell_ref.
+
+    Parameters:
+    ---------
+    cell_test : Device
+
+    cell_ref : Device
+
+    tolerance : float (optional)
+
+    Returns:
+        True (if strictly cell_tot>=cell_test+cell_ref)
+        False (otherwise).
+
+    Note:
+        if tolerance is not zero, then function returns True if cell_tot>=cell_test+cell_ref-tol
+        in all direction
+    '''
+
+    if tolerance==0:
+
+        return _is_cell_outside(cell_test,cell_ref)
+
+    else:
+
+        shifts_set=np.array([[1,1],[-1,-1],[1,-1],[-1,1]])*tolerance
+
+        for shift in shifts_set:
+
+            cell_test.move(destination=shift)
+
+            if not _is_cell_outside(
+                cell_test,
+                cell_ref):
+
+                cell_test.move(destination=-shift)
+
+                return False
+
+            else:
+
+                cell_test.move(destination=-shift)
+
+        else:
+
+            return True
+
+def _is_cell_outside(cell_test,cell_ref):
+
+    area_test=cell_test.area()
+
+    area_ref,area_post=_calculate_pre_post_area(cell_test,cell_ref)
+
+    if round(area_post,3)>=round(area_ref+area_test,3):
+
+        return True
+
+    else:
+
+        return False
+
+def _calculate_pre_post_area(cell_test,cell_ref):
+
+    area_pre=_get_cell_area(cell_ref)
+
+    c_flat=pg.union(cell_ref, by_layer=False, layer=100)
 
     if isinstance(cell_test,Device):
 
@@ -1283,17 +1360,27 @@ def _is_cell_within(cell_test,cell_ref):
 
             c_flat.add(cell_test)
 
-    c_flat=pg.union(c_flat, by_layer=False, layer=100)
+    area_post=_get_cell_area(c_flat)
 
-    area_post=c_flat.area()
+    return area_pre,area_post
 
-    if round(area_pre,3) >= round(area_post,3):
+def _get_cell_area(cell):
 
-        return True
+    c_flat=pg.union(cell, by_layer=False, layer=100)
 
-    else:
+    return c_flat.area()
 
-        return False
+def _get_centroid(*points):
+
+    x_c=0
+    y_c=0
+
+    for p in points:
+
+        x_c=x_c+p.x
+        y_c=y_c+p.y
+
+    return Point(x_c,y_c)/length(p)
 
 def pick_callable_param(pars : dict):
 

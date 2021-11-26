@@ -18,7 +18,6 @@ from phidl import Path,CrossSection
 
 import os
 
-
 import gdspy
 
 import numpy as np
@@ -1276,7 +1275,7 @@ class FBERes(LFERes):
 
         supercell=LFERes.draw(self)
 
-        super_ref=cell.add_ref(supercell)
+        super_ref=cell.add_ref(supercell,alias='LFERes')
 
         if self.plate_position=='out, short':
 
@@ -1297,7 +1296,6 @@ class FBERes(LFERes):
             cell.absorb(plate_ref)
 
             del plate
-
 
         elif self.plate_position=='in, short':
 
@@ -1383,6 +1381,43 @@ class FBERes(LFERes):
         for name,port in supercell.ports.items():
 
             cell.add_port(port,name)
+
+        return cell
+
+class TwoPortRes(FBERes):
+
+    def __init__(self,*a,**k):
+
+        super().__init__(*a,**k)
+
+        self.plate_position='in, longpow'
+
+        self.platelayer=LayoutDefault.layerBottom
+
+    def draw(self):
+
+        cell=Device()
+
+        cell.name=self.name
+
+        supercell=FBERes.draw(self)
+
+        super_ref=cell.add_ref(supercell,alias='FBERes')
+
+        lfe_cell=supercell['LFERes'].parent
+
+        for label in ('AnchorBottom','AnchorTop'):
+
+            anchor_ref=lfe_cell[label]
+
+            anchor_metal=cell.add_polygon(
+                anchor_ref.get_polygons(
+                    by_spec=(self.idt.layer,0)),
+                layer=self.platelayer)
+
+        for n,p in supercell.ports.items():
+
+            cell.add_port(p,n)
 
         return cell
 
@@ -1604,7 +1639,7 @@ class Routing(LayoutPart):
 
                             raise ValueError("error in +0 source, rx path")
 
-                if source.orientation==90 : 
+                if source.orientation==90 :
 
                     if source.x+self.trace_width>ll.x and source.x-self.trace_width<lr.x: #source tucked inside clearance
 
@@ -2010,7 +2045,7 @@ class ParasiticAwareMultiRouting(MultiRouting):
                 return res
 
 _allclasses=(IDT,PartialEtchIDT,Bus,EtchPit,Anchor,Via,Routing,GSProbe,GSGProbe,
-Pad,MultiLayerPad,ViaInPad,LFERes,FBERes,TFERes,MultiRouting,ParasiticAwareMultiRouting)
+Pad,MultiLayerPad,ViaInPad,LFERes,FBERes,TwoPortRes,TFERes,MultiRouting,ParasiticAwareMultiRouting)
 
 for cls in _allclasses:
 
