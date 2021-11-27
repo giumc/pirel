@@ -13,6 +13,7 @@ import gdspy
 import numpy as np
 
 from pirel.tools import *
+
 from pirel.pcells import *
 
 import pirel.tools as pt
@@ -198,7 +199,8 @@ def chip_frame(name="Default",size=(20e3,20e3),layer=LayoutDefault.layerTop,logo
         'distance':Point(0,0),\
         'layer':layer}).draw()
 
-    text_cell.move(origin=(text_cell.xmax,text_cell.ymax),\
+    text_cell.move(origin=(text_cell.xmax,text_cell.ymax),
+
         destination=(cell.xmax-street_width*1.2,cell.ymax-street_width*1.2))
 
     cell.add(text_cell)
@@ -226,7 +228,9 @@ def chip_frame(name="Default",size=(20e3,20e3),layer=LayoutDefault.layerTop,logo
                     cells_logo.append(import_gds(str(p.absolute())))
 
     g=Group(cells_logo)
+
     g.distribute(direction='x',spacing=150)
+
     g.align(alignment='y')
 
     logo_cell=dl.Device(name="logos")

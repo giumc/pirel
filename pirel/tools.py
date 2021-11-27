@@ -147,7 +147,7 @@ class Point:
 
         else:
 
-            raise Exception("Division Point/x0 is not possible here")
+            raise ValueError("Point dividion is only possible to a scalar")
 
     def __repr__(self):
 
@@ -166,7 +166,7 @@ class Point:
 
         else:
 
-            raise Exception("Division Point/x0 is not possible here")
+            raise ValueError("Point multiplication is only possible to a scalar")
 
     def __eq__(self,p2):
 
@@ -190,9 +190,19 @@ class Point:
 
         return hash(self.coord)
 
-    def __abs___(self):
+    def __abs__(self):
 
-        return sqrt(self.x^2+self.y^2)
+        from math import sqrt
+
+        return sqrt(self.x**2+self.y**2)
+
+    def dot(self,b):
+
+        if not isinstance(b,Point):
+
+            raise ValueError(f"{b} needs to be a Point")
+
+        return self.x*b.x+self.y*b.y
 
 class LayoutDefault:
     '''container of pirel constants.'''
@@ -280,17 +290,14 @@ class LayoutDefault:
     #Routing
 
     Routingtrace_width=80.0
-
     Routingclearance=((0,250),(300,550))
-
     Routinglayer=layerTop
-
     Routingports=(Port(name='1',midpoint=(450,0),\
         width=50,orientation=90),\
             Port(name='2',midpoint=(100,550),\
             width=50,orientation=90),)
-
     Routingside='auto'
+    Routingoverhang=10.0
 
     #MultiRouting
 
@@ -1346,6 +1353,29 @@ def _is_cell_outside(cell_test,cell_ref):
 
 def _calculate_pre_post_area(cell_test,cell_ref):
 
+
+                cell_test.move(destination=-shift)
+
+        else:
+
+            return True
+
+def _is_cell_outside(cell_test,cell_ref):
+
+    area_test=cell_test.area()
+
+    area_ref,area_post=_calculate_pre_post_area(cell_test,cell_ref)
+
+    if round(area_post,3)>=round(area_ref+area_test,3):
+
+        return True
+
+    else:
+
+        return False
+
+def _calculate_pre_post_area(cell_test,cell_ref):
+
     area_pre=_get_cell_area(cell_ref)
 
     c_flat=pg.union(cell_ref, by_layer=False, layer=100)
@@ -1394,10 +1424,24 @@ def pick_callable_param(pars : dict):
 
     return out_pars
 
+def _get_angle(p1,p2):
+
+    if not (isinstance(p1,Point) and isinstance(p2,Point)):
+
+        raise ValueError(f"{p1} and {p2} have to be pirel Points")
+
+    import numpy as np
+
+    ang1 = np.arctan2(p1.y,p1.x)
+
+    ang2 = np.arctan2(p2.y,p2.x)
+
+    return np.rad2deg((ang1 - ang2) % (2 * np.pi))
+
 def _copy_ports(source,dest):
 
     for name,port in source.ports.items():
 
         dest.add_port(port,name)
-        
+
 warnings.formatwarning = custom_formatwarning
