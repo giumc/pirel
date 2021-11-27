@@ -290,17 +290,14 @@ class LayoutDefault:
     #Routing
 
     Routingtrace_width=80.0
-
     Routingclearance=((0,250),(300,550))
-
     Routinglayer=layerTop
-
     Routingports=(Port(name='1',midpoint=(450,0),\
         width=50,orientation=90),\
             Port(name='2',midpoint=(100,550),\
             width=50,orientation=90),)
-
     Routingside='auto'
+    Routingoverhang=10.0
 
     #MultiRouting
 
@@ -1413,7 +1410,7 @@ def _get_angle(p1,p2):
     import numpy as np
 
     ang1 = np.arctan2(p1.y,p1.x)
-    
+
     ang2 = np.arctan2(p2.y,p2.x)
 
     return np.rad2deg((ang1 - ang2) % (2 * np.pi))

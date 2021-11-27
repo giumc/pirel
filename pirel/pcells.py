@@ -1467,6 +1467,9 @@ class Routing(LayoutPart):
 
     source: phidl.Port
 
+    overhang: float
+        distance to extend port in its direction before routing
+
     destination: phidl.Port
         for now, the ports have to be oriented as follows:
             +90 -> -90 if below obstacle
@@ -1491,11 +1494,11 @@ class Routing(LayoutPart):
 
     _tol=1e-3
 
-    _overhang=5
-
     _simplification=10
 
-    clearance= LayoutParamInterface()
+    clearance=LayoutParamInterface()
+
+    overhang=LayoutParamInterface()
 
     side=LayoutParamInterface('left','right','auto')
 
@@ -1516,6 +1519,7 @@ class Routing(LayoutPart):
         self.source=LayoutDefault.Routingports[0]
         self.destination=LayoutDefault.Routingports[1]
         self.layer=LayoutDefault.Routinglayer
+        self.overhang=LayoutDefault.Routingoverhang
 
     def _draw_frame(self):
 
@@ -1563,27 +1567,15 @@ class Routing(LayoutPart):
 
             p=self._draw_non_hindered_path(s,d)
 
-        except BaseException as e_non_hind:
-
-            import pdb; pdb.set_trace()
+        except Exception as e_non_hind:
 
             try:
 
-                if s.orientation==0 :
+                p=self._draw_hindered_path(s,d,self.side)
 
-                    p=self._draw_hindered_path(s,d,'right')
+            except Exception as e_hind:
 
-                elif s.orientation==90 :
-
-                     p=self._draw_hindered_path(s,d,'auto')
-
-                elif s.orientation==180 :
-
-                    p=self._draw_hindered_path(s,d,'left')
-
-            except BaseException as e_hind:
-
-                import pdb; pdb.set_trace()
+                raise AttributeError("could not generate path")
 
         return p
 
@@ -1597,20 +1589,17 @@ class Routing(LayoutPart):
 
     def _draw_non_hindered_path(self,s,d):
 
-        distance=Point(d.midpoint)-\
-            Point(s.midpoint)
-
         p1=Point(s.midpoint)
 
         p2=Point(d.midpoint)
 
         dt1_norm=Point(s.normal[1])-Point(s.normal[0])
 
-        p1_proj=p1+dt1_norm*(abs(distance)/self._overhang)
+        p1_proj=p1+dt1_norm*self.overhang
 
         dt2_norm=Point(d.normal[1])-Point(d.normal[0])
 
-        p2_proj=p2+dt2_norm*(abs(distance)/self._overhang)
+        p2_proj=p2+dt2_norm*self.overhang
 
         for p_mid in (Point(p1_proj.x,p2_proj.y),Point(p2_proj.x,p1_proj.y)):
 
@@ -1626,7 +1615,7 @@ class Routing(LayoutPart):
 
     def _draw_hindered_path(self,s,d,side='auto'):
 
-        ll,lr,ul,ur=get_corners(self.clearance)
+        ll,lr,ul,ur=get_corners(pg.bbox(self.clearance))
 
         if side=='auto':
 
@@ -1638,33 +1627,37 @@ class Routing(LayoutPart):
 
             else : return path1
 
-        p0=Point(s.midpoint)
+        p1=Point(s.midpoint)
+
+        p2=Point(d.midpoint)
+
+        dt1_norm=Point(s.normal[1])-Point(s.normal[0])
+
+        p1_proj=p1+dt1_norm*self.overhang
+
+        dt2_norm=Point(d.normal[1])-Point(d.normal[0])
+
+        p2_proj=p2+dt2_norm*self.overhang
 
         if side=='left':
 
-            p1=Point(ll.x-self.trace_width,p0.y)
+            p_mid=Point(ll.x-self.trace_width,p1_proj.y)
 
         elif side=='right':
 
-            p1=Point(lr.x+self.trace_width,p0.y)
+            p_mid=Point(lr.x+self.trace_width,p1_proj.y)
 
-        p2=Point(p1.x,ur.y+self.trace_width)
+        p_mid2=Point(p_mid.x,ur.y+self.trace_width)
 
-        p3=Point(d.x,p2.y)
+        p=self._make_path(p1,p1_proj,p_mid,p_mid2,p2_proj,p2)
 
-        p4=Point(d.x,d.y)
-
-        list_points=_check_points_path(p0,p1,p2,p3,p4,trace_width=self.trace_width)
-
-        try :
-
-            p=pp.smooth(points=list_points,radius=self._radius,num_pts=self._num_pts)
+        if not self._is_hindered(p):
 
             return p
 
-        except :
+        else:
 
-            import pdb; pdb.set_trace()
+            raise AttributeError("path is hindered")
 
     def _is_hindered(self,path):
 

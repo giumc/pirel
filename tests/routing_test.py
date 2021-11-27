@@ -13,7 +13,7 @@ route=pc.Routing()
 
 route.source=dl.Port(
     name='source',
-    midpoint=(-100,0),
+    midpoint=(200,0),
     width=50,
     orientation=90)
 
@@ -27,8 +27,12 @@ route.trace_width=20
 
 route.clearance=bbox
 
+route.overhang=50
+
+route.side='right'
+
 cell=pg.bbox(bbox)
-pt.check(route._draw_frame())
+# pt.check(route._draw_frame())
 cell<<route.draw()
 
 pt.check(cell)
