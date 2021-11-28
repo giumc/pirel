@@ -1353,29 +1353,6 @@ def _is_cell_outside(cell_test,cell_ref):
 
 def _calculate_pre_post_area(cell_test,cell_ref):
 
-
-                cell_test.move(destination=-shift)
-
-        else:
-
-            return True
-
-def _is_cell_outside(cell_test,cell_ref):
-
-    area_test=cell_test.area()
-
-    area_ref,area_post=_calculate_pre_post_area(cell_test,cell_ref)
-
-    if round(area_post,3)>=round(area_ref+area_test,3):
-
-        return True
-
-    else:
-
-        return False
-
-def _calculate_pre_post_area(cell_test,cell_ref):
-
     area_pre=_get_cell_area(cell_ref)
 
     c_flat=pg.union(cell_ref, by_layer=False, layer=100)

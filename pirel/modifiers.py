@@ -1001,9 +1001,9 @@ def addTwoPortProbe(cls,probe=makeTwoPortProbe(pc.GSGProbe)):
 
             import pdb; pdb.set_trace()
 
-            top_port=[p for p in device_cell.port if 'top' in p.name]
+            top_port=[p for p in device_cell.ports.values() if 'top' in p.name]
 
-            bottom_port=[p for p in device_cell.port if 'bottom' in p.name]
+            bottom_port=[p for p in device_cell.ports.values() if 'bottom' in p.name]
 
             top_port_midpoint=pt._get_centroid(top_port)
 

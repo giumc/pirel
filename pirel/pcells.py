@@ -1378,6 +1378,8 @@ class FBERes(LFERes):
 
             del plate
 
+        _copy_ports(supercell,cell)
+
         return cell
 
 class TwoPortRes(FBERes):
