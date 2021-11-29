@@ -1607,6 +1607,8 @@ class Routing(LayoutPart):
 
             except Exception as e_hind:
 
+                # import pdb; pdb.set_trace()
+
                 raise AttributeError("could not generate path")
 
         return p
@@ -1681,7 +1683,9 @@ class Routing(LayoutPart):
 
         p_mid2=Point(p_mid.x,ur.y+self.trace_width)
 
-        p=self._make_path(p1,p1_proj,p_mid,p_mid2,p2_proj,p2)
+        p_mid3=Point(p_mid2.x,p2_proj.y)
+
+        p=self._make_path(p1,p1_proj,p_mid,p_mid2,p_mid3,p2_proj,p2)
 
         if not self._is_hindered(p):
 
@@ -1695,7 +1699,7 @@ class Routing(LayoutPart):
 
         test_path_cell=self._make_path_cell(path)
 
-        return not is_cell_outside(test_path_cell,pg.bbox(self.clearance))
+        return not is_cell_outside(test_path_cell,pg.bbox(self.clearance),tolerance=self._tol)
 
     def _make_path(self,*p):
 
@@ -1731,8 +1735,6 @@ class MultiRouting(Routing):
     def path(self):
 
         p=[]
-
-        import pdb; pdb.set_trace()
 
         for s in self.source:
 
@@ -1889,18 +1891,7 @@ class ParasiticAwareMultiRouting(MultiRouting):
 
         p3=Point(p2.x,d.midpoint[1])
 
-        list_points=_check_points_path(p0,p1,p2,p3,trace_width=s.width)
-
-        try:
-
-            return  pp.smooth(
-                        points=list_points,
-                        radius=self._radius,
-                        num_pts=self._num_pts)
-
-        except Exception:
-
-            import pdb; pdb.set_trace()
+        return self._make_path(p0,p1,p2,p3)
 
     @property
     def resistance_squares(self):
@@ -1908,8 +1899,6 @@ class ParasiticAwareMultiRouting(MultiRouting):
         p=self.path
 
         numpaths=len(p)
-
-        pdb.set_trace()
 
         if numpaths==1 or numpaths==2:
 

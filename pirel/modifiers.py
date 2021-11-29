@@ -167,8 +167,6 @@ def addPad(cls, pad=pc.Pad, side='top'):
 
             pt._copy_ports(d_ref,cell)
 
-            import pdb; pdb.set_trace()
-
             add_pads(cell,self.pad,side)
 
             return cell
@@ -959,23 +957,42 @@ def addTwoPortProbe(cls,probe=makeTwoPortProbe(pc.GSGProbe)):
 
             device_cell=cls.draw(self)
 
-            probe_cell=self.probe.draw()
-
             cell=Device(name=self.name)
 
-            cell.add_ref(device_cell, alias=self.name+"Device")
+            device_ref=cell.add_ref(device_cell, alias=self.name+"Device")
+
+            self._setup_probe(device_ref)
+
+            probe_cell=self.probe.draw()
 
             probe_ref=cell.add_ref(probe_cell, alias=self.name+"Probe")
 
-            self._move_probe_ref(device_cell,probe_ref)
+            self._move_probe_ref(device_ref,probe_ref)
 
-            self._setup_routings(device_cell,probe_ref)
+            import pdb; pdb.set_trace()
+
+            self._setup_routings(device_ref,probe_ref)
 
             probe_routing_cell=self._draw_probe_routing()
 
             cell.add_ref(probe_routing_cell, alias=self.name+"ProbeRouting")
 
             return cell
+
+        def _setup_probe(self,device_cell):
+
+            top_port=[pt.Point(p.midpoint) for p in device_cell.ports.values() if 'top' in p.name]
+
+            bottom_port=[pt.Point(p.midpoint) for p in device_cell.ports.values() if 'bottom' in p.name]
+
+            top_port_midpoint=pt._get_centroid(*top_port)
+
+            bottom_port_midpoint=pt._get_centroid(*bottom_port)
+
+            self.probe.offset=pt.Point(
+                (top_port_midpoint.x-bottom_port_midpoint.x),
+                (top_port_midpoint.y-bottom_port_midpoint.y)+
+                2*self.probe_dut_distance.y)
 
         def _draw_probe_routing(self):
 
@@ -998,21 +1015,6 @@ def addTwoPortProbe(cls,probe=makeTwoPortProbe(pc.GSGProbe)):
                 raise ValueError("To be implemented")
 
         def _setup_routings(self,device_cell,probe_cell):
-
-            import pdb; pdb.set_trace()
-
-            top_port=[p for p in device_cell.ports.values() if 'top' in p.name]
-
-            bottom_port=[p for p in device_cell.ports.values() if 'bottom' in p.name]
-
-            top_port_midpoint=pt._get_centroid(top_port)
-
-            bottom_port_midpoint=pt._get_centroid(bottom_port)
-
-            self.probe.offset=pt.Point(
-                (top_port_midpoint.x-bottom_port_midpoint.x),
-                (top_port_midpoint.y-bottom_port_midpoint.y)+
-                2*self.probe_dut_distance.y)
 
             bbox=super()._bbox_mod(device_cell.bbox)
 
@@ -1048,13 +1050,17 @@ def addTwoPortProbe(cls,probe=makeTwoPortProbe(pc.GSGProbe)):
 
                     sigroute.side='auto'
 
+                    sigroute.layer=self.probe.layer
+
+                    sigroute.clearance=bbox
+
                     if index==0:
 
                         sigroute.source=(probe_cell.ports['sig_1'],)
 
                         dest_port=[]
 
-                        for port_name,cell_port in probe_cell.ports.items():
+                        for port_name,cell_port in device_cell.ports.items():
 
                             if 'bottom' in port_name:
 
@@ -1072,7 +1078,7 @@ def addTwoPortProbe(cls,probe=makeTwoPortProbe(pc.GSGProbe)):
 
                         dest_port=[]
 
-                        for port_name,cell_port in probe_cell.ports.items():
+                        for port_name,cell_port in device_cell.ports.items():
 
                             if 'top' in port_name:
 
@@ -1096,11 +1102,11 @@ def addTwoPortProbe(cls,probe=makeTwoPortProbe(pc.GSGProbe)):
 
                 raise ValueError("OnePortProbed without GSG/GSprobe to be implemented ")
 
-        def _move_probe_ref(self,device_cell,probe_ref):
+        def _move_probe_ref(self,device_ref,probe_ref):
 
             probe_dut_distance=self.probe_dut_distance
 
-            bottom_port=device_cell.ports['bottom']
+            bottom_port=device_ref.ports['bottom']
 
             top_port=probe_ref.ports['sig_1']
 
@@ -1319,8 +1325,6 @@ def add_pads(cell,pad,tags='top'):
         tags : iterable of str
             used to find ports
     '''
-
-    import pdb; pdb.set_trace()
 
     if isinstance(tags,str):
 

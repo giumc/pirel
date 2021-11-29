@@ -1223,7 +1223,7 @@ def image_to_gds(p : pathlib.Path ,
 
     nd.export_gds(filename=str(p.parent/p.stem)+'.gds', flat=True)
 
-def is_cell_within(
+def is_cell_inside(
     cell_test : Device ,
     cell_ref : Device,
     tolerance: float =0):
@@ -1248,7 +1248,7 @@ def is_cell_within(
 
     if tolerance==0:
 
-        return _is_cell_within(cell_test,cell_ref)
+        return _is_cell_inside(cell_test,cell_ref)
 
     else:
 
@@ -1258,7 +1258,7 @@ def is_cell_within(
 
             cell_test.move(destination=shift)
 
-            if not _is_cell_within(
+            if not _is_cell_inside(
                 cell_test,
                 cell_ref):
 
@@ -1274,7 +1274,7 @@ def is_cell_within(
 
             return True
 
-def _is_cell_within(cell_test,cell_ref):
+def _is_cell_inside(cell_test,cell_ref):
 
     area_pre,area_post=_calculate_pre_post_area(cell_test,cell_ref)
 
@@ -1382,12 +1382,16 @@ def _get_centroid(*points):
     x_c=0
     y_c=0
 
+    if isinstance(points, Point):
+
+        return points
+
     for p in points:
 
         x_c=x_c+p.x
         y_c=y_c+p.y
 
-    return Point(x_c,y_c)/length(p)
+    return Point(x_c,y_c)/len(points)
 
 def pick_callable_param(pars : dict):
 
