@@ -358,17 +358,20 @@ def addOnePortProbe(cls,probe=pc.GSGProbe):
 
             return self.idt.probe_distance
 
-        def _move_probe_ref(self,device_cell,probe_ref):
+        def _move_probe_ref(self,device_ref,probe_ref):
 
             probe_dut_distance=self.probe_dut_distance
 
-            probe_ref.move(
-                origin=(probe_ref.center[0],probe_ref.ymax),
-                destination=(
-                    device_cell.center[0],
-                    device_cell.ports['bottom'].midpoint[1]-probe_dut_distance.y))
+            bottom_ports=pt._find_ports(device_ref,'bottom')
 
-            return probe_ref
+            bottom_center=pt._get_centroid(*[pt.Point(p.midpoint) for p in bottom_ports])
+
+            probe_port=probe_ref.ports['sig_1']
+
+            probe_ref.move(
+                origin=probe_port.midpoint,
+                destination=(bottom_center-probe_dut_distance).coord)
+
 
         def _setup_routings(self,device_cell,probe_cell):
 
@@ -967,9 +970,9 @@ def addTwoPortProbe(cls,probe=makeTwoPortProbe(pc.GSGProbe)):
 
             probe_ref=cell.add_ref(probe_cell, alias=self.name+"Probe")
 
-            self._move_probe_ref(device_ref,probe_ref)
-
             import pdb; pdb.set_trace()
+
+            self._move_probe_ref(device_ref,probe_ref)
 
             self._setup_routings(device_ref,probe_ref)
 
@@ -981,13 +984,13 @@ def addTwoPortProbe(cls,probe=makeTwoPortProbe(pc.GSGProbe)):
 
         def _setup_probe(self,device_cell):
 
-            top_port=[pt.Point(p.midpoint) for p in device_cell.ports.values() if 'top' in p.name]
+            top_ports=[pt.Point(p.midpoint) for p in pt._find_ports(device_cell,'top')]
 
-            bottom_port=[pt.Point(p.midpoint) for p in device_cell.ports.values() if 'bottom' in p.name]
+            bottom_ports=[pt.Point(p.midpoint) for p in pt._find_ports(device_cell,'bottom')]
 
-            top_port_midpoint=pt._get_centroid(*top_port)
+            top_port_midpoint=pt._get_centroid(*top_ports)
 
-            bottom_port_midpoint=pt._get_centroid(*bottom_port)
+            bottom_port_midpoint=pt._get_centroid(*bottom_ports)
 
             self.probe.offset=pt.Point(
                 (top_port_midpoint.x-bottom_port_midpoint.x),
@@ -1052,47 +1055,31 @@ def addTwoPortProbe(cls,probe=makeTwoPortProbe(pc.GSGProbe)):
 
                     sigroute.layer=self.probe.layer
 
-                    sigroute.clearance=bbox
-
                     if index==0:
 
                         sigroute.source=(probe_cell.ports['sig_1'],)
 
-                        dest_port=[]
-
-                        for port_name,cell_port in device_cell.ports.items():
-
-                            if 'bottom' in port_name:
-
-                                dest_port.append(cell_port)
+                        dest_port=pt._find_ports(device_cell,'bottom')
 
                         sigroute.source=(probe_cell.ports['sig_1'],)
 
                         sigroute.destination=tuple(dest_port)
 
-                        sigroute.trace_width=device_cell.ports['bottom'].width
+                        sigroute.trace_width=dest_port[0].width
 
                     elif index==1:
 
-                        sigroute.source=(probe_cell.ports['sig_2'],)
-
-                        dest_port=[]
-
-                        for port_name,cell_port in device_cell.ports.items():
-
-                            if 'top' in port_name:
-
-                                dest_port.append(cell_port)
+                        dest_port=pt._find_ports(device_cell,'top')
 
                         sigroute.source=(probe_cell.ports['sig_2'],)
 
                         sigroute.destination=tuple(dest_port)
 
-                        sigroute.trace_width=device_cell.ports['top'].width
+                        sigroute.trace_width=dest_port[0].width
 
                     sigroute.layer=self.probe.layer
 
-                    sigroute.clearance=bbox
+                    # sigroute.clearance=bbox
 
             elif isinstance(self.probe,pc.GSProbe):
 
@@ -1101,18 +1088,6 @@ def addTwoPortProbe(cls,probe=makeTwoPortProbe(pc.GSGProbe)):
             else:
 
                 raise ValueError("OnePortProbed without GSG/GSprobe to be implemented ")
-
-        def _move_probe_ref(self,device_ref,probe_ref):
-
-            probe_dut_distance=self.probe_dut_distance
-
-            bottom_port=device_ref.ports['bottom']
-
-            top_port=probe_ref.ports['sig_1']
-
-            probe_ref.connect(top_port,
-                destination=bottom_port,
-                overlap=-probe_dut_distance.y)
 
         def get_components(self):
 
@@ -1247,13 +1222,7 @@ def connect_ports(cell,tags='top',conn_dist=pt.Point(0,100)):
 
         if 'top' in tag:
 
-            top_ports=[]
-
-            for name,port in cell.ports.items():
-
-                if tag in name:
-
-                    top_ports.append(port)
+            top_ports=pt._find_ports(cell,'top')
 
             top_conn=Port('top')
 
@@ -1283,13 +1252,7 @@ def connect_ports(cell,tags='top',conn_dist=pt.Point(0,100)):
 
             bottom_conn=Port('bottom')
 
-            bottom_ports=[]
-
-            for name,port in cell.ports.items():
-
-                if tag in name:
-
-                    bottom_ports.append(port)
+            bottom_ports=pt._find_ports(cell,'bottom')
 
             bottom_conn.width=bottom_ports[0].width
 

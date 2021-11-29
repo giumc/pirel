@@ -79,11 +79,11 @@ class Point:
     @property
     def x(self):
 
-        return self._x
+        return round(self._x,3)
 
     @property
     def y(self):
-        return self._y
+        return round(self._y,3)
 
     def in_box(self,bbox):
 
@@ -290,7 +290,7 @@ class LayoutDefault:
     #Routing
 
     Routingtrace_width=80.0
-    Routingclearance=((0,250),(300,550))
+    Routingclearance=((0,0),(0,0))
     Routinglayer=layerTop
     Routingports=(Port(name='1',midpoint=(450,0),\
         width=50,orientation=90),\
@@ -1424,5 +1424,17 @@ def _copy_ports(source,dest):
     for name,port in source.ports.items():
 
         dest.add_port(port,name)
+
+def _find_ports(cell,tag):
+
+    output=[]
+
+    for port_name,cell_port in cell.ports.items():
+
+        if tag in port_name:
+
+            output.append(cell_port)
+
+    return output
 
 warnings.formatwarning = custom_formatwarning

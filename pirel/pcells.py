@@ -1556,8 +1556,11 @@ class Routing(LayoutPart):
     def _draw_frame(self):
 
         rect=pg.bbox(self.clearance,layer=self.layer)
+
         rect.add_port(self.source)
+
         rect.add_port(self.destination)
+
         rect.name=self.name+"frame"
 
         return rect
@@ -1574,11 +1577,11 @@ class Routing(LayoutPart):
 
     def _make_path_cell(self,p):
 
-        x=CrossSection()
-
-        x.add(layer=self.layer,width=self.trace_width)
-
-        return join(x.extrude(p,simplify=self._simplification))
+        return join(
+            p.extrude(
+                layer=self.layer,
+                width=self.trace_width,
+                simplify=self._simplification))
 
     @property
     def path(self):
@@ -1606,8 +1609,6 @@ class Routing(LayoutPart):
                 p=self._draw_hindered_path(s,d,self.side)
 
             except Exception as e_hind:
-
-                # import pdb; pdb.set_trace()
 
                 raise AttributeError("could not generate path")
 
@@ -1699,19 +1700,30 @@ class Routing(LayoutPart):
 
         test_path_cell=self._make_path_cell(path)
 
-        return not is_cell_outside(test_path_cell,pg.bbox(self.clearance),tolerance=self._tol)
+        if self.clearance==((0,0),(0,0)):
 
-    def _make_path(self,*p):
+            return False
 
-        list_points=_check_points_path(*p,trace_width=self.trace_width)
+        else:
 
-        try:
+            return not is_cell_outside(
+                test_path_cell,
+                pg.bbox(self.clearance),
+                tolerance=self._tol)
 
-            return pp.smooth(points=list_points,radius=self._radius,num_pts=self._num_pts)
+    def _make_path(self,*points):
 
-        except Exception:
+        sel_points=list(points)
 
-            raise ValueError("error for non-hindered path ")
+        for p1,p2 in zip(points, points[1:]):
+
+            if p2==p1:
+
+                sel_points.remove(p2)
+
+        sel_points=_check_points_path(*sel_points,trace_width=self.trace_width)
+
+        return pp.smooth(points=sel_points,radius=self._radius,num_pts=self._num_pts)
 
     @property
     def resistance_squares(self):
@@ -1786,13 +1798,9 @@ class MultiRouting(Routing):
 
         c=Device(name=self.name)
 
-        x=CrossSection()
-
-        x.add(layer=self.layer,width=self.trace_width)
-
         for p in self.path:
 
-            c<<x.extrude(p,simplify=0.1)
+            c<<p.extrude(width=self.trace_width,layer=self.layer,simplify=0.1)
 
         return c
 
@@ -1816,13 +1824,7 @@ class ParasiticAwareMultiRouting(MultiRouting):
 
         if numports == 1 or numports == 2 :
 
-            try:
-
-                return super().path
-
-            except Exception as e:
-
-                raise e
+            return super().path
 
         else :
 
