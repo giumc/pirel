@@ -488,7 +488,7 @@ def addLargeGround(probe):
         def draw(self):
 
             oldprobe=probe.draw(self)
-            
+
             cell=pg.deepcopy(oldprobe)
 
             groundpad=pg.compass(size=(self.ground_size,self.ground_size),\
@@ -857,6 +857,24 @@ def makeTwoPortProbe(cls):
 
         def draw(self):
 
+            def mirror_label(str):
+
+                if 'N' in str:
+
+                    return str.replace('N','S')
+
+                if 'E' in str:
+
+                    return str.replace('E','W')
+
+                if 'S' in str:
+
+                    return str.replace('S','N')
+
+                if 'W' in str:
+
+                    return str.replace('W','E')
+
             cell=Device(name=self.name)
 
             probe_cell=super().draw()
@@ -877,19 +895,19 @@ def makeTwoPortProbe(cls):
 
             for n,p in p2.ports.items():
 
-                if 'left' in n:
+                if 'LX' in n:
 
-                    cell.add_port(port=p,name=n.replace('left','right')+'_2')
+                    cell.add_port(port=p,name=mirror_label(n).replace('LX','RX')+'_2')
 
                 else:
 
-                    if 'right' in n:
+                    if 'RX' in n:
 
-                        cell.add_port(port=p,name=n.replace('right','left')+'_2')
+                        cell.add_port(port=p,name=mirror_label(n).replace('RX','LX')+'_2')
 
                     else:
 
-                        cell.add_port(port=p,name=n+'_2')
+                        cell.add_port(port=p,name=mirror_label(n)+'_2')
 
             return cell
 
@@ -987,9 +1005,9 @@ def addTwoPortProbe(cls,probe=makeTwoPortProbe(pc.GSGProbe)):
 
                         groundroute.side='left'
 
-                        groundroute.source=(probe_cell.ports['gnd_left_1'],)
+                        groundroute.source=(probe_cell.ports['GroundLXN_2'],)
 
-                        groundroute.destination=(probe_cell.ports['gnd_left_2'],)
+                        groundroute.destination=(probe_cell.ports['Ground'],)
 
                     elif index==1:
 
