@@ -300,8 +300,6 @@ def addOnePortProbe(cls,probe=pc.GSGProbe):
 
             routing_cell=self._draw_probe_routing()
 
-            import pdb; pdb.set_trace()
-
             if hasattr(self,'via'):
 
                 add_vias(routing_cell,
@@ -952,11 +950,17 @@ def addTwoPortProbe(cls,probe=makeTwoPortProbe(pc.GSGProbe)):
 
             self._setup_routings(device_ref,probe_ref)
 
-            import pdb; pdb.set_trace()
+            routing_cell=self._draw_probe_routing()
 
-            probe_routing_cell=self._draw_probe_routing()
+            if hasattr(self,'via'):
 
-            cell.add_ref(probe_routing_cell, alias=self.name+"ProbeRouting")
+                add_vias(routing_cell,
+                    routing_cell.bbox,
+                    self.via,
+                    spacing=self.via.size*1.25,
+                    tolerance=self.via.size)
+
+            cell.add_ref(routing_cell,alias=self.name+"GroundTrace")
 
             return cell
 
@@ -1092,6 +1096,15 @@ def addTwoPortProbe(cls,probe=makeTwoPortProbe(pc.GSGProbe)):
                 "Sig2Trace":pc.ParasiticAwareMultiRouting})
 
             return supercomp
+
+        def get_params(self):
+
+            t=super().get_params()
+
+            pt.pop_all_dict(t, [k for k in t if re.search('Sig1Trace',k) ])
+            pt.pop_all_dict(t, [k for k in t if re.search('Sig2Trace',k) ])
+
+            return t
 
     TwoPortProbed.__name__=f"TwoPortProbed {cls.__name__} with {probe.__name__}"
 
@@ -1287,15 +1300,15 @@ def add_pads(cell,pad,tags='top'):
 
     for tag in tags:
 
-        for name,port in cell.ports.items():
+        ports=pt._find_ports(cell,tag)
 
-            if tag in name:
+        for port in ports:
 
-                pad.port=port
+            pad.port=port
 
-                pad_ref=cell.add_ref(pad.draw())
+            pad_ref=cell.add_ref(pad.draw())
 
-                pad_ref.connect('conn',destination=port)
+            pad_ref.connect('conn',destination=port)
 
 def add_vias(cell : Device, bbox, via : pt.LayoutPart, spacing : float = 0,tolerance: float = 0):
 
