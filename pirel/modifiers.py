@@ -165,7 +165,7 @@ def addPad(cls, pad=pc.Pad, side='top'):
 
             d_ref=cell.add_ref(cls.draw(self),alias='Device')
 
-            pt._copy_ports(d_ref,cell)
+            # pt._copy_ports(d_ref,cell)
 
             add_pads(cell,self.pad,side)
 
@@ -500,37 +500,32 @@ def addLargeGround(probe):
 
                 if 'GroundLX' in alias:
 
+                    dest=cell[alias].ports['N'].endpoints[1]
+
                     cell.remove(cell[alias])
 
-                    groundref=cell.add_ref(groundpad,alias="GroundLX")
+                    groundref=cell.add_ref(groundpad,alias=alias)
 
                     groundref.move(origin=ur.coord,\
-                    destination=cell.ports['GroundLXN'].endpoints[1])
+                    destination=dest)
 
-                    for p in cell.get_ports():
+                if 'GroundRX' in alias:
 
-                        if alias in p.name:
-
-                            cell.remove(cell.ports[p.name])
-
-                    pt._copy_ports(groundref,cell,prefix="GroundLX")
-
-                elif 'GroundRX' in alias:
+                    dest=cell[alias].ports['N'].endpoints[0]
 
                     cell.remove(cell[alias])
 
-                    groundref=cell.add_ref(groundpad,alias="GroundRX")
+                    groundref=cell.add_ref(groundpad,alias=alias)
 
-                    groundref.move(origin=ul.coord,\
-                    destination=cell.ports['GroundRXN'].endpoints[0])
+                    groundref.move(origin=ur.coord,\
+                    destination=dest)
+                # for p in cell.get_ports():
+                #
+                #     if alias in p.name:
+                #
+                #         cell.remove(cell.ports[p.name])
 
-                    for p in cell.get_ports():
-
-                        if alias in p.name:
-
-                            cell.remove(cell.ports[p.name])
-
-                    pt._copy_ports(groundref,cell,prefix="GroundRX")
+                # pt._copy_ports(groundref,cell,prefix="GroundLX")
 
             return cell
 
@@ -986,10 +981,9 @@ def addTwoPortProbe(cls,probe=makeTwoPortProbe(pc.GSGProbe)):
 
             bbox=super()._bbox_mod(device_cell.bbox)
 
-            import pdb; pdb.set_trace()
-
             if isinstance(self.probe,pc.GSGProbe):
 
+                import pdb; pdb.set_trace()
                 #ground routing setup
                 for index,groundroute in enumerate([self.gndlefttrace,self.gndrighttrace]):
 
@@ -1005,17 +999,17 @@ def addTwoPortProbe(cls,probe=makeTwoPortProbe(pc.GSGProbe)):
 
                         groundroute.side='left'
 
-                        groundroute.source=(probe_cell.ports['GroundLXN_2'],)
+                        groundroute.source=(probe_cell.ports['GroundLXN_1'],)
 
-                        groundroute.destination=(probe_cell.ports['Ground'],)
+                        groundroute.destination=(probe_cell.ports['GroundLXS_2'],)
 
                     elif index==1:
 
                         groundroute.side='right'
 
-                        groundroute.source=(probe_cell.ports['gnd_right_1'],)
+                        groundroute.source=(probe_cell.ports['GroundRXN_1'],)
 
-                        groundroute.destination=(probe_cell.ports['gnd_right_2'],)
+                        groundroute.destination=(probe_cell.ports['GroundRXS_2'],)
 
                 #signal routing
                 for index,sigroute in enumerate([self.sig1trace,self.sig2trace]):
@@ -1026,11 +1020,9 @@ def addTwoPortProbe(cls,probe=makeTwoPortProbe(pc.GSGProbe)):
 
                     if index==0:
 
-                        sigroute.source=(probe_cell.ports['sig_1'],)
+                        sigroute.source=(probe_cell.ports['SigN_1'],)
 
                         dest_port=pt._find_ports(device_cell,'bottom')
-
-                        sigroute.source=(probe_cell.ports['sig_1'],)
 
                         sigroute.destination=tuple(dest_port)
 
@@ -1040,15 +1032,13 @@ def addTwoPortProbe(cls,probe=makeTwoPortProbe(pc.GSGProbe)):
 
                         dest_port=pt._find_ports(device_cell,'top')
 
-                        sigroute.source=(probe_cell.ports['sig_2'],)
+                        sigroute.source=(probe_cell.ports['SigN_2'],)
 
                         sigroute.destination=tuple(dest_port)
 
                         sigroute.trace_width=dest_port[0].width
 
                     sigroute.layer=self.probe.layer
-
-                    # sigroute.clearance=bbox
 
             elif isinstance(self.probe,pc.GSProbe):
 
