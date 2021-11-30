@@ -1,6 +1,6 @@
 from pirel.tools import *
 
-from pirel.tools import _check_points_path, _copy_ports
+from pirel.tools import _check_points_path, _copy_ports,_view_points
 
 from phidl.device_layout import Device, Port, DeviceReference, Group
 
@@ -1604,13 +1604,7 @@ class Routing(LayoutPart):
 
         except Exception as e_non_hind:
 
-            try:
-
                 p=self._draw_hindered_path(s,d,self.side)
-
-            except Exception as e_hind:
-
-                raise AttributeError("could not generate path")
 
         return p
 
@@ -1646,7 +1640,7 @@ class Routing(LayoutPart):
 
         else:
 
-            raise AttributeError("path is hindered")
+            raise ValueError("path is hindered")
 
     def _draw_hindered_path(self,s,d,side='auto'):
 
@@ -1684,9 +1678,9 @@ class Routing(LayoutPart):
 
         p_mid2=Point(p_mid.x,ur.y+self.trace_width)
 
-        p_mid3=Point(p_mid2.x,p2_proj.y)
+        # p_mid3=Point(p_mid2.x,p2_proj.y)
 
-        p=self._make_path(p1,p1_proj,p_mid,p_mid2,p_mid3,p2_proj,p2)
+        p=self._make_path(p1,p1_proj,p_mid,p_mid2,p2_proj,p2)
 
         if not self._is_hindered(p):
 
@@ -1694,7 +1688,7 @@ class Routing(LayoutPart):
 
         else:
 
-            raise AttributeError("path is hindered")
+            raise ValueError("path is hindered")
 
     def _is_hindered(self,path):
 
@@ -1723,7 +1717,13 @@ class Routing(LayoutPart):
 
         sel_points=_check_points_path(*sel_points,trace_width=self.trace_width)
 
-        return pp.smooth(points=sel_points,radius=self._radius,num_pts=self._num_pts)
+        try:
+
+            return pp.smooth(points=sel_points,radius=self._radius,num_pts=self._num_pts)
+
+        except:
+
+            _view_points(sel_points)
 
     @property
     def resistance_squares(self):

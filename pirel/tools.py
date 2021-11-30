@@ -18,9 +18,9 @@ import phidl.device_layout as dl
 
 from IPython import get_ipython
 
-if get_ipython() is not None:
+import matplotlib.pyplot as plt
 
-    import matplotlib.pyplot as plt
+if get_ipython() is not None:
 
     get_ipython().run_line_magic('matplotlib', 'inline')
 
@@ -795,7 +795,7 @@ class LayoutPart(ABC) :
 
         return df.to_string()
 
-def print_ports(device : Device):
+def _print_ports(device : Device):
     ''' print a list of ports in the cell.
 
     Parameters
@@ -818,7 +818,7 @@ def join(device : Device) -> Device:
 
     return out_cell
 
-def get_corners(device : Device) :
+def _get_corners(device : Device) :
     ''' get corners of a device.
 
     Parameters
@@ -1436,5 +1436,23 @@ def _find_ports(cell,tag):
             output.append(cell_port)
 
     return output
+
+def _view_points(points):
+
+    ax=plt.axes()
+
+    p=ax.plot([p[0] for p in points],[p[1] for p in points])
+
+    p[0].set_linewidth(1)
+
+    p[0].set_linestyle('-.')
+
+    p[0].set_marker('o')
+
+    p[0].set_markerfacecolor('r')
+
+    plt.show()
+
+    return
 
 warnings.formatwarning = custom_formatwarning

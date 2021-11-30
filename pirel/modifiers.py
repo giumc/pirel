@@ -372,7 +372,6 @@ def addOnePortProbe(cls,probe=pc.GSGProbe):
                 origin=probe_port.midpoint,
                 destination=(bottom_center-probe_dut_distance).coord)
 
-
         def _setup_routings(self,device_cell,probe_cell):
 
             probe_ref=self._move_probe_ref(device_cell,DeviceReference(probe_cell))
@@ -969,8 +968,6 @@ def addTwoPortProbe(cls,probe=makeTwoPortProbe(pc.GSGProbe)):
             probe_cell=self.probe.draw()
 
             probe_ref=cell.add_ref(probe_cell, alias=self.name+"Probe")
-
-            import pdb; pdb.set_trace()
 
             self._move_probe_ref(device_ref,probe_ref)
 
