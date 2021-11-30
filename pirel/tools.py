@@ -796,6 +796,14 @@ class LayoutPart(ABC) :
 
         return df.to_string()
 
+    def __getitem__(self,key):
+
+        return self.get_params()[key]
+
+    def __setitem__(self,key,value):
+
+        self.set_params({key:value})
+
 def _print_ports(device : Device):
     ''' print a list of ports in the cell.
 

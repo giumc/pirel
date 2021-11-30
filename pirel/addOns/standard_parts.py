@@ -356,3 +356,65 @@ def get_device_param_from_table(tab : pd.DataFrame, tag : str):
             pass
 
     return pars
+
+def alignment_marks_4layers(scale=[0.2,0.5,1]):
+
+    def dr(cell):
+
+        return DeviceReference(cell)
+
+    BElayer=LayoutDefault.layerBottom
+    TElayer=LayoutDefault.layerTop
+    VIAlayer=LayoutDefault.layerVias
+    ETCHlayer=LayoutDefault.layerEtch
+    PETCHlayer=LayoutDefault.layerPartialEtch
+    Zerolayer=LayoutDefault.layerPad
+
+    align1=pf.verniers(scale,layers=[BElayer,VIAlayer],label='VIA',reversed=True)
+    align_ph=pg.bbox(align1.bbox) #only for space
+    align2=pf.verniers(scale,layers=[BElayer,TElayer],label='TE')
+    align3=pf.verniers(scale,layers=[BElayer,ETCHlayer],label='ETCH')
+    align4=pf.verniers(scale,layers=[BElayer,PETCHlayer],label='PETCH')
+    t1=text_aligner(size=300,label="Align to BE",
+        layers=[BElayer,TElayer,ETCHlayer,PETCHlayer,VIAlayer])
+    g=Group([align1,dr(align_ph),align2,align3,align4,t1])
+    g.distribute(direction='x',spacing=150)
+    g.align(alignment='y')
+
+    align5=pf.verniers(scale,layers=[TElayer,VIAlayer],label='VIA',reversed=True)
+    align6=pf.verniers(scale,layers=[TElayer,ETCHlayer],label='ETCH')
+    align7=pf.verniers(scale,layers=[TElayer,PETCHlayer],label='PETCH')
+    t2=text_aligner(size=300,label='Align to TE',\
+        layers=[TElayer,ETCHlayer,PETCHlayer,VIAlayer])
+    g2=Group([align5,dr(align_ph),dr(align_ph),align6,align7,t2])
+    g2.distribute(direction='x',spacing=150)
+    g2.align(alignment='y')
+
+    align8=pf.verniers(scale,layers=[Zerolayer,VIAlayer],label='VIA',reversed=True)
+    align9=pf.verniers(scale,layers=[Zerolayer,BElayer],label='BE')
+    align10=pf.verniers(scale,layers=[Zerolayer,TElayer],label='TE')
+    align11=pf.verniers(scale,layers=[Zerolayer,ETCHlayer],label='ETCH')
+    align12=pf.verniers(scale,layers=[Zerolayer,PETCHlayer],label='PETCH')
+    t3=text_aligner(size=300,label='Align to Pad',\
+        layers=[Zerolayer,BElayer,TElayer,ETCHlayer,PETCHlayer,VIAlayer])
+    g3=Group([align8,align9,align10,align11,align12,t3])
+    g3.distribute(direction='x',spacing=150)
+    g3.align(alignment='y')
+
+    g_tot=Group([g,g2,g3])
+    g_tot.distribute(direction='y',spacing=150)
+    g_tot.align(alignment='xmin')
+
+    cell=Device("Alignments")
+
+    for c in [align1,align2,align3,align4,t1]:
+
+        cell.add(c)
+
+    for c in [align5,align6,align7,t2]:
+        cell.add(c)
+
+    for c in [align8,align9,align10,align11,align12,t3]:
+        cell.add(c)
+
+    return cell
