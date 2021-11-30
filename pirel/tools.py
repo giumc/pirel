@@ -270,7 +270,7 @@ class LayoutDefault:
     #Via
 
     Vialayer=layerVias
-    Viashape='circle'
+    Viashape='square'
     Viasize=20
 
     #GSGProbe
@@ -1279,7 +1279,7 @@ def _is_cell_inside(cell_test,cell_ref):
 
     area_pre,area_post=_calculate_pre_post_area(cell_test,cell_ref)
 
-    if round(area_pre,3) >= round(area_post,3):
+    if round(area_pre,3) >= round(area_post,3)-1e-3:
 
         return True
 
@@ -1344,7 +1344,7 @@ def _is_cell_outside(cell_test,cell_ref):
 
     area_ref,area_post=_calculate_pre_post_area(cell_test,cell_ref)
 
-    if round(area_post,3)>=round(area_ref+area_test,3):
+    if round(area_post,3)>=round(area_ref+area_test,3)-1e-3:
 
         return True
 

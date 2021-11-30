@@ -1615,11 +1615,17 @@ class Routing(LayoutPart):
 
         for p_mid in (Point(p1_proj.x,p2_proj.y),Point(p2_proj.x,p1_proj.y)):
 
-            p=self._make_path(p1,p1_proj,p_mid,p2_proj,p2)
+            try:
 
-            if not self._is_hindered(p):
+                p=self._make_path(p1,p1_proj,p_mid,p2_proj,p2)
 
-                return p
+                if not self._is_hindered(p):
+
+                    return p
+
+            except :
+
+                pass
 
         else:
 
@@ -1661,17 +1667,27 @@ class Routing(LayoutPart):
 
         p_mid2=Point(p_mid.x,ur.y+(ll.y-p1_proj.y))
 
-        # p_mid3=Point(p_mid2.x,p2_proj.y)
+        for p_mid3 in (Point(p_mid2.x,p2_proj.y),Point(p2_proj.x,p_mid2.y)):
 
-        p=self._make_path(p1,p1_proj,p_mid,p_mid2,p2_proj,p2)
+            try:
 
-        if not self._is_hindered(p):
+                p=self._make_path(p1,p1_proj,p_mid,p_mid2,p_mid3,p2_proj,p2)
 
-            return p
+                if not self._is_hindered(p):
+
+                    return p
+
+            except:
+
+                pass
 
         else:
 
-            raise ValueError("path is hindered")
+            import pdb; pdb.set_trace()
+
+            self._is_hindered(p)
+
+            raise ValueError("path is impossible")
 
     def _is_hindered(self,path):
 
@@ -1686,7 +1702,7 @@ class Routing(LayoutPart):
             return not is_cell_outside(
                 test_path_cell,
                 pg.bbox(self.clearance),
-                tolerance=self._tol)
+                tolerance=0)
 
     def _make_path(self,*points):
 
@@ -1700,13 +1716,7 @@ class Routing(LayoutPart):
 
         sel_points=_check_points_path(*sel_points,trace_width=self.trace_width)
 
-        try:
-
-            return pp.smooth(points=sel_points,radius=self._radius,num_pts=self._num_pts)
-
-        except:
-
-            _view_points(sel_points)
+        return pp.smooth(points=sel_points,radius=self._radius,num_pts=self._num_pts)
 
     @property
     def resistance_squares(self):

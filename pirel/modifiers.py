@@ -245,19 +245,30 @@ def addPartialEtch(cls):
     adddPartialEtch.__name__=cls.__name__+' w PartialEtching'
 
 def addOnePortProbe(cls,probe=pc.GSGProbe):
+    ''' adds a one port probe to existing LayoutClass.
+
+    Parameters:
+    -----------
+        cls : pt.LayoutPart
+            the layout drawn with this LayoutPart needs to have
+            a 'bottom' and 'top' port.
+
+        probe: pt.LayoutPart
+            currently working only on pc.GSGProbe.
+    '''
 
     class OnePortProbed(cls):
-        ''' adds a one port probe to existing LayoutClass.
+        ''' LayoutPart decorated with a one port probe.
 
         Parameters:
         -----------
-            cls : pt.LayoutPart
-                the layout drawn with this LayoutPart needs to have
-                a 'bottom' and 'top' port.
+            ground_conn_style : ('straight','side')
 
-            probe: pt.LayoutPart
-                currently working only on pc.GSGProbe.
+            gnd_routing_width: float.
+
         '''
+
+        ground_conn_style=LayoutParamInterface('straight','side')
 
         gnd_routing_width=LayoutParamInterface()
 
@@ -267,13 +278,13 @@ def addOnePortProbe(cls,probe=pc.GSGProbe):
 
             self.gnd_routing_width=100.0
 
-            self._setup_routings(cls.draw(self),self.probe.draw())
+            self.ground_conn_style='straight'
+
+            # self._setup_routings(cls.draw(self),self.probe.draw())
 
         def draw(self):
 
             device_cell=cls.draw(self)
-
-            self._setup_routings(device_cell)
 
             probe_cell=self.probe.draw()
 
@@ -283,23 +294,23 @@ def addOnePortProbe(cls,probe=pc.GSGProbe):
 
             probe_ref=cell.add_ref(probe_cell, alias=self.name+"Probe")
 
-            self._move_probe_ref(probe_ref)
+            self._move_probe_ref(device_cell,probe_ref)
+
+            self._setup_routings(device_cell,probe_ref)
 
             routing_cell=self._draw_probe_routing()
 
+            import pdb; pdb.set_trace()
+
             if hasattr(self,'via'):
 
-                routing_cell_vias=add_vias(routing_cell,
+                add_vias(routing_cell,
                     routing_cell.bbox,
                     self.via,
-                    spacing=self.via.size*2,
-                    tolerance=self.via.size*1.5)
+                    spacing=self.via.size*1.25,
+                    tolerance=self.via.size)
 
-                cell.add_ref(routing_cell_vias,alias=self.name+"GroundTrace")
-
-            else:
-
-                cell.add_ref(routing_cell,alias=self.name+"GroundTrace")
+            cell.add_ref(routing_cell,alias=self.name+"GroundTrace")
 
             return cell
 
@@ -366,15 +377,19 @@ def addOnePortProbe(cls,probe=pc.GSGProbe):
 
             bottom_center=pt._get_centroid(*[pt.Point(p.midpoint) for p in bottom_ports])
 
-            probe_port=probe_ref.ports['sig_1']
+            try:
+
+                probe_port=probe_ref.ports['SigN']
+
+            except:
+
+                probe_port=probe_ref.ports['SigN_1']
 
             probe_ref.move(
                 origin=probe_port.midpoint,
                 destination=(bottom_center-probe_dut_distance).coord)
 
         def _setup_routings(self,device_cell,probe_cell):
-
-            probe_ref=self._move_probe_ref(device_cell,DeviceReference(probe_cell))
 
             bbox=super()._bbox_mod(device_cell.bbox)
 
@@ -392,54 +407,40 @@ def addOnePortProbe(cls,probe=pc.GSGProbe):
 
                         groundroute.side='left'
 
-                        groundroute.source=(probe_ref.ports['gnd_left'],)
+                        if self.ground_conn_style=='straight':
+
+                            groundroute.source=(probe_cell.ports['GroundLXN'],)
+
+                        elif self.ground_conn_style=='side':
+
+                            groundroute.source=(probe_cell.ports['GroundLXW'],)
 
                     elif index==1:
 
                         groundroute.side='right'
 
-                        groundroute.source=(probe_ref.ports['gnd_right'],)
+                        if self.ground_conn_style=='straight':
 
-                    device_ports=device_cell.ports
+                            groundroute.source=(probe_cell.ports['GroundRXN'],)
 
-                    dut_port_top=[]
+                        elif self.ground_conn_style=='side':
 
-                    for port_name in device_ports.keys():
+                            groundroute.source=(probe_cell.ports['GroundRXE'],)
 
-                        if re.search('top',port_name):
-
-                            dut_port_top.append(device_ports[port_name])
-
-                    groundroute.destination=tuple(dut_port_top)
+                    groundroute.destination=tuple(pt._find_ports(device_cell,'top'))
 
                 #signal routing
                 signalroute=self.sigtrace
 
-                for p_name in device_cell.ports.keys():
+                bottom_ports=pt._find_ports(device_cell,'bottom')
 
-                    if re.search('bottom',p_name):
-
-                        signalroute.trace_width=device_cell.ports[p_name].width
-
-                        break
-
-                else:
-
-                    raise ValueError(f"no bottom port in {cls.__name__} cell")
-
-                bottom_ports=[]
-
-                for port_name in device_ports.keys():
-
-                    if re.search('bottom',port_name):
-
-                        bottom_ports.append(device_ports[port_name])
+                signalroute.trace_width=bottom_ports[0].width
 
                 signalroute.layer=self.probe.layer
 
                 signalroute.clearance=bbox
 
-                signalroute.source=(probe_ref.ports['sig'],)
+                signalroute.source=(probe_cell.ports['SigN'],)
 
                 signalroute.destination=tuple(bottom_ports)
 
@@ -883,6 +884,8 @@ def makeTwoPortProbe(cls):
 
                     return str.replace('W_','E_')
 
+                return str
+
             cell=Device(name=self.name)
 
             probe_cell=super().draw()
@@ -905,17 +908,17 @@ def makeTwoPortProbe(cls):
 
                 if 'LX' in n:
 
-                    cell.add_port(port=p,name=mirror_label(n).replace('LX','RX')+'_2')
+                    cell.add_port(port=p,name=mirror_label(n+'_2').replace('LX','RX'))
 
                 else:
 
                     if 'RX' in n:
 
-                        cell.add_port(port=p,name=mirror_label(n).replace('RX','LX')+'_2')
+                        cell.add_port(port=p,name=mirror_label(n+'_2').replace('RX','LX'))
 
                     else:
 
-                        cell.add_port(port=p,name=mirror_label(n)+'_2')
+                        cell.add_port(port=p,name=mirror_label(n+'_2'))
 
             return cell
 
@@ -947,9 +950,9 @@ def addTwoPortProbe(cls,probe=makeTwoPortProbe(pc.GSGProbe)):
 
             self._move_probe_ref(device_ref,probe_ref)
 
-            import pdb; pdb.set_trace()
-
             self._setup_routings(device_ref,probe_ref)
+
+            import pdb; pdb.set_trace()
 
             probe_routing_cell=self._draw_probe_routing()
 
@@ -998,7 +1001,6 @@ def addTwoPortProbe(cls,probe=makeTwoPortProbe(pc.GSGProbe)):
 
             if isinstance(self.probe,pc.GSGProbe):
 
-                import pdb; pdb.set_trace()
                 #ground routing setup
                 for index,groundroute in enumerate([self.gndlefttrace,self.gndrighttrace]):
 
@@ -1014,17 +1016,33 @@ def addTwoPortProbe(cls,probe=makeTwoPortProbe(pc.GSGProbe)):
 
                         groundroute.side='left'
 
-                        groundroute.source=(probe_cell.ports['GroundLXN_1'],)
+                        if self.ground_conn_style=='straight':
 
-                        groundroute.destination=(probe_cell.ports['GroundLXS_2'],)
+                            groundroute.source=(probe_cell.ports['GroundLXN_1'],)
+
+                            groundroute.destination=(probe_cell.ports['GroundLXS_2'],)
+
+                        elif self.ground_conn_style=='side':
+
+                            groundroute.source=(probe_cell.ports['GroundLXW_1'],)
+
+                            groundroute.destination=(probe_cell.ports['GroundLXW_2'],)
 
                     elif index==1:
 
                         groundroute.side='right'
 
-                        groundroute.source=(probe_cell.ports['GroundRXN_1'],)
+                        if self.ground_conn_style=='straight':
 
-                        groundroute.destination=(probe_cell.ports['GroundRXS_2'],)
+                            groundroute.source=(probe_cell.ports['GroundRXN_1'],)
+
+                            groundroute.destination=(probe_cell.ports['GroundRXS_2'],)
+
+                        elif self.ground_conn_style=='side':
+
+                            groundroute.source=(probe_cell.ports['GroundRXE_1'],)
+
+                            groundroute.destination=(probe_cell.ports['GroundRXE_2'],)
 
                 #signal routing
                 for index,sigroute in enumerate([self.sig1trace,self.sig2trace]):
@@ -1047,7 +1065,7 @@ def addTwoPortProbe(cls,probe=makeTwoPortProbe(pc.GSGProbe)):
 
                         dest_port=pt._find_ports(device_cell,'top')
 
-                        sigroute.source=(probe_cell.ports['SigN_2'],)
+                        sigroute.source=(probe_cell.ports['SigS_2'],)
 
                         sigroute.destination=tuple(dest_port)
 
@@ -1327,7 +1345,7 @@ def add_vias(cell : Device, bbox, via : pt.LayoutPart, spacing : float = 0,toler
 
     for elem in via_cell.references:
 
-        if not pt.is_cell_within(elem,cell,tolerance):
+        if not pt.is_cell_inside(elem,cell,tolerance):
 
             tbr.append(elem)
 
