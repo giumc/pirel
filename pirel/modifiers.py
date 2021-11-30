@@ -165,7 +165,7 @@ def addPad(cls, pad=pc.Pad, side='top'):
 
             d_ref=cell.add_ref(cls.draw(self),alias='Device')
 
-            # pt._copy_ports(d_ref,cell)
+            pt._copy_ports(d_ref,cell)
 
             add_pads(cell,self.pad,side)
 
@@ -502,30 +502,43 @@ def addLargeGround(probe):
 
                     dest=cell[alias].ports['N'].endpoints[1]
 
+                    for portname in cell.ports:
+
+                        if alias in portname:
+
+                            cell.remove(cell.ports[portname])
+
                     cell.remove(cell[alias])
 
                     groundref=cell.add_ref(groundpad,alias=alias)
 
                     groundref.move(origin=ur.coord,\
                     destination=dest)
+
+                    pt._copy_ports(groundref,cell,prefix="GroundLX")
 
                 if 'GroundRX' in alias:
 
                     dest=cell[alias].ports['N'].endpoints[0]
 
+                    for portname in cell.ports:
+
+                        if alias in portname:
+
+                            cell.remove(cell.ports[portname])
+
                     cell.remove(cell[alias])
 
                     groundref=cell.add_ref(groundpad,alias=alias)
 
-                    groundref.move(origin=ur.coord,\
+                    groundref.move(origin=ul.coord,\
                     destination=dest)
-                # for p in cell.get_ports():
-                #
-                #     if alias in p.name:
-                #
-                #         cell.remove(cell.ports[p.name])
 
-                # pt._copy_ports(groundref,cell,prefix="GroundLX")
+                    for portname in cell[alias].ports:
+
+                        cell.remove(cell[alias].ports[portname])
+
+                    pt._copy_ports(groundref,cell,prefix="GroundRX")
 
             return cell
 
@@ -854,21 +867,21 @@ def makeTwoPortProbe(cls):
 
             def mirror_label(str):
 
-                if 'N' in str:
+                if 'N_' in str:
 
-                    return str.replace('N','S')
+                    return str.replace('N_','S_')
 
-                if 'E' in str:
+                if 'E_' in str:
 
-                    return str.replace('E','W')
+                    return str.replace('E_','W_')
 
-                if 'S' in str:
+                if 'S_' in str:
 
-                    return str.replace('S','N')
+                    return str.replace('S_','N_')
 
-                if 'W' in str:
+                if 'W_' in str:
 
-                    return str.replace('W','E')
+                    return str.replace('W_','E_')
 
             cell=Device(name=self.name)
 
@@ -933,6 +946,8 @@ def addTwoPortProbe(cls,probe=makeTwoPortProbe(pc.GSGProbe)):
             probe_ref=cell.add_ref(probe_cell, alias=self.name+"Probe")
 
             self._move_probe_ref(device_ref,probe_ref)
+
+            import pdb; pdb.set_trace()
 
             self._setup_routings(device_ref,probe_ref)
 

@@ -923,9 +923,9 @@ class GSGProbe(LayoutPart):
         pad_gnd_rx=cell.add_ref(pad_cell,alias='GroundRX')
         pad_gnd_rx.move(destination=(2*dp).coord)
 
-        # _copy_ports(pad_sig,cell,prefix='Sig')
-        # _copy_ports(pad_gnd_rx,cell,prefix='GroundRX')
-        # _copy_ports(pad_gnd_lx,cell,prefix='GroundLX')
+        _copy_ports(pad_sig,cell,prefix='Sig')
+        _copy_ports(pad_gnd_rx,cell,prefix='GroundRX')
+        _copy_ports(pad_gnd_lx,cell,prefix='GroundLX')
         # cell.add_port(port=pad_sig.ports['N'],name='sig')
         #
         # cell.add_port(port=pad_gnd_sx.ports['N'],name='gnd_left')
@@ -1367,7 +1367,7 @@ class FBERes(LFERes):
 
             del plate
 
-        # _copy_ports(supercell,cell)
+        _copy_ports(supercell,cell)
 
         return cell
 
@@ -1402,7 +1402,7 @@ class TwoPortRes(FBERes):
                     by_spec=(self.idt.layer,0)),
                 layer=self.platelayer)
 
-        # _copy_ports(supercell,cell)
+        _copy_ports(supercell,cell)
 
         return cell
 
