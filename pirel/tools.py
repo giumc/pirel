@@ -291,7 +291,7 @@ class LayoutDefault:
 
     Routingtrace_width=80.0
     Routingclearance=((0,0),(0,0))
-    Routinglayer=layerTop
+    Routinglayer=(layerTop,)
     Routingports=(Port(name='1',midpoint=(450,0),\
         width=50,orientation=90),\
             Port(name='2',midpoint=(100,550),\
@@ -847,7 +847,7 @@ def _get_corners(device : Device) :
 
     return ll,lr,ul,ur
 
-def check(device : Device, joined=False, blocking=True):
+def check(device : Device, joined=False, blocking=True,gds=False):
     ''' Shows the device layout.
 
         If run by terminal, blocks script until window is closed.
@@ -857,8 +857,10 @@ def check(device : Device, joined=False, blocking=True):
             device : phidl.Device
 
             joined : boolean (optional, default False)
-
                 if true, returns a flattened/joined version of device
+
+            gds : boolean
+                if true, view in gdspy viewer
 
     '''
     set_quickplot_options(blocking=blocking)
@@ -868,7 +870,16 @@ def check(device : Device, joined=False, blocking=True):
         cell=Device()
         cell.absorb(cell<<device)
         cell.flatten()
-        qp(join(cell))
+
+    if gds:
+
+        lib=gdspy.GdsLibrary()
+
+        gcell=lib.new_cell("Output")
+
+        gcell.add(device.flatten())
+
+        gdspy.LayoutViewer(lib)
 
     else:
 

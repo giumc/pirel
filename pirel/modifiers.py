@@ -264,13 +264,17 @@ def addOnePortProbe(cls,probe=pc.GSGProbe):
         -----------
             ground_conn_style : ('straight','side')
 
-            gnd_routing_width: float.
+            gnd_routing_width: float
+
+            routing_layer: tuple.
 
         '''
 
         ground_conn_style=LayoutParamInterface('straight','side')
 
         gnd_routing_width=LayoutParamInterface()
+
+        routing_layer=LayoutParamInterface()
 
         def __init__(self,*args,**kwargs):
 
@@ -280,7 +284,7 @@ def addOnePortProbe(cls,probe=pc.GSGProbe):
 
             self.ground_conn_style='straight'
 
-            # self._setup_routings(cls.draw(self),self.probe.draw())
+            self.routing_layer=(self.probe.layer,)
 
         def draw(self):
 
@@ -395,7 +399,7 @@ def addOnePortProbe(cls,probe=pc.GSGProbe):
 
                 for index,groundroute in enumerate([self.gndlefttrace,self.gndrighttrace]):
 
-                    groundroute.layer=self.probe.layer
+                    groundroute.layer=self.routing_layer
 
                     groundroute.clearance=bbox
 
@@ -434,7 +438,7 @@ def addOnePortProbe(cls,probe=pc.GSGProbe):
 
                 signalroute.trace_width=bottom_ports[0].width
 
-                signalroute.layer=self.probe.layer
+                signalroute.layer=self.routing_layer
 
                 signalroute.clearance=bbox
 
@@ -1008,7 +1012,7 @@ def addTwoPortProbe(cls,probe=makeTwoPortProbe(pc.GSGProbe)):
                 #ground routing setup
                 for index,groundroute in enumerate([self.gndlefttrace,self.gndrighttrace]):
 
-                    groundroute.layer=self.probe.layer
+                    groundroute.layer=self.routing_layer
 
                     groundroute.clearance=bbox
 
@@ -1053,7 +1057,7 @@ def addTwoPortProbe(cls,probe=makeTwoPortProbe(pc.GSGProbe)):
 
                     sigroute.side='auto'
 
-                    sigroute.layer=self.probe.layer
+                    sigroute.layer=self.routing_layer
 
                     if index==0:
 
@@ -1075,7 +1079,7 @@ def addTwoPortProbe(cls,probe=makeTwoPortProbe(pc.GSGProbe)):
 
                         sigroute.trace_width=dest_port[0].width
 
-                    sigroute.layer=self.probe.layer
+                    sigroute.layer=self.routing_layer
 
             elif isinstance(self.probe,pc.GSProbe):
 

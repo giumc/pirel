@@ -1509,7 +1509,7 @@ class Routing(LayoutPart):
 
     _tol=1e-3
 
-    _simplification=10
+    _simplification=0.1
 
     clearance=LayoutParamInterface()
 
@@ -1536,6 +1536,12 @@ class Routing(LayoutPart):
         self.layer=LayoutDefault.Routinglayer
         self.overhang=LayoutDefault.Routingoverhang
 
+    def _check_frame(self):
+
+        cell=self._draw_frame()
+
+        check(cell)
+
     def _draw_frame(self):
 
         rect=pg.bbox(self.clearance,layer=self.layer)
@@ -1554,17 +1560,24 @@ class Routing(LayoutPart):
 
         path_cell=self._make_path_cell(p)
 
+        import pdb; pdb.set_trace()
+
         path_cell.name=self.name
 
         return path_cell
 
     def _make_path_cell(self,p):
 
-        return join(
-            p.extrude(
-                layer=self.layer,
+        cell=Device()
+
+        for l in self.layer:
+
+            cell<<p.extrude(
+                layer=l,
                 width=self.trace_width,
-                simplify=self._simplification))
+                simplify=self._simplification)
+
+        return join(cell)
 
     @property
     def path(self):
@@ -1693,6 +1706,15 @@ class Routing(LayoutPart):
 
         test_path_cell=self._make_path_cell(path)
 
+        try:
+
+                test_path_cell.remove_polygons(
+                    lambda pt,lay,dt : lay==any(self.layer[1:]))
+
+        except:
+
+            pass
+
         if self.clearance==((0,0),(0,0)):
 
             return False
@@ -1701,7 +1723,7 @@ class Routing(LayoutPart):
 
             return not is_cell_outside(
                 test_path_cell,
-                pg.bbox(self.clearance),
+                pg.bbox(self.clearance,layer=self.layer[0]),
                 tolerance=0)
 
     def _make_path(self,*points):
@@ -1802,7 +1824,7 @@ class MultiRouting(Routing):
 
         for p in self.path:
 
-            c<<p.extrude(width=self.trace_width,layer=self.layer,simplify=0.1)
+            c<<self._make_path_cell(p)
 
         return c
 
