@@ -479,108 +479,58 @@ def addLargeGround(probe):
 
         ground_size=LayoutParamInterface()
 
-        pad_position=LayoutParamInterface('top','side')
-
         def __init__(self,*args,**kwargs):
 
             probe.__init__(self,*args,**kwargs)
 
             self.ground_size=LayoutDefault.GSGProbe_LargePadground_size
 
-            self.pad_position='side'
-
         def draw(self):
 
-            cell=pt.Device(name=self.name)
-
-            oldprobe=cell<<probe.draw(self)
-
-            cell.absorb(oldprobe)
+            oldprobe=probe.draw(self)
+            
+            cell=pg.deepcopy(oldprobe)
 
             groundpad=pg.compass(size=(self.ground_size,self.ground_size),\
             layer=self.layer)
 
-            [_,_,ul,ur]=pt.get_corners(groundpad)
+            [_,_,ul,ur]=pt._get_corners(groundpad)
 
-            for name,p in oldprobe.ports.items():
+            for alias in cell.aliases:
 
-                name=p.name
+                if 'GroundLX' in alias:
 
-                if 'gnd' in name:
+                    cell.remove(cell[alias])
 
-                    groundref=cell<<groundpad
+                    groundref=cell.add_ref(groundpad,alias="GroundLX")
 
-                    if 'left' in name:
+                    groundref.move(origin=ur.coord,\
+                    destination=cell.ports['GroundLXN'].endpoints[1])
 
-                        groundref.move(origin=ur.coord,\
-                        destination=p.endpoints[1])
+                    for p in cell.get_ports():
 
-                        left_port=groundref.ports['N']
+                        if alias in p.name:
 
-                    elif 'right' in name:
+                            cell.remove(cell.ports[p.name])
 
-                        groundref.move(origin=ul.coord,\
-                        destination=p.endpoints[0])
+                    pt._copy_ports(groundref,cell,prefix="GroundLX")
 
-                        right_port=groundref.ports['N']
+                elif 'GroundRX' in alias:
 
-                    cell.absorb(groundref)
+                    cell.remove(cell[alias])
 
-                else :
+                    groundref=cell.add_ref(groundpad,alias="GroundRX")
 
-                    cell.add_port(p)
+                    groundref.move(origin=ul.coord,\
+                    destination=cell.ports['GroundRXN'].endpoints[0])
 
-            for name,port in oldprobe.ports.items():
+                    for p in cell.get_ports():
 
-                if 'gnd' in name:
+                        if alias in p.name:
 
-                    if 'left' in name:
+                            cell.remove(cell.ports[p.name])
 
-                        if self.pad_position=='side':
-
-                            left_port=Port(name=name,\
-                                midpoint=(left_port.midpoint[0]-self.ground_size/2,\
-                                left_port.midpoint[1]-self.ground_size/2),\
-                                orientation=180,\
-                                width=self.ground_size)
-
-                        elif self.pad_position=='top':
-
-                            left_port=Port(name=name,\
-                                midpoint=(left_port.midpoint[0],\
-                                left_port.midpoint[1]),\
-                                orientation=90,\
-                                width=self.ground_size)
-
-                        else :
-
-                            raise ValueError(f"New pad position is {self.pad_position} : not acceptable")
-
-                        cell.add_port(left_port)
-
-                    elif 'right' in name:
-
-                        if self.pad_position=='side':
-
-                            right_port=Port(name=name,\
-                            midpoint=(right_port.midpoint[0]+self.ground_size/2,\
-                                right_port.midpoint[1]-self.ground_size/2),\
-                            orientation=0,\
-                            width=self.ground_size)
-
-                        elif self.pad_position=='top':
-
-                            right_port=Port(name=name,\
-                            midpoint=(right_port.midpoint[0],\
-                                right_port.midpoint[1]),\
-                            orientation=90,\
-                            width=self.ground_size)
-
-                        else :
-
-                            raise ValueError(f"New pad position is {self.pad_position} : not acceptable")
-
-                        cell.add_port(right_port)
+                    pt._copy_ports(groundref,cell,prefix="GroundRX")
 
             return cell
 
@@ -1018,6 +968,8 @@ def addTwoPortProbe(cls,probe=makeTwoPortProbe(pc.GSGProbe)):
 
             bbox=super()._bbox_mod(device_cell.bbox)
 
+            import pdb; pdb.set_trace()
+
             if isinstance(self.probe,pc.GSGProbe):
 
                 #ground routing setup
@@ -1028,6 +980,8 @@ def addTwoPortProbe(cls,probe=makeTwoPortProbe(pc.GSGProbe)):
                     groundroute.clearance=bbox
 
                     groundroute.trace_width=self.gnd_routing_width
+
+                    groundroute.overhang=groundroute.trace_width/4
 
                     if index==0:
 

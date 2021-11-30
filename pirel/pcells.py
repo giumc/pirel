@@ -1,6 +1,6 @@
 from pirel.tools import *
 
-from pirel.tools import _check_points_path, _copy_ports,_view_points
+from pirel.tools import _check_points_path, _copy_ports,_view_points,_get_corners
 
 from phidl.device_layout import Device, Port, DeviceReference, Group
 
@@ -147,7 +147,7 @@ class TextParam:
 
         o=Point(0,0)
 
-        ll,lr,ul,ur=get_corners(cell)
+        ll,lr,ul,ur=_get_corners(cell)
 
         text_location=self.get('location')
 
@@ -900,8 +900,6 @@ class GSGProbe(LayoutPart):
 
         name=self.name
 
-        o=self.origin
-
         pad_x=self.size.x
 
         if pad_x>self.pitch*9/10:
@@ -910,38 +908,29 @@ class GSGProbe(LayoutPart):
 
             # warnings.warn("Pad size too large, capped to pitch*9/10")
 
-        pad_cell=pg.rectangle(size=(pad_x,self.size.y),\
+        pad_cell=pg.compass(size=(pad_x,self.size.y),\
         layer=self.layer)
-
-        pad_cell.move(origin=(0,0),\
-        destination=o.coord)
 
         cell=Device(self.name)
 
         dp=Point(self.pitch,0)
-        pad_gnd_sx=cell<<pad_cell
-        pad_sig=cell<<pad_cell
-        pad_sig.move(origin=o.coord,\
-        destination=(o+dp).coord)
 
-        pad_gnd_dx=cell<<pad_cell
-        pad_gnd_dx.move(origin=o.coord,\
-        destination=(o+dp*2).coord)
+        pad_gnd_lx=cell.add_ref(pad_cell,alias='GroundLX')
 
-        cell.add_port(Port(name='sig',\
-        midpoint=(o+Point(pad_x/2+self.pitch,self.size.y)).coord,\
-        width=pad_x,\
-        orientation=90))
+        pad_sig=cell.add_ref(pad_cell,alias='Sig')
+        pad_sig.move(destination=dp.coord)
 
-        cell.add_port(Port(name='gnd_left',\
-        midpoint=(o+Point(pad_x/2,self.size.y)).coord,\
-        width=pad_x,\
-        orientation=90))
+        pad_gnd_rx=cell.add_ref(pad_cell,alias='GroundRX')
+        pad_gnd_rx.move(destination=(2*dp).coord)
 
-        cell.add_port(Port(name='gnd_right',\
-        midpoint=(o+Point(pad_x/2+2*self.pitch,self.size.y)).coord,\
-        width=pad_x,\
-        orientation=90))
+        _copy_ports(pad_sig,cell,prefix='Sig')
+        _copy_ports(pad_gnd_rx,cell,prefix='GroundRX')
+        _copy_ports(pad_gnd_lx,cell,prefix='GroundLX')
+        # cell.add_port(port=pad_sig.ports['N'],name='sig')
+        #
+        # cell.add_port(port=pad_gnd_sx.ports['N'],name='gnd_left')
+        #
+        # cell.add_port(port=pad_gnd_dx.ports['N'],name='gnd_right')
 
         return cell
 
@@ -1287,8 +1276,8 @@ class FBERes(LFERes):
             transl_rel=Point(self.etchpit.x-4*self.idt.active_area_margin,self.anchor.size.y+2*self.anchor.etch_margin.y+self.bus.size.y\
                 +self.idt.y_offset*3/4)
 
-            lr_cell=get_corners(cell)[0]
-            lr_plate=get_corners(plate_ref)[0]
+            lr_cell=_get_corners(cell)[0]
+            lr_plate=_get_corners(plate_ref)[0]
 
             plate_ref.move(origin=lr_plate.coord,\
             destination=(lr_plate+lr_cell+transl_rel).coord)
@@ -1315,8 +1304,8 @@ class FBERes(LFERes):
                 self.bus.size.y+\
                 self.idt.y_offset*3/4)
 
-            lr_cell=get_corners(cell)[0]
-            lr_plate=get_corners(plate_ref)[0]
+            lr_cell=_get_corners(cell)[0]
+            lr_plate=_get_corners(plate_ref)[0]
 
             plate_ref.move(origin=lr_plate.coord,\
             destination=(lr_plate+lr_cell+transl_rel).coord)
@@ -1341,8 +1330,8 @@ class FBERes(LFERes):
                 4*self.idt.active_area_margin,\
                     self.anchor.size.y+2*self.anchor.etch_margin.y)
 
-            lr_cell=get_corners(cell)[0]
-            lr_plate=get_corners(plate_ref)[0]
+            lr_cell=_get_corners(cell)[0]
+            lr_plate=_get_corners(plate_ref)[0]
 
             plate_ref.move(origin=lr_plate.coord,\
             destination=(lr_plate+lr_cell+transl_rel).coord)
@@ -1368,8 +1357,8 @@ class FBERes(LFERes):
                     self.idt.active_area_margin,\
                         self.anchor.size.y+2*self.anchor.etch_margin.y)
 
-            lr_cell=get_corners(cell)[0]
-            lr_plate=get_corners(plate_ref)[0]
+            lr_cell=_get_corners(cell)[0]
+            lr_plate=_get_corners(plate_ref)[0]
 
             plate_ref.move(origin=lr_plate.coord,\
             destination=(lr_plate+lr_cell+transl_rel).coord)
@@ -1503,17 +1492,11 @@ class Routing(LayoutPart):
         distance to extend port in its direction before routing
 
     destination: phidl.Port
-        for now, the ports have to be oriented as follows:
-            +90 -> -90 if below obstacle
-            +90 -> +90 if above obstacle
-            0 -> +90 if above obstacle
-            180 -> +90 if above obstacle
 
     layer : int
         metal layer.
 
     side : str (can be "auto","left","right")
-
         where to go if there is an obstacle.
         decides where to go if there is an obstacle in the routing,
         only 'auto','left','right'
@@ -1644,7 +1627,7 @@ class Routing(LayoutPart):
 
     def _draw_hindered_path(self,s,d,side='auto'):
 
-        ll,lr,ul,ur=get_corners(pg.bbox(self.clearance))
+        ll,lr,ul,ur=_get_corners(pg.bbox(self.clearance))
 
         if side=='auto':
 
@@ -1676,7 +1659,7 @@ class Routing(LayoutPart):
 
             p_mid=Point(lr.x+self.trace_width,p1_proj.y)
 
-        p_mid2=Point(p_mid.x,ur.y+self.trace_width)
+        p_mid2=Point(p_mid.x,ur.y+(ll.y-p1_proj.y))
 
         # p_mid3=Point(p_mid2.x,p2_proj.y)
 
@@ -1731,7 +1714,15 @@ class Routing(LayoutPart):
         return self.path.length()/self.trace_width
 
 class MultiRouting(Routing):
+    ''' Handles routings on multiple ports.
 
+    Attributes
+    ----------
+    source: tuple of phidl.Port
+
+    destination: tuple of phidl.Port
+
+    '''
     def __init__(self,*a,**k):
 
         LayoutPart.__init__(self,*a,**k)
@@ -1742,6 +1733,7 @@ class MultiRouting(Routing):
         self.trace_width=LayoutDefault.Routingtrace_width
         self.layer=LayoutDefault.Routinglayer
         self.side=LayoutDefault.Routingside
+        self.overhang=LayoutDefault.Routingoverhang
 
     @property
     def path(self):
@@ -1830,7 +1822,7 @@ class ParasiticAwareMultiRouting(MultiRouting):
 
             p=[]
 
-            if numports %2 ==0:
+            if numports %2 == 0:
 
                 midport=int(numports/2)
 
@@ -1848,15 +1840,15 @@ class ParasiticAwareMultiRouting(MultiRouting):
 
                         else:
 
-                            p.append(self._make_paware_connection(dest,nextdest))
+                            p.append(self._draw_non_hindered_path(dest,nextdest))
 
                     else:
 
-                        p.append(self._make_paware_connection(dest,nextdest))
+                        p.append(self._draw_non_hindered_path(dest,nextdest))
 
                 return p
 
-            elif numports%2==1:
+            elif numports %2 == 1:
 
                 midport=int((numports-1)/2)
 
@@ -1870,24 +1862,21 @@ class ParasiticAwareMultiRouting(MultiRouting):
 
                         p.extend(base_routing.path)
 
-                        p.append(self._make_paware_connection(dest,nextdest))
+                        p.append(self._draw_non_hindered_path(dest,nextdest))
 
                     else:
 
-                        p.append(self._make_paware_connection(dest,nextdest))
+                        p.append(self._draw_non_hindered_path(dest,nextdest))
 
                 return p
 
-    def _yovertravel(self,s):
-        return (s.midpoint[1]-self.source[0].midpoint[1])/4
-
     def _make_paware_connection(self,s,d):
 
-        Yovertravel=self._yovertravel(s)
+        p1=Point(s.midpoint)
 
-        p0=Point(s.midpoint)
+        p2=Point(d.midpoint)
 
-        p1=p0-Point(0,Yovertravel)
+        p1=p0+Point(0,self.overhang)
 
         p2=Point(d.midpoint[0],p1.y)
 

@@ -302,6 +302,7 @@ class LayoutDefault:
     #MultiRouting
 
     MultiRoutingsources=(Routingports[0],)
+    MultiRoutinglayer=(layerBottom,layerTop)
     MultiRoutingdestinations=(Port(name='2',midpoint=(100,550),\
         width=50,orientation=90),\
             Port(name='3',midpoint=(200,80),\
@@ -1419,11 +1420,11 @@ def _get_angle(p1,p2):
 
     return np.rad2deg((ang1 - ang2) % (2 * np.pi))
 
-def _copy_ports(source,dest):
+def _copy_ports(source,dest,prefix='',suffix=''):
 
-    for name,port in source.ports.items():
+    for n,p in source.ports.items():
 
-        dest.add_port(port,name)
+        dest.add_port(port=p,name=prefix+n+suffix)
 
 def _find_ports(cell,tag):
 
@@ -1454,5 +1455,30 @@ def _view_points(points):
     plt.show()
 
     return
+
+def _make_connection(p1,p2,layer):
+
+    from math import cos, sin, pi
+
+    c1,c2=port_coords(p1)
+    c3,c4=port_coords(p2)
+
+    return pg.Polygon([c1,c2,c3,c4],gds_layer=layer)
+
+    def port_coords(p1):
+
+        pmin=Point(p1.midpoint)-p1.width/2*Point(cos(p1.orientation*pi/180),sin(p1.orientation*pi/180))
+
+        pmax=Point(p1.midpoint)+p1.width/2*Point(cos(p1.orientation*pi/180),sin(p1.orientation*pi/180))
+
+        return pmin,pmax
+
+def _copy_layer(cell,l1,l2):
+
+    flatcell=join(cell)
+
+    tobecopied=flatcell.get_polygons(byspec=(l1,0))
+
+    cell.add_polygons(tobecopied,l2)
 
 warnings.formatwarning = custom_formatwarning
