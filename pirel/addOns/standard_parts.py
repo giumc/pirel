@@ -4,15 +4,13 @@ import phidl.geometry as pg
 
 import phidl.device_layout as dl
 
-from phidl.device_layout import Group
+from phidl.device_layout import Group,Device,DeviceReference
 
 import pathlib
 
 import gdspy
 
 import numpy as np
-
-from pirel.tools import *
 
 import pirel.tools as pt
 
@@ -33,7 +31,7 @@ def resistivity_test_cell():
 
         cell=pg.import_gds(infile,cellname='TestCell')
 
-        cell=join(cell)
+        cell=pt.join(cell)
 
         cell.name='ResistivityTest'
 
@@ -146,7 +144,7 @@ def verniers(scale=[1, 0.5, 0.1],layers=[1,2],label='TE',text_size=20,reversed=F
 
         xcell<<x
 
-    xcell=join(xcell)
+    xcell=pt.join(xcell)
 
     vern_x=cell<<xcell
     vern_y=cell<<xcell
@@ -174,7 +172,7 @@ def verniers(scale=[1, 0.5, 0.1],layers=[1,2],label='TE',text_size=20,reversed=F
     cell<<label
     cell<<cutlab
 
-    cell=join(cell)
+    cell=pt.join(cell)
 
     return cell
 
@@ -183,9 +181,9 @@ def chip_frame(
     size=(20e3,20e3),
     street_width=150,
     street_length=1e3,
-    layer=LayoutDefault.layerTop,
-    print_name=True,
-    name_style=None):
+    layer=pt.LayoutDefault.layerTop,
+    name_style=None,
+    text_pos={'anchor_source':'s','anchor_dest':'s'}):
 
     die_cell=pg.basic_die(size=size,\
         die_name="",layer=layer,draw_bbox=False,
@@ -195,28 +193,20 @@ def chip_frame(
 
     cell.absorb(cell<<die_cell)
 
-    if print_name:
+    if name_style is None:
 
-        if name_style is None:
+        text_cell=pc.TextParam(\
+            {'size':800,\
+            'label':name,\
+            'location':'top',\
+            'distance':pt.Point(0,0),\
+            'layer':layer}).draw()
 
-            text_cell=pc.TextParam(\
-                {'size':800,\
-                'label':name,\
-                'location':'top',\
-                'distance':Point(0,0),\
-                'layer':layer}).draw()
+    else:
 
-        else:
+        text_cell=name_style.draw()
 
-            text_cell=name_style.draw()
-
-        text_cell.move(origin=(text_cell.xmax,text_cell.ymax),
-
-            destination=(cell.xmax-street_width*1.2,cell.ymax-street_width*1.2))
-
-        cell.add(text_cell)
-
-        cell.flatten()
+    move_relative_to_cell(cell<<text_cell,cell,**text_pos)
 
     return cell
 
@@ -224,9 +214,9 @@ def align_TE_on_via():
 
     cell=dl.Device("Align TE on VIA")
 
-    circle=pg.circle(radius=50,layer=LayoutDefault.layerVias)
+    circle=pg.circle(radius=50,layer=pt.LayoutDefault.layerVias)
 
-    cross=pg.cross(width=30,length=250,layer=LayoutDefault.layerVias)
+    cross=pg.cross(width=30,length=250,layer=pt.LayoutDefault.layerVias)
 
     g=Group([circle,cross])
 
@@ -234,9 +224,9 @@ def align_TE_on_via():
     g.align(alignment='y')
     circle.add(cross)
 
-    viapattern=pg.union(circle,'A+B',layer=LayoutDefault.layerVias)
+    viapattern=pg.union(circle,'A+B',layer=pt.LayoutDefault.layerVias)
 
-    TEpattern=pg.union(circle,'A+B',layer=LayoutDefault.layerTop).copy('tmp',scale=0.8)
+    TEpattern=pg.union(circle,'A+B',layer=pt.LayoutDefault.layerTop).copy('tmp',scale=0.8)
 
     cell.add(viapattern)
     cell.add(TEpattern)
@@ -298,12 +288,12 @@ def alignment_marks_4layers(scale=[0.2,0.5,1]):
 
         return DeviceReference(cell)
 
-    BElayer=LayoutDefault.layerBottom
-    TElayer=LayoutDefault.layerTop
-    VIAlayer=LayoutDefault.layerVias
-    ETCHlayer=LayoutDefault.layerEtch
-    PETCHlayer=LayoutDefault.layerPartialEtch
-    Zerolayer=LayoutDefault.layerPad
+    BElayer=pt.LayoutDefault.layerBottom
+    TElayer=pt.LayoutDefault.layerTop
+    VIAlayer=pt.LayoutDefault.layerVias
+    ETCHlayer=pt.LayoutDefault.layerEtch
+    PETCHlayer=pt.LayoutDefault.layerPartialEtch
+    Zerolayer=pt.LayoutDefault.layerPad
 
     align1=verniers(scale,layers=[BElayer,VIAlayer],label='VIA',reversed=True)
     align_ph=pg.bbox(align1.bbox) #only for space
@@ -504,3 +494,117 @@ def mask_names(
             cell_name.absorb(cell_name<<x)
 
         return cell_name
+
+def load_gds(cells):
+
+    if isinstance(cells,str):
+
+        cells=pathlib.Path(cells)
+
+    elif isinstance(cells,list) or isinstance(cells,tuple):
+
+        cells_logo=[]
+
+        for p in cells:
+
+            if isinstance(p,str):
+
+                # import pdb ; pdb.set_trace()
+
+                cells_logo.append(pg.import_gds(p))
+
+            elif isinstance(p,pathlib.Path):
+
+                cells_logo.append(pg.import_gds(str(p.absolute())))
+
+    g=Group(cells_logo)
+
+    g.distribute(direction='x',spacing=150)
+
+    g.align(alignment='y')
+
+    logo_cell=dl.Device(name="cells")
+
+    for c in cells_logo:
+
+        logo_cell.add(c)
+
+    logo_cell.flatten()
+
+    logo_cell.name='Logos'
+
+    return logo_cell
+
+def open_in_klayout(path):
+
+    if isinstance(path,str):
+
+        path=pathlib.Path(path)
+
+    import subprocess
+
+    subprocess.call(["klayout_app", "-s", path.absolute()])
+
+def move_relative_to_cell(
+    cell_to_be_moved,
+    cell_ref,
+    anchor_source='ll',
+    anchor_dest='ll',
+    offset=(0,0)):
+
+    def anchor_selector(text,ll,lr,ul,ur,cc,n,s,w,e):
+
+        if text=='ll':
+
+            return ll
+
+        elif text=='lr':
+
+            return lr
+
+        elif text=='ul':
+
+            return ul
+
+        elif text=='ur':
+
+            return ur
+
+        elif text=='cc':
+
+            return cc
+
+        elif text=='n':
+
+            return n
+
+        elif text=='s':
+
+            return s
+
+        elif text=='w':
+
+            return w
+
+        elif text=='e':
+
+            return e
+
+        else :
+
+            raise ValueError()
+
+    a_origin=anchor_selector(anchor_source,*pt._get_corners(cell_to_be_moved))
+
+    a_end=anchor_selector(anchor_dest,*pt._get_corners(cell_ref))
+
+    dx=cell_ref.xmax-cell_ref.xmin
+    dy=cell_ref.ymax-cell_ref.ymin
+
+    offset=pt.Point(dx*offset[0],dy*offset[1])
+
+    cell_to_be_moved.move(
+        origin=a_origin.coord,
+        destination=a_end.coord)
+    cell_to_be_moved.move(
+        destination=offset.coord)

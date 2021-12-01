@@ -835,25 +835,38 @@ def _get_corners(device : Device) :
     device : phidl.Device
 
     Returns:
-    ll : sketch.Point
+    ll : pt.Point
         lower left
 
-    lr : sketch.Point
+    lr : pt.Point
         lower right
 
-    ul : sketch.Point
+    ul : pt.Point
         upper left
 
-    ur : sketch.Point
-        upper right.
+    ur : pt.Point
+
+    cc : pt.Point
+
+    n : pt.point
+
+    s : pt.point
+
+    w : pt.Point
+
+    e : pt.Point.
     '''
     bbox=device.bbox
     ll=Point(bbox[0,0],bbox[0,1])
     lr=Point(bbox[1,0],bbox[0,1])
     ul=Point(bbox[0,0],bbox[1,1])
     ur=Point(bbox[1,0],bbox[1,1])
-
-    return ll,lr,ul,ur
+    n=Point(device.center[0],bbox[1,1])
+    s=Point(device.center[0],bbox[0,1])
+    w=Point(bbox[0,0],device.center[1])
+    e=Point(bbox[1,0],device.center[1])
+    cc=Point(device.center)
+    return ll,lr,ul,ur,cc,n,s,w,e
 
 def check(device : Device, joined=False, blocking=True,gds=False):
     ''' Shows the device layout.
