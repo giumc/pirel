@@ -16,13 +16,15 @@ import numpy as np
 
 import pathlib
 
-from pirel.pcells import TextParam
+from pirel.pcells import Text
 
 plt.style.use(str((pathlib.Path(__file__).parent/'addOns'/'pltstl.mplstyle').absolute()))
 
 from math import ceil,floor
 
 import sys
+
+from copy import copy
 
 class SweepParam:
 
@@ -494,7 +496,7 @@ class PArray(LayoutPart):
 
                 if set to None, top labels will be kept empty
 
-            text_params : pirel.tools.TextParam
+            text_params : pirel.pcells.Text
 
                 to control text appearance
 
@@ -520,7 +522,7 @@ class PArray(LayoutPart):
 
         self.labels_bottom=None
 
-        self.text_params=copy(TextParam())
+        self.text_params=pc.Text()
 
     @property
     def device(self):
@@ -659,15 +661,23 @@ class PArray(LayoutPart):
 
             if self.labels_top is not None:
 
-                self.text_params.set('location','top')
+                self.text_params.label=self.labels_top[index]
 
-                self.text_params.add_text(new_cell,self.labels_top[index])
+                self.text_params.add_text(
+                    new_cell,
+                    anchor_source='s',
+                    anchor_dest='n',
+                    offset=(0,50))
 
             if self.labels_bottom is not None:
 
-                self.text_params.set('location','bottom')
+                self.text_params.label=self.labels_bottom[index]
 
-                self.text_params.add_text(new_cell,self.labels_bottom[index])
+                self.text_params.add_text(
+                    new_cell,
+                    anchor_source='n',
+                    anchor_dest='s',
+                    offset=(0,-50))
 
             cells.append(new_cell)
 

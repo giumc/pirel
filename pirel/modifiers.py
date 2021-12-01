@@ -369,7 +369,19 @@ def addOnePortProbe(cls,probe=pc.GSGProbe):
         @property
         def probe_dut_distance(self):
 
-            return self.idt.probe_distance
+            base_dist=self.idt.probe_distance
+
+            if hasattr(self,'pad'):
+
+                return base_dist+pt.Point(0,self.pad.size+self.pad.distance)
+
+            elif hasattr(self.probe,'pad'):
+
+                return base_dist+pt.Point(0,self.probe.pad.size+self.probe.pad.distance)
+
+            else:
+
+                return base_dist
 
         def _move_probe_ref(self,device_ref,probe_ref):
 

@@ -26,7 +26,7 @@ from copy import copy,deepcopy
 
 import matplotlib.pyplot as plt
 
-class TextParam:
+class Text(LayoutPart):
     ''' Class to store text data and to add it in cells.
 
     It controls how the text labels generated are formatted.
@@ -35,13 +35,9 @@ class TextParam:
     Attributes
     ----------
     font : string
-            if overridden, needs to be in sketch/ path
+            if overridden, needs to be in pirel / path
 
     size : float
-
-    location : 'left','right','top','bottom'
-
-    distance :  PyResLayout.Point
 
     label :     string
         can be multiline if '\\n' is added
@@ -49,77 +45,33 @@ class TextParam:
     layer:   int.
     '''
 
-    _valid_names={'font','size','location','distance','label','layer'}
+    _valid_names={'font','size','label','layer'}
 
     _msg_err="""Invalid key for text_param.
     Valid options are :{}""".format("\n".join(_valid_names))
 
-    _default=LayoutDefault.TextParams
+    layer=LayoutParamInterface()
 
-    def __init__(self,df={}):
+    label=LayoutParamInterface()
 
-        '''Initialize TextParam.
+    size=LayoutParamInterface()
 
-        If no value is passed, default values are used (from LayoutDefault class).
+    font=LayoutParamInterface()
 
-        Parameters
-        ----------
-            df : dict (optional)
-                key:value of all the attributes.
-        '''
-        if not isinstance(df,dict):
+    def __init__(self,*a,**kw):
 
-            raise ValueError("text params is initialized by a dict")
+        super().__init__(self)
 
-        else:
+        self.layer=LayoutDefault.TextLayer
 
-            for key,value in df.items():
+        self.label=LayoutDefault.TextLabel
 
-                self.set(key,value)
+        self.size=LayoutDefault.TextSize
 
-    def set(self,key,value):
+        self.font=LayoutDefault.TextFont
 
-        if not key in self._valid_names:
-
-            raise ValueError(self._msg_err)
-
-        else:
-
-            setattr(self,key,value)
-
-    def get(self,key):
-
-        if not key in self._valid_names:
-
-            raise ValueError(self._msg_err)
-
-        if hasattr(self,key):
-
-            return getattr(self,key)
-
-        else:
-
-            return self._default[key]
-
-    def __call__(self,df={}):
-
-        if not isinstance(df,dict):
-
-            raise ValueError("Update textparam with a dict")
-
-        for key,value in df.items():
-
-            self.set(key,value)
-
-        ret_dict={}
-
-        for name in self._valid_names:
-
-            ret_dict[name]=self.get(name)
-
-        return rect_dict
-
-    def add_text(self,cell,label=None):
+    def add_to_cell(self,cell,
+        angle=0,*a,**kw):
         '''Add text to a cell.
 
         Parameters
@@ -127,85 +79,42 @@ class TextParam:
 
         cell : phidl.Device
 
-        Returns
-        -------
+        angle : float
 
-        cell :phidl.Device.
+        optional: options for move_relative_to_cell().
         '''
 
-        if label is not None:
+        text_cell_ref=cell<<self.draw()
 
-            if isinstance(label,str):
+        try:
 
-                self.set('label',label)
+            text_cell_ref.rotate(
+                center=pt._anchor_selector(kw['anchor_source'],text_cell_ref).coord,
+                angle=angle)
 
-            else:
+        except:
 
-                raise ValueError("Passed parameter {} is not a string ".format(label.__class__.__name__))
+            text_cell_ref.rotate(
+                center=pt._anchor_selector('ll',text_cell_ref).coord,
+                angle=angle)
 
-        text_cell=DeviceReference(self.draw())
-
-        o=Point(0,0)
-
-        ll,lr,ul,ur=_get_corners(cell)
-
-        text_location=self.get('location')
-
-        text_size=Point(text_cell.size)
-
-        text_distance=self.get('distance')
-
-        if text_location=='top':
-
-            o=Point((ul.x+ur.x)/2,ul.y)-Point(text_size.x/2,0)+text_distance
-
-        elif text_location=='bottom':
-
-            o=Point((ll.x+lr.x)/2,ll.y)-Point(text_size.x/2,text_size.y)-text_distance
-
-        elif text_location=='right':
-
-            o=ur+text_distance
-
-            text_cell.rotate(angle=-90)
-
-        elif text_location=='left':
-
-            o=ll-text_distance
-
-            text_cell.rotate(angle=90)
-
-        cell.add(text_cell)
-
-        text_cell.move(origin=(0,0),\
-            destination=o.coord)
+        pt._move_relative_to_cell(text_cell_ref,cell,**kw)
 
         return cell
 
-    def __str__(self):
-
-        dict=self()
-
-        return pd.Series(dict).to_string()
-
     def draw(self):
 
-        text_opts={}
+        cell=Device(self.name)
 
-        for name in self._valid_names:
+        for l in self.layer:
 
-            text_opts[name]=self.get(name)
+            cell<<pg.text(
+                size=self.size,
+                text=self.label,
+                font=self.font,
+                layer=l)
 
-        package_directory = str(pathlib.Path(__file__).parent/'addOns')
-
-        font=os.path.join(package_directory,text_opts['font'])
-
-        text_cell=pg.text(size=text_opts['size'],\
-            text=text_opts['label'],\
-            font=font,\
-            layer=text_opts['layer'])
-
-        return text_cell
+        return cell
 
 class IDT(LayoutPart) :
     ''' Generates interdigitated structure.
@@ -1646,7 +1555,7 @@ class Routing(LayoutPart):
 
     def _draw_hindered_path(self,s,d,side='auto'):
 
-        ll,lr,ul,ur=_get_corners(pg.bbox(self.clearance))
+        ll,lr,ul,ur,*_=_get_corners(pg.bbox(self.clearance))
 
         if side=='auto':
 

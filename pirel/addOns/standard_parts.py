@@ -177,36 +177,32 @@ def verniers(scale=[1, 0.5, 0.1],layers=[1,2],label='TE',text_size=20,reversed=F
     return cell
 
 def chip_frame(
-    name="Default",
     size=(20e3,20e3),
     street_width=150,
     street_length=1e3,
     layer=pt.LayoutDefault.layerTop,
-    name_style=None,
+    name=None,
     text_pos={'anchor_source':'s','anchor_dest':'s'}):
 
     die_cell=pg.basic_die(size=size,\
         die_name="",layer=layer,draw_bbox=False,
         street_length=street_length,street_width=street_width)
 
-    cell=dl.Device(name=name)
+    if name is not None:
 
-    cell.absorb(cell<<die_cell)
-
-    if name_style is None:
-
-        text_cell=pc.TextParam(\
-            {'size':800,\
-            'label':name,\
-            'location':'top',\
-            'distance':pt.Point(0,0),\
-            'layer':layer}).draw()
+        cell=dl.Device(name=name.label)
 
     else:
 
-        text_cell=name_style.draw()
+        cell=dl.Device()
+        
+    cell.absorb(cell<<die_cell)
 
-    move_relative_to_cell(cell<<text_cell,cell,**text_pos)
+    if name is not None:
+
+        text_cell=name.draw()
+
+        move_relative_to_cell(cell<<text_cell,cell,**text_pos)
 
     return cell
 
@@ -300,8 +296,14 @@ def alignment_marks_4layers(scale=[0.2,0.5,1]):
     align2=verniers(scale,layers=[BElayer,TElayer],label='TE')
     align3=verniers(scale,layers=[BElayer,ETCHlayer],label='ETCH')
     align4=verniers(scale,layers=[BElayer,PETCHlayer],label='PETCH')
-    t1=text_aligner(size=300,label="Align to BE",
-        layers=[BElayer,TElayer,ETCHlayer,PETCHlayer,VIAlayer])
+
+    text=pc.Text()
+    text.size=300
+    text.layer=(BElayer,TElayer,ETCHlayer,PETCHlayer,VIAlayer)
+    text.label="Align to BE"
+
+    t1=text.draw()
+
     g=Group([align1,dr(align_ph),align2,align3,align4,t1])
     g.distribute(direction='x',spacing=150)
     g.align(alignment='y')
@@ -309,8 +311,11 @@ def alignment_marks_4layers(scale=[0.2,0.5,1]):
     align5=verniers(scale,layers=[TElayer,VIAlayer],label='VIA',reversed=True)
     align6=verniers(scale,layers=[TElayer,ETCHlayer],label='ETCH')
     align7=verniers(scale,layers=[TElayer,PETCHlayer],label='PETCH')
-    t2=text_aligner(size=300,label='Align to TE',\
-        layers=[TElayer,ETCHlayer,PETCHlayer,VIAlayer])
+
+    text.layer=(TElayer,ETCHlayer,PETCHlayer,VIAlayer)
+    text.label='Align to TE'
+    t2=text.draw()
+
     g2=Group([align5,dr(align_ph),dr(align_ph),align6,align7,t2])
     g2.distribute(direction='x',spacing=150)
     g2.align(alignment='y')
@@ -320,8 +325,12 @@ def alignment_marks_4layers(scale=[0.2,0.5,1]):
     align10=verniers(scale,layers=[Zerolayer,TElayer],label='TE')
     align11=verniers(scale,layers=[Zerolayer,ETCHlayer],label='ETCH')
     align12=verniers(scale,layers=[Zerolayer,PETCHlayer],label='PETCH')
-    t3=text_aligner(size=300,label='Align to Pad',\
-        layers=[Zerolayer,BElayer,TElayer,ETCHlayer,PETCHlayer,VIAlayer])
+
+    text.layer=(Zerolayer,BElayer,TElayer,ETCHlayer,PETCHlayer,VIAlayer)
+    text.label="Align to Pad"
+
+    t3=text.draw()
+
     g3=Group([align8,align9,align10,align11,align12,t3])
     g3.distribute(direction='x',spacing=150)
     g3.align(alignment='y')
@@ -401,38 +410,6 @@ def add_utility_cell(cell,align_scale=[0.25,0.5,1],position=['top','left']):
 
     cell<<utility_cell
 
-def text_aligner(
-    size=300,
-    label="Align to Bottom",
-    layers=(
-        pt.LayoutDefault.layerBottom,
-        pt.LayoutDefault.layerTop,
-        pt.LayoutDefault.layerVias,
-        pt.LayoutDefault.layerEtch,
-        pt.LayoutDefault.layerPad)
-    ):
-
-    t=pc.TextParam({'size':size,'label':label})
-
-    cells=[]
-
-    for l in layers:
-
-        t.layer=l
-        cells.append(t.draw())
-
-    g=Group(cells)
-    g.align(alignment='x')
-    g.align(alignment='y')
-
-    out_cell=Device()
-
-    for c in cells:
-
-        out_cell.add(c)
-
-    return out_cell
-
 def mask_names(
     names=(
         "Bottom Electrode","Top Electrode",
@@ -463,7 +440,9 @@ def mask_names(
             cell : phidl.Device.
     """
 
-    text_param=pc.TextParam({'size':size})
+    text=pc.Text()
+
+    text['Size']=size
 
     if not len(names)==len(layers):
 
@@ -471,17 +450,15 @@ def mask_names(
 
     else:
 
-        iter_params=[{
-            name:value for name,value in zip(['label','layer'],
-            [names[x],layers[x]])} for x in range(len(names))]
-
         text_cells=[]
 
-        for x in iter_params:
+        for label,layer in zip(names,layers):
 
-            [text_param.set(name,value) for name,value in x.items()]
+            text['Label']=label
 
-            text_cells.append(text_param.draw())
+            text['Layer']=(layer,)
+
+            text_cells.append(text.draw())
 
         g=Group(text_cells)
 
@@ -544,67 +521,3 @@ def open_in_klayout(path):
     import subprocess
 
     subprocess.call(["klayout_app", "-s", path.absolute()])
-
-def move_relative_to_cell(
-    cell_to_be_moved,
-    cell_ref,
-    anchor_source='ll',
-    anchor_dest='ll',
-    offset=(0,0)):
-
-    def anchor_selector(text,ll,lr,ul,ur,cc,n,s,w,e):
-
-        if text=='ll':
-
-            return ll
-
-        elif text=='lr':
-
-            return lr
-
-        elif text=='ul':
-
-            return ul
-
-        elif text=='ur':
-
-            return ur
-
-        elif text=='cc':
-
-            return cc
-
-        elif text=='n':
-
-            return n
-
-        elif text=='s':
-
-            return s
-
-        elif text=='w':
-
-            return w
-
-        elif text=='e':
-
-            return e
-
-        else :
-
-            raise ValueError()
-
-    a_origin=anchor_selector(anchor_source,*pt._get_corners(cell_to_be_moved))
-
-    a_end=anchor_selector(anchor_dest,*pt._get_corners(cell_ref))
-
-    dx=cell_ref.xmax-cell_ref.xmin
-    dy=cell_ref.ymax-cell_ref.ymin
-
-    offset=pt.Point(dx*offset[0],dy*offset[1])
-
-    cell_to_be_moved.move(
-        origin=a_origin.coord,
-        destination=a_end.coord)
-    cell_to_be_moved.move(
-        destination=offset.coord)

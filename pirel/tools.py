@@ -340,6 +340,13 @@ class LayoutDefault:
 
     TwoPortProbeoffset=Point(0,200)
 
+    #Text
+
+    TextSize=100
+    TextLabel='Default'
+    TextLayer=(layerTop,)
+    TextFont=str(pathlib.Path(__file__).parent/'addOns'/'BebasNeue-Regular.otf')
+
 class _LayoutParam:
 
     def __init__(self,name,value):
@@ -1514,3 +1521,69 @@ def _copy_layer(cell,l1,l2):
     cell.add_polygons(tobecopied,l2)
 
 warnings.formatwarning = custom_formatwarning
+
+def _move_relative_to_cell(
+    cell_to_be_moved,
+    cell_ref,
+    anchor_source='ll',
+    anchor_dest='ll',
+    offset=(0,0)):
+
+    a_origin=_anchor_selector(anchor_source,cell_to_be_moved)
+
+    a_end=_anchor_selector(anchor_dest,cell_to_be_moved)
+
+    dx=cell_ref.xmax-cell_ref.xmin
+    dy=cell_ref.ymax-cell_ref.ymin
+
+    offset=Point(dx*offset[0],dy*offset[1])
+
+    cell_to_be_moved.move(
+        origin=a_origin.coord,
+        destination=a_end.coord)
+    cell_to_be_moved.move(
+        destination=offset.coord)
+
+def _anchor_selector(text,cell):
+
+    ll,lr,ul,ur,c,n,s,w,e=_get_corners(cell)
+
+    if text=='ll':
+
+        return ll
+
+    elif text=='lr':
+
+        return lr
+
+    elif text=='ul':
+
+        return ul
+
+    elif text=='ur':
+
+        return ur
+
+    elif text=='c':
+
+        return c
+
+    elif text=='n':
+
+        return n
+
+    elif text=='s':
+
+        return s
+
+    elif text=='w':
+
+        return w
+
+    elif text=='e':
+
+        return e
+
+    else :
+
+        raise ValueError()
