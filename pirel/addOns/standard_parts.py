@@ -190,19 +190,19 @@ def chip_frame(
 
     if name is not None:
 
-        cell=dl.Device(name=name.label)
+        cell=dl.Device(name=str(name.label))
 
     else:
 
-        cell=dl.Device()
-        
+        cell=dl.Device(name='default')
+
     cell.absorb(cell<<die_cell)
 
     if name is not None:
 
         text_cell=name.draw()
 
-        move_relative_to_cell(cell<<text_cell,cell,**text_pos)
+        pt._move_relative_to_cell(cell<<text_cell,cell,**text_pos)
 
     return cell
 

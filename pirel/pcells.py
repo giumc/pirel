@@ -1,6 +1,6 @@
 from pirel.tools import *
 
-from pirel.tools import _check_points_path, _copy_ports,_view_points,_get_corners
+import pirel.tools as pt
 
 from phidl.device_layout import Device, Port, DeviceReference, Group
 
@@ -60,7 +60,7 @@ class Text(LayoutPart):
 
     def __init__(self,*a,**kw):
 
-        super().__init__(self)
+        super().__init__(*a,**kw)
 
         self.layer=LayoutDefault.TextLayer
 
@@ -832,9 +832,9 @@ class GSGProbe(LayoutPart):
         pad_gnd_rx=cell.add_ref(pad_cell,alias='GroundRX')
         pad_gnd_rx.move(destination=(2*dp).coord)
 
-        _copy_ports(pad_sig,cell,prefix='Sig')
-        _copy_ports(pad_gnd_rx,cell,prefix='GroundRX')
-        _copy_ports(pad_gnd_lx,cell,prefix='GroundLX')
+        pt._copy_ports(pad_sig,cell,prefix='Sig')
+        pt._copy_ports(pad_gnd_rx,cell,prefix='GroundRX')
+        pt._copy_ports(pad_gnd_lx,cell,prefix='GroundLX')
         # cell.add_port(port=pad_sig.ports['N'],name='sig')
         #
         # cell.add_port(port=pad_gnd_sx.ports['N'],name='gnd_left')
@@ -1185,8 +1185,8 @@ class FBERes(LFERes):
             transl_rel=Point(self.etchpit.x-4*self.idt.active_area_margin,self.anchor.size.y+2*self.anchor.etch_margin.y+self.bus.size.y\
                 +self.idt.y_offset*3/4)
 
-            lr_cell=_get_corners(cell)[0]
-            lr_plate=_get_corners(plate_ref)[0]
+            lr_cell=pt._get_corners(cell)[0]
+            lr_plate=pt._get_corners(plate_ref)[0]
 
             plate_ref.move(origin=lr_plate.coord,\
             destination=(lr_plate+lr_cell+transl_rel).coord)
@@ -1213,8 +1213,8 @@ class FBERes(LFERes):
                 self.bus.size.y+\
                 self.idt.y_offset*3/4)
 
-            lr_cell=_get_corners(cell)[0]
-            lr_plate=_get_corners(plate_ref)[0]
+            lr_cell=pt._get_corners(cell)[0]
+            lr_plate=pt._get_corners(plate_ref)[0]
 
             plate_ref.move(origin=lr_plate.coord,\
             destination=(lr_plate+lr_cell+transl_rel).coord)
@@ -1239,8 +1239,8 @@ class FBERes(LFERes):
                 4*self.idt.active_area_margin,\
                     self.anchor.size.y+2*self.anchor.etch_margin.y)
 
-            lr_cell=_get_corners(cell)[0]
-            lr_plate=_get_corners(plate_ref)[0]
+            lr_cell=pt._get_corners(cell)[0]
+            lr_plate=pt._get_corners(plate_ref)[0]
 
             plate_ref.move(origin=lr_plate.coord,\
             destination=(lr_plate+lr_cell+transl_rel).coord)
@@ -1266,8 +1266,8 @@ class FBERes(LFERes):
                     self.idt.active_area_margin,\
                         self.anchor.size.y+2*self.anchor.etch_margin.y)
 
-            lr_cell=_get_corners(cell)[0]
-            lr_plate=_get_corners(plate_ref)[0]
+            lr_cell=pt._get_corners(cell)[0]
+            lr_plate=pt._get_corners(plate_ref)[0]
 
             plate_ref.move(origin=lr_plate.coord,\
             destination=(lr_plate+lr_cell+transl_rel).coord)
@@ -1276,7 +1276,7 @@ class FBERes(LFERes):
 
             del plate
 
-        _copy_ports(supercell,cell)
+        pt._copy_ports(supercell,cell)
 
         return cell
 
@@ -1311,7 +1311,7 @@ class TwoPortRes(FBERes):
                     by_spec=(self.idt.layer,0)),
                 layer=self.platelayer)
 
-        _copy_ports(supercell,cell)
+        pt._copy_ports(supercell,cell)
 
         return cell
 
@@ -1555,7 +1555,7 @@ class Routing(LayoutPart):
 
     def _draw_hindered_path(self,s,d,side='auto'):
 
-        ll,lr,ul,ur,*_=_get_corners(pg.bbox(self.clearance))
+        ll,lr,ul,ur,*_=pt._get_corners(pg.bbox(self.clearance))
 
         if side=='auto':
 
@@ -1645,7 +1645,7 @@ class Routing(LayoutPart):
 
                 sel_points.remove(p2)
 
-        sel_points=_check_points_path(*sel_points,trace_width=self.trace_width)
+        sel_points=pt._check_points_path(*sel_points,trace_width=self.trace_width)
 
         return pp.smooth(points=sel_points,radius=self._radius,num_pts=self._num_pts)
 

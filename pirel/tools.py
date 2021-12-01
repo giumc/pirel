@@ -804,8 +804,14 @@ class LayoutPart(ABC) :
         return df.to_string()
 
     def __getitem__(self,key):
+        # 
+        # if isinstance(key,slice):
+        #
+        #     import pdb; pdb.set_trace()
+        #
+        pars=self.get_params()
 
-        return self.get_params()[key]
+        return pars[key]
 
     def __setitem__(self,key,value):
 
@@ -853,7 +859,7 @@ def _get_corners(device : Device) :
 
     ur : pt.Point
 
-    cc : pt.Point
+    c : pt.Point
 
     n : pt.point
 
@@ -872,8 +878,8 @@ def _get_corners(device : Device) :
     s=Point(device.center[0],bbox[0,1])
     w=Point(bbox[0,0],device.center[1])
     e=Point(bbox[1,0],device.center[1])
-    cc=Point(device.center)
-    return ll,lr,ul,ur,cc,n,s,w,e
+    c=Point(device.center)
+    return ll,lr,ul,ur,c,n,s,w,e
 
 def check(device : Device, joined=False, blocking=True,gds=False):
     ''' Shows the device layout.
@@ -1531,7 +1537,7 @@ def _move_relative_to_cell(
 
     a_origin=_anchor_selector(anchor_source,cell_to_be_moved)
 
-    a_end=_anchor_selector(anchor_dest,cell_to_be_moved)
+    a_end=_anchor_selector(anchor_dest,cell_ref)
 
     dx=cell_ref.xmax-cell_ref.xmin
     dy=cell_ref.ymax-cell_ref.ymin
