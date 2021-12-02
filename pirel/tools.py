@@ -347,6 +347,11 @@ class LayoutDefault:
     TextLayer=(layerTop,)
     TextFont=str(pathlib.Path(__file__).parent/'addOns'/'BebasNeue-Regular.otf')
 
+    #Npath
+
+    NPathCommLength=100
+    NPathSpacing=Point(0,0)
+
 class _LayoutParam:
 
     def __init__(self,name,value):
@@ -804,11 +809,7 @@ class LayoutPart(ABC) :
         return df.to_string()
 
     def __getitem__(self,key):
-        #
-        # if isinstance(key,slice):
-        #
-        #     import pdb; pdb.set_trace()
-        #
+
         pars=self.get_params()
 
         return pars[key]
@@ -1520,6 +1521,15 @@ def _copy_layer(cell,l1,l2):
     tobecopied=flatcell.get_polygons(byspec=(l1,0))
 
     cell.add_polygons(tobecopied,l2)
+
+def _calculate_overhang(s,d):
+
+    p1=Point(s.midpoint)
+    p2=Point(d.midpoint)
+
+    dist=abs(p2-p1)
+
+    return dist/5
 
 warnings.formatwarning = custom_formatwarning
 

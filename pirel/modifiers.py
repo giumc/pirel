@@ -749,7 +749,7 @@ def makeFixture(cls,style='open'):
 
     return Fixture
 
-def makeNpaths(cls, pad=pc.Pad, probe=pc.GSGProbe, n=4):
+def makeNpaths(cls, pad=pc.Pad, n=4):
 
     if not isinstance(n,int):
 
@@ -773,9 +773,9 @@ def makeNpaths(cls, pad=pc.Pad, probe=pc.GSGProbe, n=4):
 
             self.n_copies=n
 
-            self.spacing=pt.Point(0,0)
+            self.spacing=LayoutDefault.NPathSpacing
 
-            self.comm_pad_length=0.0
+            self.comm_pad_length=LayoutDefault.NPathCommLength
 
             NpathsOf._set_relations(self)
 
@@ -814,14 +814,18 @@ def makeNpaths(cls, pad=pc.Pad, probe=pc.GSGProbe, n=4):
 
                     refs[-1].move(destination=(0,-self.comm_pad_length))
 
-            comm_pad=pg.rectangle(size=(out_cell.xsize,self.comm_pad_length),layer=self.pad.layer)
+            comm_pad=Device()
 
-            comm_pad_via=add_vias(comm_pad,comm_pad.bbox,self.via,self.via.size*2)
+            for l in self.pad.layer:
 
-            comm_pad_via.move(origin=(comm_pad.xmin,comm_pad.ymin),
+                comm_pad<<pg.rectangle(size=(out_cell.xsize,self.comm_pad_length),layer=l)
+
+            add_vias(comm_pad,comm_pad.bbox,self.via,self.via.size*2)
+
+            comm_pad.move(origin=(comm_pad.xmin,comm_pad.ymin),
                          destination=(out_cell.xmin,out_cell.ymin+(out_cell.ysize-self.comm_pad_length)/2))
 
-            out_cell.add_ref(comm_pad_via,alias='CommPad')
+            out_cell.add_ref(comm_pad,alias='CommPad')
 
             return out_cell
 
@@ -1171,8 +1175,6 @@ def addTwoPortProbe(cls,probe=makeTwoPortProbe(pc.GSGProbe)):
 
     return TwoPortProbed
 
-
-
 # Device decorator
 
 def add_compass(device : Device) -> Device:
@@ -1308,6 +1310,8 @@ def connect_ports(cell,tags='top',conn_dist=pt.Point(0,100)):
 
             connector.clearance=tuple(tuple(_) for _ in cell.bbox.tolist())
 
+            connector.overhang=pt._calculate_overhang(top_conn,top_ports[0])
+
             tracecell=connector.draw()
 
             top_trace_ref=cell.add_ref(tracecell,alias='TopTrace')
@@ -1328,13 +1332,15 @@ def connect_ports(cell,tags='top',conn_dist=pt.Point(0,100)):
 
             bottom_conn.orientation=90
 
-            connector.source=tuple([bottom_conn])
+            connector.source=tuple(bottom_conn,)
 
             connector.destination=tuple(bottom_ports)
 
             connector.trace_width=bottom_ports[0].width
 
             connector.clearance=tuple(tuple(_) for _ in cell.bbox.tolist())
+
+            connector.overhang=pt._calculate_overhang(bottom_conn,bottom_ports[0])
 
             tracecell=connector.draw()
 

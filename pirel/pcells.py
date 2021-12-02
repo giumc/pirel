@@ -1415,7 +1415,7 @@ class Routing(LayoutPart):
 
     _tol=1e-3
 
-    _simplification=5
+    _simplification=1
 
     clearance=LayoutParamInterface()
 
@@ -1465,8 +1465,6 @@ class Routing(LayoutPart):
         p=self.path
 
         path_cell=self._make_path_cell(p)
-
-        import pdb; pdb.set_trace()
 
         path_cell.name=self.name
 
@@ -1612,9 +1610,11 @@ class Routing(LayoutPart):
 
         else:
 
-            import pdb; pdb.set_trace()
+            # p=self._make_path(p1,p1_proj,p_mid,p_mid2,p_mid3,p2_proj,p2)
 
-            self._is_hindered(p)
+            # p=self._draw_non_hindered_path(s,d)
+
+            # self._is_hindered(p)
 
             raise ValueError("path is impossible")
 
@@ -1698,27 +1698,23 @@ class MultiRouting(Routing):
 
     def _make_routing(self,s,d):
 
-        if not all([isinstance(p, Port) for p in (s,d)]):
+        r=Routing()
 
-            raise TypeError(f"{p} is not a phidl Port")
+        r.clearance=self.clearance
 
-        else:
+        r.side=self.side
 
-            r=Routing()
+        r.layer=self.layer
 
-            r.clearance=self.clearance
+        r.trace_width=self.trace_width
 
-            r.side=self.side
+        r.source=s
 
-            r.layer=self.layer
+        r.destination=d
 
-            r.trace_width=self.trace_width
+        r.overhang=self.overhang
 
-            r.source=s
-
-            r.destination=d
-
-            return r.path
+        return r.path
 
     def _draw_frame(self):
 
