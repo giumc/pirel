@@ -84,7 +84,7 @@ class Text(LayoutPart):
         optional: options for move_relative_to_cell().
         '''
 
-        text_cell_ref=cell<<self.draw()
+        text_cell_ref=DeviceReference(self.draw())
 
         try:
 
@@ -99,6 +99,8 @@ class Text(LayoutPart):
                 angle=angle)
 
         pt._move_relative_to_cell(text_cell_ref,cell,**kw)
+
+        cell.add(text_cell_ref)
 
         return cell
 
@@ -1336,17 +1338,11 @@ class TFERes(LFERes):
 
         idt_bottom.layer=self.bottom_layer
 
+        idt_bottom.y_offset=-idt_bottom.y_offset
+
         idt_ref=cell.add_ref(idt_bottom.draw(),alias='BottomIDT')
 
-        p_bott=idt_ref.ports['bottom']
-
-        p_bott_coord=Point(p_bott.midpoint)
-
-        idt_ref.mirror(p1=(p_bott_coord-Point(p_bott.width/2,0)).coord,\
-            p2=(p_bott_coord+Point(p_bott.width/2,0)).coord)
-
-        idt_ref.move(origin=(idt_ref.xmin,idt_ref.ymax),\
-            destination=(idt_ref.xmin,idt_ref.ymax+self.idt.length+self.idt.y_offset))
+        idt_ref.move(destination=(0,-idt_bottom.y_offset))
 
         bus_bottom=deepcopy(self.bus)
 
@@ -1365,15 +1361,17 @@ class TFERes(LFERes):
 
         anchor_ref=cell.add_ref(anchor_bottom.draw(),alias="BottomAnchor_Top")
 
-        anchor_ref.connect(anchor_ref.ports['conn'],\
-            destination=idt_ref.ports['top'],\
-            overlap=-self.bus.size.y)
+        anchor_ref.connect(anchor_ref.ports['conn'],
+            destination=cell['TopCell'].ports['top'])
 
-        anchor_ref_2=cell.add_ref(anchor_bottom.draw(),alias="BottomAnchor_Bottom")
+        anchor_ref.rotate(center=anchor_ref.ports['conn'].midpoint,angle=180)
 
-        anchor_ref_2.connect(anchor_ref_2.ports['conn'],\
-            destination=idt_ref.ports['bottom'],\
-            overlap=-self.bus.size.y)
+        anchor_ref_2=cell.add_ref(anchor_bottom.draw(),alias="BottomAnchor_Top")
+
+        anchor_ref_2.connect(anchor_ref_2.ports['conn'],
+            destination=cell['TopCell'].ports['bottom'])
+
+        anchor_ref_2.rotate(center=anchor_ref_2.ports['conn'].midpoint,angle=180)
 
         pt._copy_ports(lfe_cell,cell)
 

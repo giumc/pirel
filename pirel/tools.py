@@ -1598,3 +1598,29 @@ def _anchor_selector(text,cell):
     else :
 
         raise ValueError()
+
+def _remove_alias(cell,name):
+
+    for alias in cell.aliases:
+
+        _remove_alias(cell[alias].parent,name)
+
+        if name in alias:
+
+            cell.remove(cell[alias])
+
+def _find_alias(cell,name):
+
+    list=[]
+
+    for alias in cell.aliases:
+
+        list.extend(_find_alias(cell[alias].parent,name))
+
+        if name in alias:
+
+            list.append(cell[alias])
+
+    else:
+
+        return list

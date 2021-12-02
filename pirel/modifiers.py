@@ -304,13 +304,13 @@ def addOnePortProbe(cls,probe=pc.GSGProbe):
 
             routing_cell=self._draw_probe_routing()
 
-            # if hasattr(self,'gnd_via'):
-            #
-            #     add_vias(routing_cell,
-            #         routing_cell.bbox,
-            #         self.via,
-            #         spacing=self.via.size*1.25,
-            #         tolerance=self.via.size/2)
+            if hasattr(self,'gndvia'):
+
+                add_vias(routing_cell,
+                    routing_cell.bbox,
+                    self.gndvia,
+                    spacing=self.gndvia.size*1.25,
+                    tolerance=self.gndvia.size/2)
 
             cell.add_ref(routing_cell,alias=self.name+"GroundTrace")
 
@@ -679,45 +679,21 @@ def makeFixture(cls,style='open'):
 
             style=self.style
 
-            ports=supercell.ports
-
-            for subcell in cell.get_dependencies(recursive=True):
-
-                if 'IDT' in subcell.aliases:
-
-                    idt_parent=subcell
-                    idt_cell=subcell['IDT']
-
-            for alias in cell.aliases.keys():
-
-                if 'IDT' in alias:
-
-                    idt_parent=cell
-                    idt_cell=cell['IDT']
-
             if style=='open':
 
-                idt_parent.remove(idt_cell)
+                pt._remove_alias(cell,'IDT')
 
             if style=='short':
 
-                top_port=idt_cell.ports['top']
+                idt_cells=pt._find_alias(cell,'IDT')
 
-                bottom_port=idt_cell.ports['bottom']
+                for idt_cell in idt_cells:
 
-                short=pg.taper(length=top_port.y-bottom_port.y,\
-                width1=top_port.width,\
-                width2=bottom_port.width,layer=self.idt.layer)
+                    s=pt._make_connection(idt_cell.ports['top'],idt_cell.ports['bottom'],self.idt.layer)
 
-                s_ref=cell<<short
+                    cell<<s
 
-                s_ref.connect(short.ports[1],\
-                    destination=top_port)
-
-                s_ref.rotate(center=top_port.center,\
-                angle=180)
-
-                cell.absorb(s_ref)
+                pt._remove_alias(cell,'IDT')
 
             return cell
 
@@ -983,14 +959,14 @@ def addTwoPortProbe(cls,probe=makeTwoPortProbe(pc.GSGProbe)):
             self._setup_routings(device_ref,probe_ref)
 
             routing_cell=self._draw_probe_routing()
-            #
-            # if hasattr(self,'via'):
-            #
-            #     add_vias(routing_cell,
-            #         routing_cell.bbox,
-            #         self.via,
-            #         spacing=self.via.size*1.25,
-            #         tolerance=self.via.size/2)
+
+            if hasattr(self,'gndvia'):
+
+                add_vias(routing_cell,
+                    routing_cell.bbox,
+                    self.gndvia,
+                    spacing=self.gndvia.size*1.25,
+                    tolerance=self.gndvia.size/2)
 
             cell.add_ref(routing_cell,alias=self.name+"GroundTrace")
 

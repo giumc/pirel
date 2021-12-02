@@ -1,7 +1,7 @@
 
 from phidl.device_layout import Group,Device
 
-import pdb
+import test
 
 import matplotlib.pyplot as plt
 
@@ -403,7 +403,7 @@ class SweepParam:
 
             if not len(new_values)==n:
 
-                import pdb; pdb.set_trace()
+                import test; test.set_trace()
                 raise ValueError("bug in subset creation, wrong length")
 
             else:
@@ -631,7 +631,7 @@ class PArray(pt.LayoutPart):
 
         master_cell=Device(name=self.name)
 
-        cells=list()
+        cells=[]
 
         param=self.x_param
 
