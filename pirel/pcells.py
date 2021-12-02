@@ -1143,7 +1143,6 @@ class FBERes(LFERes):
         ----------
 
             plate_position
-
                 can be 'in(/out), short(/long)' such that
                     if 'in', plate is below active region only,
                     if 'out', plate is below bus too.
@@ -1152,8 +1151,10 @@ class FBERes(LFERes):
                     if 'long', plate is larger than the trench.
 
         '''
-    plate_position=LayoutParamInterface(\
+    plate_position=LayoutParamInterface(
         'in, short','out, short','in, long','out, long')
+
+    plate_layer=LayoutParamInterface()
 
     def __init__(self,*args,**kwargs):
 
@@ -1161,7 +1162,7 @@ class FBERes(LFERes):
 
         self.plate_position='out, short'
 
-        self.platelayer=LayoutDefault.FBEResplatelayer
+        self.plate_layer=LayoutDefault.FBEResplatelayer
 
     def draw(self):
 
@@ -1176,7 +1177,7 @@ class FBERes(LFERes):
         if self.plate_position=='out, short':
 
             plate=pg.rectangle(size=(self.etchpit.active_area.x+8*self.idt.active_area_margin,self.idt.length-self.idt.y_offset/2),\
-            layer=self.platelayer)
+            layer=self.plate_layer)
 
             plate_ref=cell.add_ref(plate,alias='Plate')
 
@@ -1200,7 +1201,7 @@ class FBERes(LFERes):
                     self.etchpit.active_area.x-\
                         2*self.idt.active_area_margin,\
                         self.idt.length-self.idt.y_offset/2),\
-                layer=self.platelayer)
+                layer=self.plate_layer)
 
             plate_ref=cell.add_ref(plate,alias='Plate')
 
@@ -1229,7 +1230,7 @@ class FBERes(LFERes):
                     self.idt.length+\
                         2*self.bus.size.y+\
                         self.idt.y_offset),\
-                layer=self.platelayer)
+                layer=self.plate_layer)
 
             plate_ref=cell.add_ref(plate,alias='Plate')
 
@@ -1256,7 +1257,7 @@ class FBERes(LFERes):
                         self.idt.length+\
                             2*self.bus.size.y+\
                             self.idt.y_offset),
-                layer=self.platelayer)
+                layer=self.plate_layer)
 
             plate_ref=cell.add_ref(plate,alias='Plate')
 
@@ -1286,7 +1287,7 @@ class TwoPortRes(FBERes):
 
         self.plate_position='in, long'
 
-        self.platelayer=LayoutDefault.layerBottom
+        self.plate_layer=LayoutDefault.layerBottom
 
     def draw(self):
 
@@ -1307,7 +1308,7 @@ class TwoPortRes(FBERes):
             anchor_metal=cell.add_polygon(
                 anchor_ref.get_polygons(
                     by_spec=(self.idt.layer,0)),
-                layer=self.platelayer)
+                layer=self.plate_layer)
 
         pt._copy_ports(supercell,cell)
 
@@ -1414,7 +1415,7 @@ class Routing(LayoutPart):
 
     _tol=1e-3
 
-    _simplification=0.1
+    _simplification=5
 
     clearance=LayoutParamInterface()
 

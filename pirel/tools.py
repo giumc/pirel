@@ -1474,9 +1474,13 @@ def _find_ports(cell,tag):
 
     output=[]
 
+    if isinstance(tag,str):
+
+        tag=[tag]
+
     for port_name,cell_port in cell.ports.items():
 
-        if tag in port_name:
+        if all([x in port_name for x in tag]):
 
             output.append(cell_port)
 
@@ -1502,20 +1506,12 @@ def _view_points(points):
 
 def _make_connection(p1,p2,layer):
 
-    from math import cos, sin, pi
 
-    c1,c2=port_coords(p1)
-    c3,c4=port_coords(p2)
+    d=Device()
 
-    return pg.Polygon([c1,c2,c3,c4],gds_layer=layer)
+    d.add_polygon( [p1.endpoints[0],p1.endpoints[1],p2.endpoints[0],p2.endpoints[1]],layer=layer)
 
-    def port_coords(p1):
-
-        pmin=Point(p1.midpoint)-p1.width/2*Point(cos(p1.orientation*pi/180),sin(p1.orientation*pi/180))
-
-        pmax=Point(p1.midpoint)+p1.width/2*Point(cos(p1.orientation*pi/180),sin(p1.orientation*pi/180))
-
-        return pmin,pmax
+    return d
 
 def _copy_layer(cell,l1,l2):
 

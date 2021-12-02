@@ -304,13 +304,13 @@ def addOnePortProbe(cls,probe=pc.GSGProbe):
 
             routing_cell=self._draw_probe_routing()
 
-            if hasattr(self,'via'):
-
-                add_vias(routing_cell,
-                    routing_cell.bbox,
-                    self.via,
-                    spacing=self.via.size*1.25,
-                    tolerance=self.via.size/2)
+            # if hasattr(self,'gnd_via'):
+            #
+            #     add_vias(routing_cell,
+            #         routing_cell.bbox,
+            #         self.via,
+            #         spacing=self.via.size*1.25,
+            #         tolerance=self.via.size/2)
 
             cell.add_ref(routing_cell,alias=self.name+"GroundTrace")
 
@@ -353,7 +353,7 @@ def addOnePortProbe(cls,probe=pc.GSGProbe):
                     "SigTrace":pc.ParasiticAwareMultiRouting,
                     "GndLeftTrace":pc.MultiRouting,
                     "GndRightTrace":pc.MultiRouting,
-                    "Via":pc.Via})
+                    "GndVia":pc.Via})
 
             else:
 
@@ -979,16 +979,23 @@ def addTwoPortProbe(cls,probe=makeTwoPortProbe(pc.GSGProbe)):
             self._setup_routings(device_ref,probe_ref)
 
             routing_cell=self._draw_probe_routing()
-
-            if hasattr(self,'via'):
-
-                add_vias(routing_cell,
-                    routing_cell.bbox,
-                    self.via,
-                    spacing=self.via.size*1.25,
-                    tolerance=self.via.size/2)
+            #
+            # if hasattr(self,'via'):
+            #
+            #     add_vias(routing_cell,
+            #         routing_cell.bbox,
+            #         self.via,
+            #         spacing=self.via.size*1.25,
+            #         tolerance=self.via.size/2)
 
             cell.add_ref(routing_cell,alias=self.name+"GroundTrace")
+
+            if issubclass(cls,pc.TwoPortRes):
+
+                cell.add_ref(
+                    pt.join(
+                        self._make_twoportres_conn(
+                            device_cell,probe_ref)))
 
             return cell
 
@@ -1111,6 +1118,34 @@ def addTwoPortProbe(cls,probe=makeTwoPortProbe(pc.GSGProbe)):
 
                 raise ValueError("OnePortProbed without GSG/GSprobe to be implemented ")
 
+        def _make_twoportres_conn(self,device_cell,probe_cell):
+
+            probe_ground_ports=[
+                pt._find_ports(probe_cell,['Ground','_'+x]) for x in ('1','2')]
+
+            device_ground_ports=[
+                pt._find_ports(device_cell,x) for x in ('bottom','top')]
+            #
+            # gnd_conn=Device()
+            #
+            # routing=pc.MultiRouting()
+            # routing.layer=(self.plate_layer,)
+            # routing.source=(device_ground_ports[0][0],)
+            # routing.destination=tuple(device_ground_ports[0][1:])
+            # routing.overhang=self.probe_dut_distance.y/5
+            # routing.trace_width=device_ground_ports[0][0].width
+            # # import pdb; pdb.set_trace()
+            # gnd_conn<<routing.draw()
+            # for probe_ports,device_ports in zip(probe_ground_ports,device_ground_ports):
+            #
+            #     for s in device_ports:
+            #
+            #         for d in probe_ports:
+            #
+            #             gnd_conn<<pt._make_connection(s,d,layer=self.plate_layer)
+
+            return gnd_conn
+
         def get_components(self):
 
             supercomp=copy(super().get_components())
@@ -1135,6 +1170,8 @@ def addTwoPortProbe(cls,probe=makeTwoPortProbe(pc.GSGProbe)):
     TwoPortProbed.__name__=f"TwoPortProbed {cls.__name__} with {probe.__name__}"
 
     return TwoPortProbed
+
+
 
 # Device decorator
 
