@@ -804,7 +804,7 @@ class LayoutPart(ABC) :
         return df.to_string()
 
     def __getitem__(self,key):
-        # 
+        #
         # if isinstance(key,slice):
         #
         #     import pdb; pdb.set_trace()
@@ -992,7 +992,6 @@ def pirel_cache(fun):
     from functools import wraps
 
     @wraps(fun)
-
     def wrapper(self):
 
         cls=_get_class_that_defined_method(fun)

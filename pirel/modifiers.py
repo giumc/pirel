@@ -284,7 +284,7 @@ def addOnePortProbe(cls,probe=pc.GSGProbe):
 
             self.ground_conn_style='straight'
 
-            self.routing_layer=(self.probe.layer,)
+            self.routing_layer=(self.probe.layer,LayoutDefault.layerBottom)
 
         def draw(self):
 
@@ -310,7 +310,7 @@ def addOnePortProbe(cls,probe=pc.GSGProbe):
                     routing_cell.bbox,
                     self.via,
                     spacing=self.via.size*1.25,
-                    tolerance=self.via.size)
+                    tolerance=self.via.size/2)
 
             cell.add_ref(routing_cell,alias=self.name+"GroundTrace")
 
@@ -373,11 +373,23 @@ def addOnePortProbe(cls,probe=pc.GSGProbe):
 
             if hasattr(self,'pad'):
 
-                return base_dist+pt.Point(0,self.pad.size+self.pad.distance)
+                if self.pad.size+self.pad.distance>base_dist.y:
+
+                    return pt.Point(base_dist.x,self.pad.size+self.pad.distance)
+
+                else:
+
+                    return base_dist
 
             elif hasattr(self.probe,'pad'):
 
-                return base_dist+pt.Point(0,self.probe.pad.size+self.probe.pad.distance)
+                if self.probe.pad.size+self.probe.pad.distance>base_dist.y:
+
+                    return pt.Point(base_dist.x,self.probe.pad.size+self.probe.pad.distance)
+
+                else:
+
+                    return base_dist
 
             else:
 
@@ -765,11 +777,11 @@ def makeNpaths(cls, pad=pc.Pad, probe=pc.GSGProbe, n=4):
 
             self.comm_pad_length=0.0
 
-            makeNpaths._set_relations(self)
+            NpathsOf._set_relations(self)
 
         def draw(self):
 
-            makeNpaths._set_relations(self)
+            NpathsOf._set_relations(self)
 
             cell=pg.deepcopy(cls.draw(self))
 
@@ -974,7 +986,7 @@ def addTwoPortProbe(cls,probe=makeTwoPortProbe(pc.GSGProbe)):
                     routing_cell.bbox,
                     self.via,
                     spacing=self.via.size*1.25,
-                    tolerance=self.via.size)
+                    tolerance=self.via.size/2)
 
             cell.add_ref(routing_cell,alias=self.name+"GroundTrace")
 
@@ -1029,8 +1041,6 @@ def addTwoPortProbe(cls,probe=makeTwoPortProbe(pc.GSGProbe)):
                     groundroute.clearance=bbox
 
                     groundroute.trace_width=self.gnd_routing_width
-
-                    groundroute.overhang=groundroute.trace_width/4
 
                     if index==0:
 
@@ -1403,4 +1413,7 @@ def attach_taper(cell : Device , port : Port , length : float , \
 
     cell.add_port(new_port)
 
-_allmodifiers=(makeScaled,addPad,addPartialEtch,addOnePortProbe,addLargeGround,makeArray,makeFixture,makeNpaths)
+_allmodifiers=(
+    makeScaled,addPad,addPartialEtch,
+    addOnePortProbe,addLargeGround,
+    makeArray,makeFixture,makeNpaths)

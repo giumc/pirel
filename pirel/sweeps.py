@@ -1,6 +1,5 @@
-from pirel.tools import *
 
-from phidl.device_layout import Group
+from phidl.device_layout import Group,Device
 
 import pdb
 
@@ -16,7 +15,9 @@ import numpy as np
 
 import pathlib
 
-from pirel.pcells import Text
+import pirel.pcells as pc
+
+import pirel.tools as pt
 
 plt.style.use(str((pathlib.Path(__file__).parent/'addOns'/'pltstl.mplstyle').absolute()))
 
@@ -25,6 +26,8 @@ from math import ceil,floor
 import sys
 
 from copy import copy
+
+from pandas import Series,DataFrame
 
 class SweepParam:
 
@@ -411,7 +414,7 @@ class SweepParam:
 
 class _SweepParamValidator:
 
-    def __init__(self,def_param=LayoutDefault.Arrayx_param):
+    def __init__(self,def_param=pt.LayoutDefault.Arrayx_param):
 
         self.default_value=SweepParam(def_param)
 
@@ -431,7 +434,7 @@ class _SweepParamValidator:
 
     def __set__(self,obj,layout_param):
 
-        if not isinstance(obj, LayoutPart):
+        if not isinstance(obj, pt.LayoutPart):
 
             raise ValueError("{} needs to derive from LayoutPart".format(obj))
 
@@ -470,9 +473,8 @@ class _SweepParamValidator:
 
         self._valid_names=opts
 
-class PArray(LayoutPart):
-
-    """ Class used to create a parametric array of cells.
+class PArray(pt.LayoutPart):
+    """ Create a parametric array of cells.
 
         Parameters
         ----------
@@ -496,13 +498,11 @@ class PArray(LayoutPart):
 
                 if set to None, top labels will be kept empty
 
-            text_params : pirel.pcells.Text
-
-                to control text appearance
-
+            text : pirel.pcells.Text
+                to control text appearance.
     """
 
-    x_param=_SweepParamValidator(LayoutDefault.Arrayx_param)
+    x_param=_SweepParamValidator(pt.LayoutDefault.Arrayx_param)
 
     def __init__(self,device,x_param,base_params=None,*a,**k):
 
@@ -516,13 +516,13 @@ class PArray(LayoutPart):
 
             self.base_params=base_params
 
-        self.x_spacing=LayoutDefault.Arrayx_spacing
+        self.x_spacing=pt.LayoutDefault.Arrayx_spacing
 
         self.labels_top=None
 
         self.labels_bottom=None
 
-        self.text_params=pc.Text()
+        self.text=pc.Text()
 
     @property
     def device(self):
@@ -601,7 +601,7 @@ class PArray(LayoutPart):
     @device.setter
     def device(self,value):
 
-        if not isinstance(value,LayoutPart):
+        if not isinstance(value,pt.LayoutPart):
 
             raise Exception("{} is an invalid entry for object of {}".format(value,self.device.__class__.__name__))
 
@@ -649,35 +649,31 @@ class PArray(LayoutPart):
 
                 device.set_params(self.base_params)
 
-            new_cell=Device()
-
-            new_cell.absorb(new_cell<<device.draw())
-
-            new_cell=join(new_cell)
-
-            master_cell<<new_cell
+            new_cell=pt.join(device.draw())
 
             new_cell.name=self.name+"_"+str(index+1)
 
             if self.labels_top is not None:
 
-                self.text_params.label=self.labels_top[index]
+                self.text.label=self.labels_top[index]
 
-                self.text_params.add_text(
+                self.text.add_to_cell(
                     new_cell,
                     anchor_source='s',
                     anchor_dest='n',
-                    offset=(0,50))
+                    offset=(0,0.02))
 
             if self.labels_bottom is not None:
 
-                self.text_params.label=self.labels_bottom[index]
+                self.text.label=self.labels_bottom[index]
 
-                self.text_params.add_text(
+                self.text.add_to_cell(
                     new_cell,
                     anchor_source='n',
                     anchor_dest='s',
-                    offset=(0,-50))
+                    offset=(0,-0.02))
+
+            master_cell<<new_cell
 
             cells.append(new_cell)
 
@@ -839,12 +835,12 @@ class PArray(LayoutPart):
 
 class PMatrix(PArray):
 
-    y_param=_SweepParamValidator(LayoutDefault.Matrixy_param)
+    y_param=_SweepParamValidator(pt.LayoutDefault.Matrixy_param)
 
     def __init__(self,device,x_param,y_param,*a,**k):
 
         super().__init__(device,x_param,*a,**k)
-        self.y_spacing=LayoutDefault.Matrixy_spacing
+        self.y_spacing=pt.LayoutDefault.Matrixy_spacing
         self.y_param=y_param
         self.labels_top=None
         self.labels_bottom=None
@@ -993,7 +989,7 @@ class PMatrix(PArray):
 
                 device.draw()
 
-                df=device.export_all()
+                df=device.export_summary()
 
                 if self.labels_bottom is not None:
 

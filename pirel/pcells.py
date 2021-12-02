@@ -621,8 +621,6 @@ class Anchor(LayoutPart):
             cell.remove(etch_sx_ref)
             cell.remove(etch_dx_ref)
 
-        del anchor, etch_sx,etch_dx
-
         return cell
 
     @property
@@ -1327,13 +1325,13 @@ class TFERes(LFERes):
 
     def draw(self):
 
-        cell=Device(name=self.name)
-
         lfe_cell=LFERes.draw(self)
+
+        cell=Device(name=self.name)
 
         cell.add_ref(lfe_cell,alias='TopCell')
 
-        idt_bottom=copy(self.idt)
+        idt_bottom=deepcopy(self.idt)
 
         idt_bottom.layer=self.bottom_layer
 
@@ -1349,7 +1347,7 @@ class TFERes(LFERes):
         idt_ref.move(origin=(idt_ref.xmin,idt_ref.ymax),\
             destination=(idt_ref.xmin,idt_ref.ymax+self.idt.length+self.idt.y_offset))
 
-        bus_bottom=copy(self.bus)
+        bus_bottom=deepcopy(self.bus)
 
         bus_bottom.layer=self.bottom_layer
 
@@ -1358,7 +1356,7 @@ class TFERes(LFERes):
         bus_ref.move(origin=(0,0),\
         destination=(0,-self.bus.size.y))
 
-        anchor_bottom=copy(self.anchor)
+        anchor_bottom=deepcopy(self.anchor)
 
         anchor_bottom.layer=self.bottom_layer
 
@@ -1376,9 +1374,7 @@ class TFERes(LFERes):
             destination=idt_ref.ports['bottom'],\
             overlap=-self.bus.size.y)
 
-        for p_value in lfe_cell.ports.values():
-
-            cell.add_port(p_value)
+        pt._copy_ports(lfe_cell,cell)
 
         return cell
 
@@ -1534,6 +1530,16 @@ class Routing(LayoutPart):
         dt2_norm=Point(d.normal[1])-Point(d.normal[0])
 
         p2_proj=p2+dt2_norm*self.overhang
+
+        p=self._make_path(p1,p1_proj,p2_proj,p2)
+
+        if not self._is_hindered(p):
+
+            return p
+
+        else:
+
+            raise ValueError("path is hindered")
 
         for p_mid in (Point(p1_proj.x,p2_proj.y),Point(p2_proj.x,p1_proj.y)):
 
@@ -1874,7 +1880,7 @@ class ParasiticAwareMultiRouting(MultiRouting):
 
                 return res
 
-_allclasses=(IDT,PartialEtchIDT,Bus,EtchPit,Anchor,Via,Routing,GSProbe,GSGProbe,
+_allclasses=(Text,IDT,PartialEtchIDT,Bus,EtchPit,Anchor,Via,Routing,GSProbe,GSGProbe,
 Pad,MultiLayerPad,ViaInPad,LFERes,FBERes,TwoPortRes,TFERes,MultiRouting,ParasiticAwareMultiRouting)
 
 for cls in _allclasses:
