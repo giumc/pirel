@@ -352,6 +352,12 @@ class LayoutDefault:
     NPathCommLength=100
     NPathSpacing=Point(0,0)
 
+    #SMD
+
+    SMDDistance=Point(0,500)
+    SMDSize=Point(200,300)
+    SMDLayer=(layerTop,layerBottom)
+
 class _LayoutParam:
 
     def __init__(self,name,value):
@@ -1521,15 +1527,6 @@ def _copy_layer(cell,l1,l2):
     tobecopied=flatcell.get_polygons(byspec=(l1,0))
 
     cell.add_polygons(tobecopied,l2)
-
-def _calculate_overhang(s,d):
-
-    p1=Point(s.midpoint)
-    p2=Point(d.midpoint)
-
-    dist=abs(p2-p1)
-
-    return dist/5
 
 warnings.formatwarning = custom_formatwarning
 

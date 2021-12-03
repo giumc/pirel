@@ -1377,6 +1377,54 @@ class TFERes(LFERes):
 
         return cell
 
+class SMD(LayoutPart):
+    ''' Generate pad landing for SMD one-port component
+
+    Attributes
+    ----------
+    layer : int
+        metal layer
+
+    size : pt.Point
+
+    distance :pt.Point.
+    '''
+
+    layer=LayoutParamInterface()
+
+    size=LayoutParamInterface()
+
+    distance=LayoutParamInterface()
+
+    def __init__(self,*a,**kw):
+
+        super().__init__(*a,**kw)
+        self.layer=LayoutDefault.SMDLayer
+        self.distance=LayoutDefault.SMDDistance
+        self.size=LayoutDefault.SMDSize
+
+    def draw(self):
+
+        unit_pad=Device()
+
+        for l in self.layer:
+
+            unit_pad.add_ref(pg.compass(size=self.size.coord,layer=l),alias='layer'+str(l))
+
+        cell=Device(name=self.name)
+
+        pt._copy_ports(pg.compass(size=self.size.coord,layer=l),unit_pad)
+
+        p1=cell.add_ref(unit_pad,alias='Pad_1')
+        p2=cell.add_ref(unit_pad,alias='Pad_2')
+
+        p2.move(destination=self.distance.coord)
+
+        pt._copy_ports(p1,cell,suffix='_1')
+        pt._copy_ports(p2,cell,suffix='_2')
+
+        return cell
+
 class Routing(LayoutPart):
     ''' Generate automatic routing connection
 
@@ -1403,8 +1451,7 @@ class Routing(LayoutPart):
     side : str (can be "auto","left","right")
         where to go if there is an obstacle.
         decides where to go if there is an obstacle in the routing,
-        only 'auto','left','right'
-
+        only 'auto','left','right'.
     '''
 
     _radius=0.1
@@ -1462,13 +1509,13 @@ class Routing(LayoutPart):
 
         p=self.path
 
-        path_cell=self._make_path_cell(p)
+        path_cell=self._make_path_cell(p,self.source,self.destination)
 
         path_cell.name=self.name
 
         return path_cell
 
-    def _make_path_cell(self,p):
+    def _make_path_cell(self,p,s,d):
 
         cell=Device()
 
@@ -1476,7 +1523,7 @@ class Routing(LayoutPart):
 
             cell<<p.extrude(
                 layer=l,
-                width=self.trace_width,
+                width=[s.width,d.width],
                 simplify=self._simplification)
 
         return join(cell)
@@ -1530,7 +1577,7 @@ class Routing(LayoutPart):
 
         p=self._make_path(p1,p1_proj,p2_proj,p2)
 
-        if not self._is_hindered(p):
+        if not self._is_hindered(p,s,d):
 
             return p
 
@@ -1598,7 +1645,7 @@ class Routing(LayoutPart):
 
                 p=self._make_path(p1,p1_proj,p_mid,p_mid2,p_mid3,p2_proj,p2)
 
-                if not self._is_hindered(p):
+                if not self._is_hindered(p,s,d):
 
                     return p
 
@@ -1616,14 +1663,14 @@ class Routing(LayoutPart):
 
             raise ValueError("path is impossible")
 
-    def _is_hindered(self,path):
+    def _is_hindered(self,path,s,d):
 
-        test_path_cell=self._make_path_cell(path)
+        test_path_cell=self._make_path_cell(path,s,d)
 
         try:
 
-                test_path_cell.remove_polygons(
-                    lambda pt,lay,dt : lay==any(self.layer[1:]))
+            test_path_cell.remove_polygons(
+                lambda pt,lay,dt : lay==any(self.layer[1:]))
 
         except:
 
@@ -1732,12 +1779,23 @@ class MultiRouting(Routing):
 
         c=Device(name=self.name)
 
-        for p in self.path:
+        for s in self.source:
 
-            c<<self._make_path_cell(p)
+            for d in self.destination:
+
+                c<<self._make_path_cell(self._make_routing(s,d),s,d)
 
         return c
 
+    @staticmethod
+    def _calculate_overhang(s,d):
+
+        p1=Point(s.midpoint)
+        p2=Point(d.midpoint)
+
+        dist=abs(p2-p1)
+
+        return dist/5
     @property
     def resistance_squares(self):
 

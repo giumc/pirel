@@ -854,6 +854,105 @@ def makeNpaths(cls, pad=pc.Pad, n=4):
 
     return NpathsOf
 
+def makeSMDCoupledFilter(cls,smd=pc.SMD):
+
+    class SMDCoupledFilterOf(cls):
+
+        order=LayoutParamInterface()
+
+        spacing=LayoutParamInterface()
+
+        def __init__(self,*a,**kw):
+
+            cls.__init__(self,*a,**kw)
+
+            self.order=3
+
+            self.spacing=pt.Point(0,100)
+
+        def draw(self):
+
+            cell=Device(self.name)
+
+            cell<<self._draw_unit_cell()
+            # cell.add_array(self._draw_unit_cell(),columns=1,rows=self.order,spacing=self.spacing.coord)
+
+            return cell
+
+        def _draw_unit_cell(self):
+
+            base_device=cls.draw(self)
+
+            unit_cell=Device("FilterUnitCell")
+
+            device_ref=unit_cell.add_ref(base_device,alias="Device")
+
+            smd_ref=unit_cell.add_ref(self.smd.draw(),alias='Coupler')
+
+            smd_ref.move(origin=(smd_ref.x,smd_ref.ymin),
+                destination=(device_ref.x,device_ref.ymax))
+
+            smd_ref.move(destination=self.spacing.coord)
+
+            bottom_ports=pt._find_ports(device_ref,'bottom')
+
+            cell_bottom_port=Port(
+                name='bottom',
+                midpoint=(pt._get_centroid(*[pt.Point(x.midpoint) for x in bottom_ports])-self.spacing).coord,
+                width=smd_ref.ports["N_2"].width,
+                orientation=90)
+
+            unit_cell.add_port(cell_bottom_port)
+
+            unit_cell.add_port(port=smd_ref.ports["N_2"],name='top')
+
+            unit_cell<<self._draw_unit_cell_routing(unit_cell)
+
+            return unit_cell
+
+        def _draw_unit_cell_routing(self,unit_cell):
+
+            r=pc.MultiRouting()
+
+            r.layer=self.smd.layer
+
+            r.source=tuple(pt._find_ports(unit_cell["Device"],'top'))
+
+            r.destination=(unit_cell["Coupler"].ports["S_1"],)
+
+            r.trace_width=min(self.smd.size.x,r.source[0].width)
+
+            r.overhang=r._calculate_overhang(r.source[0],r.destination[0])
+
+            conn=r.draw()
+
+            r.source=(unit_cell.ports['bottom'],)
+
+            r.destination=tuple(pt._find_ports(unit_cell["Device"],'bottom'))
+
+            r.overhang=r._calculate_overhang(r.source[0],r.destination[0])
+
+            r.trace_width=min(self.smd.size.x,r.destination[0].width)
+
+            conn<<r.draw()
+
+            conn.flatten()
+
+            return conn
+
+        @staticmethod
+        def get_components():
+
+            pars=copy(cls.get_components())
+
+            pars.update({"SMD":smd})
+
+            return pars
+
+    SMDCoupledFilterOf.__name__=" ".join(["SMD coupled filter of ",cls.__name__])
+
+    return SMDCoupledFilterOf
+
 def makeTwoPortProbe(cls):
 
     class TwoPort(cls):
@@ -1286,7 +1385,7 @@ def connect_ports(cell,tags='top',conn_dist=pt.Point(0,100)):
 
             connector.clearance=tuple(tuple(_) for _ in cell.bbox.tolist())
 
-            connector.overhang=pt._calculate_overhang(top_conn,top_ports[0])
+            connector.overhang=connector._calculate_overhang(top_conn,top_ports[0])
 
             tracecell=connector.draw()
 
@@ -1316,7 +1415,7 @@ def connect_ports(cell,tags='top',conn_dist=pt.Point(0,100)):
 
             connector.clearance=tuple(tuple(_) for _ in cell.bbox.tolist())
 
-            connector.overhang=pt._calculate_overhang(bottom_conn,bottom_ports[0])
+            connector.overhang=connector._calculate_overhang(bottom_conn,bottom_ports[0])
 
             tracecell=connector.draw()
 
