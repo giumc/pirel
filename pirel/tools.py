@@ -216,6 +216,7 @@ class LayoutDefault:
     layerVias = 5
     layerPartialEtch = 6
     layerBackSide = 7
+    layerPassivation = 8
     layerMask = 99
 
     #text
@@ -356,7 +357,11 @@ class LayoutDefault:
 
     SMDDistance=Point(0,500)
     SMDSize=Point(200,300)
-    SMDLayer=(layerTop,layerBottom)
+    SMDLayer=(layerTop,)
+
+    #Passivation
+
+    PassivationMargin=Point(1.5,2)
 
 class _LayoutParam:
 
@@ -1511,12 +1516,21 @@ def _view_points(points):
 
     return
 
-def _make_connection(p1,p2,layer):
-
+def _make_poly_connection(p1,p2,layer):
 
     d=Device()
 
-    d.add_polygon( [p1.endpoints[0],p1.endpoints[1],p2.endpoints[0],p2.endpoints[1]],layer=layer)
+    try:
+
+        for l in layer:
+
+            d.add_polygon(   [p1.endpoints[0],p1.endpoints[1],p2.endpoints[1],p2.endpoints[0]],
+            layer=l)
+
+    except:
+
+        d.add_polygon(   [p1.endpoints[0],p1.endpoints[1],p2.endpoints[1],p2.endpoints[0]],
+        layer=layer)
 
     return d
 

@@ -241,7 +241,7 @@ class IDT(LayoutPart) :
     @property
     def probe_distance(self):
 
-        return Point(0,self.active_area.x/2)
+        return Point(0,self.active_area.x)
 
     @property
     def resistance_squares(self):
@@ -1460,7 +1460,7 @@ class Routing(LayoutPart):
 
     _tol=1e-3
 
-    _simplification=1
+    _simplification=3
 
     clearance=LayoutParamInterface()
 
@@ -1486,6 +1486,7 @@ class Routing(LayoutPart):
         self.destination=LayoutDefault.Routingports[1]
         self.layer=LayoutDefault.Routinglayer
         self.overhang=LayoutDefault.Routingoverhang
+        self._auto_overhang=False
 
     def _check_frame(self):
 
@@ -1534,6 +1535,10 @@ class Routing(LayoutPart):
         s=self.source
 
         d=self.destination
+
+        if self._auto_overhang:
+
+            self.overhang=self._calculate_overhang(s,d)
 
         if Point(s.midpoint).in_box(self.clearance) :
 
@@ -1701,6 +1706,29 @@ class Routing(LayoutPart):
 
         return pp.smooth(points=sel_points,radius=self._radius,num_pts=self._num_pts)
 
+    def set_auto_overhang(self,value):
+        ''' Sets automatically the routing overhead as 1/5 of distance between source and destination.
+
+        Parameters
+        ----------
+            value : boolean.
+        '''
+
+        if isinstance(value,bool):
+            self._auto_overhang=value
+        else:
+            raise ValueError("set_auto_overhang accepts True/False")
+
+    @staticmethod
+    def _calculate_overhang(s,d):
+
+        p1=Point(s.midpoint)
+        p2=Point(d.midpoint)
+
+        dist=abs(p2-p1)
+
+        return dist/5
+
     @property
     def resistance_squares(self):
 
@@ -1727,6 +1755,7 @@ class MultiRouting(Routing):
         self.layer=LayoutDefault.Routinglayer
         self.side=LayoutDefault.Routingside
         self.overhang=LayoutDefault.Routingoverhang
+        self._auto_overhang=False
 
     @property
     def path(self):
@@ -1759,6 +1788,10 @@ class MultiRouting(Routing):
 
         r.overhang=self.overhang
 
+        if self._auto_overhang:
+
+            r.set_auto_overhang(True)
+
         return r.path
 
     def _draw_frame(self):
@@ -1787,15 +1820,6 @@ class MultiRouting(Routing):
 
         return c
 
-    @staticmethod
-    def _calculate_overhang(s,d):
-
-        p1=Point(s.midpoint)
-        p2=Point(d.midpoint)
-
-        dist=abs(p2-p1)
-
-        return dist/5
     @property
     def resistance_squares(self):
 

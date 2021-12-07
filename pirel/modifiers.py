@@ -659,6 +659,45 @@ def makeArray(cls,n=2):
 
     return Arrayed
 
+def addPassivation(cls,margin=(2,2)):
+
+    class Passivated(cls):
+
+        passivation_margin=LayoutParamInterface()
+
+        def __init__(self,*a,**kw):
+
+            cls.__init__(self,*a,**kw)
+            self.passivation_margin=LayoutDefault.PassivationMargin
+
+        def draw(self):
+
+            supercell=cls.draw(self)
+
+            cell=pt.Device(self.name)
+
+            master_ref=cell.add_ref(supercell,alias='Device')
+
+            pt._copy_ports(master_ref,cell)
+
+            rect=pg.rectangle(
+                size=(
+                    master_ref.size[0]*self.passivation_margin.x,
+                    master_ref.size[1]*self.passivation_margin.y))
+
+            rect.move(origin=rect.center,
+                destination=master_ref.center)
+
+            pa=pg.boolean(rect,pg.bbox(master_ref.bbox),operation='xor',layer=LayoutDefault.layerPassivation)
+
+            cell.absorb(cell<<pa)
+
+            return cell
+
+    Passivated.__name__="Passivated "+cls.__name__
+
+    return Passivated
+
 def makeFixture(cls,style='open'):
 
     class Fixture(cls):
@@ -689,7 +728,7 @@ def makeFixture(cls,style='open'):
 
                 for idt_cell in idt_cells:
 
-                    s=pt._make_connection(idt_cell.ports['top'],idt_cell.ports['bottom'],self.idt.layer)
+                    s=pt._make_poly_connection(idt_cell.ports['top'],idt_cell.ports['bottom'],self.idt.layer)
 
                     cell<<s
 
@@ -764,7 +803,8 @@ def makeNpaths(cls, pad=pc.Pad, n=4):
             connect_ports(
                 cell,
                 conn_dist=self.idt.probe_distance,
-                tags='top')
+                tags='top',
+                layers=self.pad.layer)
 
             add_pads(cell,self.pad,tags='top')
 
@@ -874,8 +914,35 @@ def makeSMDCoupledFilter(cls,smd=pc.SMD):
 
             cell=Device(self.name)
 
-            cell<<self._draw_unit_cell()
-            # cell.add_array(self._draw_unit_cell(),columns=1,rows=self.order,spacing=self.spacing.coord)
+            unit_cell=self._draw_unit_cell()
+
+            cell_size=pt.Point(unit_cell.size+self.spacing.coord)
+
+            for n in range(self.order):
+
+                if n>0:
+
+                    top_previous=ref.ports['top']
+
+                ref=cell.add_ref(unit_cell,alias='n_'+str(n))
+
+                ref.move(destination=(cell_size.x,cell_size.y*n))
+
+                if n==0:
+
+                    cell.add_port(ref.ports['bottom'])
+
+                    cell.ports['bottom'].orientation=270
+
+                if n==self.order-1:
+
+                    cell.add_port(ref.ports['top'])
+
+                if n>0:
+
+                    this_bottom=ref.ports['bottom']
+
+                    cell.add(pt._make_poly_connection(top_previous,this_bottom,self.smd.layer))
 
             return cell
 
@@ -922,7 +989,7 @@ def makeSMDCoupledFilter(cls,smd=pc.SMD):
 
             r.trace_width=min(self.smd.size.x,r.source[0].width)
 
-            r.overhang=r._calculate_overhang(r.source[0],r.destination[0])
+            r.set_auto_overhang(True)
 
             conn=r.draw()
 
@@ -930,7 +997,7 @@ def makeSMDCoupledFilter(cls,smd=pc.SMD):
 
             r.destination=tuple(pt._find_ports(unit_cell["Device"],'bottom'))
 
-            r.overhang=r._calculate_overhang(r.source[0],r.destination[0])
+            r.set_auto_overhang(True)
 
             r.trace_width=min(self.smd.size.x,r.destination[0].width)
 
@@ -949,7 +1016,7 @@ def makeSMDCoupledFilter(cls,smd=pc.SMD):
 
             return pars
 
-    SMDCoupledFilterOf.__name__=" ".join(["SMD coupled filter of ",cls.__name__])
+    SMDCoupledFilterOf.__name__=" ".join(["SMD coupled filter of",cls.__name__])
 
     return SMDCoupledFilterOf
 
@@ -1069,12 +1136,12 @@ def addTwoPortProbe(cls,probe=makeTwoPortProbe(pc.GSGProbe)):
 
             cell.add_ref(routing_cell,alias=self.name+"GroundTrace")
 
-            if issubclass(cls,pc.TwoPortRes):
-
-                cell.add_ref(
-                    pt.join(
-                        self._make_twoportres_conn(
-                            device_cell,probe_ref)))
+            # if issubclass(cls,pc.TwoPortRes):
+            #
+            #     cell.add_ref(
+            #         pt.join(
+            #             self._make_twoportres_conn(
+            #                 device_cell,probe_ref)))
 
             return cell
 
@@ -1160,6 +1227,8 @@ def addTwoPortProbe(cls,probe=makeTwoPortProbe(pc.GSGProbe)):
 
                             groundroute.destination=(probe_cell.ports['GroundRXE_2'],)
 
+                    groundroute.overhang=groundroute.set_auto_overhang(True)
+
                 #signal routing
                 for index,sigroute in enumerate([self.sig1trace,self.sig2trace]):
 
@@ -1197,13 +1266,13 @@ def addTwoPortProbe(cls,probe=makeTwoPortProbe(pc.GSGProbe)):
 
                 raise ValueError("OnePortProbed without GSG/GSprobe to be implemented ")
 
-        def _make_twoportres_conn(self,device_cell,probe_cell):
+        # def _make_twoportres_conn(self,device_cell,probe_cell):
 
-            probe_ground_ports=[
-                pt._find_ports(probe_cell,['Ground','_'+x]) for x in ('1','2')]
+            # probe_ground_ports=[
+                # pt._find_ports(probe_cell,['Ground','_'+x]) for x in ('1','2')]
 
-            device_ground_ports=[
-                pt._find_ports(device_cell,x) for x in ('bottom','top')]
+            # device_ground_ports=[
+                # pt._find_ports(device_cell,x) for x in ('bottom','top')]
             #
             # gnd_conn=Device()
             #
@@ -1223,7 +1292,7 @@ def addTwoPortProbe(cls,probe=makeTwoPortProbe(pc.GSGProbe)):
             #
             #             gnd_conn<<pt._make_connection(s,d,layer=self.plate_layer)
 
-            return gnd_conn
+            # return gnd_conn
 
         def get_components(self):
 
@@ -1306,43 +1375,24 @@ def draw_array(
 
     cell_size=pt.Point(cell.size)+pt.Point(column_spacing,row_spacing)
 
-    cellmat=[]
-
-    ports=[]
-
     for j in range(y):
-
-        cellvec=[]
 
         for i in range(x):
 
-            cellvec.append(new_cell.add_ref(cell,alias=cell.name+'_'+str(i)+'_'+str(j)))
+            ref=new_cell.add_ref(cell,alias=cell.name+'_'+str(i)+'_'+str(j))
 
-            cellvec[i].move(
+            ref.move(
                 destination=(pt.Point(cell_size.x*i,cell_size.y*j)).coord)
 
-            for p in cellvec[i].ports.values():
-
-                ports.append(Port(name=p.name+'_'+str(i)+'_'+str(j),\
-                    midpoint=p.midpoint,\
-                    width=p.width,\
-                    orientation=p.orientation))
-
-        cellmat.append(cellvec)
-
-    for p in ports:
-
-        new_cell.add_port(p)
-    #
-    # for cellvec in cellmat:
-    #
-    #     for dr in cellvec:
-    #
-    #         new_cell.absorb(dr)
+            pt._copy_ports(ref,new_cell,suffix='_'+str(i)+'_'+str(j))
 
     return new_cell
 
-def connect_ports(cell,tags='top',conn_dist=pt.Point(0,100)):
+def connect_ports(
+    cell,
+    tags='top',
+    conn_dist=pt.Point(0,100),
+    layers=LayoutDefault.layerTop):
     ''' connects all the ports in the cell with name matching a tag.
 
     Parameters:
@@ -1352,7 +1402,9 @@ def connect_ports(cell,tags='top',conn_dist=pt.Point(0,100)):
         tags: tuple of str
 
         conn_dist: pt.Point
-            offset from port location.
+            offset from port location
+
+        layer : tuple.
     '''
 
     if isinstance(tags,str):
@@ -1377,6 +1429,8 @@ def connect_ports(cell,tags='top',conn_dist=pt.Point(0,100)):
 
             top_conn.orientation=270
 
+            connector.layer=layers
+
             connector.source=tuple([top_conn])
 
             connector.destination=tuple(top_ports)
@@ -1385,7 +1439,7 @@ def connect_ports(cell,tags='top',conn_dist=pt.Point(0,100)):
 
             connector.clearance=tuple(tuple(_) for _ in cell.bbox.tolist())
 
-            connector.overhang=connector._calculate_overhang(top_conn,top_ports[0])
+            connector.set_auto_overhang(True)
 
             tracecell=connector.draw()
 
@@ -1415,7 +1469,7 @@ def connect_ports(cell,tags='top',conn_dist=pt.Point(0,100)):
 
             connector.clearance=tuple(tuple(_) for _ in cell.bbox.tolist())
 
-            connector.overhang=connector._calculate_overhang(bottom_conn,bottom_ports[0])
+            connector.set_auto_overhang(True)
 
             tracecell=connector.draw()
 
