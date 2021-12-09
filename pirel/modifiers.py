@@ -1138,13 +1138,13 @@ def addTwoPortProbe(cls,probe=makeTwoPortProbe(pc.GSGProbe)):
 
             cell=Device(name=self.name)
 
-            device_ref=cell.add_ref(device_cell, alias=self.name+"Device")
+            device_ref=cell.add_ref(device_cell, alias="DUT")
 
             self._setup_probe(device_ref)
 
             probe_cell=self.probe.draw()
 
-            probe_ref=cell.add_ref(probe_cell, alias=self.name+"Probe")
+            probe_ref=cell.add_ref(probe_cell, alias="Probe")
 
             self._move_probe_ref(device_ref,probe_ref)
 
@@ -1168,7 +1168,11 @@ def addTwoPortProbe(cls,probe=makeTwoPortProbe(pc.GSGProbe)):
             #         spacing=self.gndvia.size*1.25,
             #         tolerance=self.gndvia.size/2)
 
-            cell.add_ref(routing_cell,alias=self.name+"GroundTrace")
+            cell.add_ref(routing_cell,alias="GroundTrace")
+
+            if issubclass(self.__class__,pc.TwoPortRes):
+
+                add_grounds_twoportres(cell)
 
             return cell
 
@@ -1261,7 +1265,7 @@ def addTwoPortProbe(cls,probe=makeTwoPortProbe(pc.GSGProbe)):
 
                     sigroute.side='auto'
 
-                    sigroute.layer=self.routing_layer
+                    sigroute.layer=(self.idt.layer,)
 
                     if index==0:
 
@@ -1282,8 +1286,6 @@ def addTwoPortProbe(cls,probe=makeTwoPortProbe(pc.GSGProbe)):
                         sigroute.destination=tuple(dest_port)
 
                         sigroute.trace_width=dest_port[0].width
-
-                    sigroute.layer=self.routing_layer
 
             elif isinstance(self.probe,pc.GSProbe):
 
@@ -1583,6 +1585,26 @@ def attach_taper(cell : Device , port : Port , length : float , \
     cell.remove(port)
 
     cell.add_port(new_port)
+
+def add_grounds_twoportres(cell):
+
+    active_cell=cell['DUT'].parent
+
+    [ll_outer,lr_outer,*_]=pt._get_corners(active_cell)
+
+    for res in pt._find_alias(active_cell,'Device'):
+
+        [ll,lr,ul,ur,*_]=pt._get_corners(res)
+
+        cell.add_polygon(
+            [[ll_outer.x,ll.y],[ll.x,ll.y],
+             [ll.x,ul.y],[ll_outer.x,ul.y]])
+
+        import pdb; pdb.set_trace()
+
+        cell.add_polygon(
+            [[lr_outer.x,ll.y],[lr.x,ll.y],
+             [lr.x,ul.y],[lr_outer.x,ul.y]])
 
 _allmodifiers=(
     makeScaled,addPad,addPartialEtch,

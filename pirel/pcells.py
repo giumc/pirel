@@ -1441,9 +1441,6 @@ class Routing(LayoutPart):
     clearance : iterable of two coordinates
         bbox of the obstacle
 
-    trace_width : float
-        with of routing
-
     source: phidl.Port
 
     overhang: float
@@ -1474,8 +1471,6 @@ class Routing(LayoutPart):
 
     side=LayoutParamInterface('left','right','auto')
 
-    trace_width=LayoutParamInterface()
-
     source=LayoutParamInterface()
 
     destination=LayoutParamInterface()
@@ -1487,7 +1482,6 @@ class Routing(LayoutPart):
         super().__init__(*args,**kwargs)
         self.clearance=LayoutDefault.Routingclearance
         self.side=LayoutDefault.Routingside
-        self.trace_width=LayoutDefault.Routingtrace_width
         self.source=LayoutDefault.Routingports[0]
         self.destination=LayoutDefault.Routingports[1]
         self.layer=LayoutDefault.Routinglayer
@@ -1618,6 +1612,8 @@ class Routing(LayoutPart):
 
         ll,lr,ul,ur,*_=pt._get_corners(pg.bbox(self.clearance))
 
+        extra_width=self._get_max_width()
+
         if side=='auto':
 
             path1=self._draw_hindered_path(s,d,'left')
@@ -1642,11 +1638,11 @@ class Routing(LayoutPart):
 
         if side=='left':
 
-            p_mid=Point(ll.x-self.trace_width,p1_proj.y)
+            p_mid=Point(ll.x-extra_width,p1_proj.y)
 
         elif side=='right':
 
-            p_mid=Point(lr.x+self.trace_width,p1_proj.y)
+            p_mid=Point(lr.x+extra_width,p1_proj.y)
 
         p_mid2=Point(p_mid.x,ur.y+(ll.y-p1_proj.y))
 
@@ -1708,7 +1704,7 @@ class Routing(LayoutPart):
 
                 sel_points.remove(p2)
 
-        sel_points=pt._check_points_path(*sel_points,trace_width=self.trace_width)
+        sel_points=pt._check_points_path(*sel_points,trace_width=self._get_max_width())
 
         return pp.smooth(points=sel_points,radius=self._radius,num_pts=self._num_pts)
 
@@ -1738,7 +1734,10 @@ class Routing(LayoutPart):
     @property
     def resistance_squares(self):
 
-        return self.path.length()/self.trace_width
+        return self.path.length()/self._get_max_width()
+
+    def _get_max_width(self):
+        return max(self.source.width,self.destination.width)
 
 class MultiRouting(Routing):
     ''' Handles routings on multiple ports.
@@ -1757,7 +1756,6 @@ class MultiRouting(Routing):
         self.source=LayoutDefault.MultiRoutingsources
         self.destination=LayoutDefault.MultiRoutingdestinations
         self.clearance=LayoutDefault.Routingclearance
-        self.trace_width=LayoutDefault.Routingtrace_width
         self.layer=LayoutDefault.Routinglayer
         self.side=LayoutDefault.Routingside
         self.overhang=LayoutDefault.Routingoverhang
@@ -1772,7 +1770,9 @@ class MultiRouting(Routing):
 
             for d in self.destination:
 
-                p.append(self._make_routing(s,d))
+                r=self._make_routing(s,d)
+
+                p.append(r.path)
 
         return p
 
@@ -1786,8 +1786,6 @@ class MultiRouting(Routing):
 
         r.layer=self.layer
 
-        r.trace_width=self.trace_width
-
         r.source=s
 
         r.destination=d
@@ -1798,7 +1796,7 @@ class MultiRouting(Routing):
 
             r.set_auto_overhang(True)
 
-        return r.path
+        return r
 
     def _draw_frame(self):
 
@@ -1822,7 +1820,8 @@ class MultiRouting(Routing):
 
             for d in self.destination:
 
-                c<<self._make_path_cell(self._make_routing(s,d),s,d)
+                r=self._make_routing(s,d)
+                c<<self._make_path_cell(r.path,s,d)
 
         return c
 
@@ -1831,11 +1830,25 @@ class MultiRouting(Routing):
 
         resistance=[]
 
-        for p in self.path:
+        for p,q in zip(self.path,self._get_max_width()):
 
-            resistance.append(p.length()/self.trace_width)
+            resistance.append(p.length()/q)
 
         return resistance
+
+    def _get_max_width():
+
+        width=[]
+
+        for s in self.source:
+
+            for d in self.destination:
+
+                r=self._make_routing(s,d)
+
+                width.append(r._get_max_width())
+
+        return width
 
 class ParasiticAwareMultiRouting(MultiRouting):
 
@@ -1943,7 +1956,7 @@ class ParasiticAwareMultiRouting(MultiRouting):
 
                     else:
 
-                        res.append(original_res[x]-self._yovertravel(self.destination[x])/self.trace_width)
+                        res.append(original_res[x]-self._yovertravel(self.destination[x])/self._get_max_width()[x])
 
                 return res
 
