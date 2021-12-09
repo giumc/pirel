@@ -1425,6 +1425,12 @@ class SMD(LayoutPart):
 
         return cell
 
+    def set_01005(self):
+
+        self.size=pt.Point(300,250)
+
+        self.distance=pt.Point(0,400)
+
 class Routing(LayoutPart):
     ''' Generate automatic routing connection
 
@@ -1545,7 +1551,7 @@ class Routing(LayoutPart):
             raise ValueError(f" Source of routing {s.midpoint} is in clearance area {bbox.bbox}")
 
         if Point(d.midpoint).in_box(self.clearance):
-
+            import pdb; pdb.set_trace()
             raise ValueError(f" Destination of routing{d.midpoint} is in clearance area{bbox.bbox}")
 
         try:

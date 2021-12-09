@@ -361,7 +361,9 @@ class LayoutDefault:
 
     #Passivation
 
-    PassivationMargin=Point(1.5,2)
+    PassivationMargin=Point(100,100)
+    PassivationScale=Point(2,3)
+    PassivationLayer=(layerPassivation,)
 
 class _LayoutParam:
 
