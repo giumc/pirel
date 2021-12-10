@@ -6,10 +6,10 @@ import pirel.tools as pt
 import pirel.addOns.standard_parts as pf
 import pirel.sweeps as ps
 
-device=pm.addTwoPortProbe(
-    pm.makeArray(pm.makeScaled(pc.TwoPortRes)),
-    probe=pm.makeTwoPortProbe(pc.GSGProbe))()
-
+# device=pm.addTwoPortProbe(
+#     pm.makeArray(pm.makeScaled(pc.TwoPortRes)),
+#     probe=pm.makeTwoPortProbe(pc.GSGProbe))()
+device=pm.makeScaled(pc.TwoPortRes)()
 pt.check(device.draw())
 # device=pm.makeArray(pc.TFERes)()
 # arr=ps.PArray(device,ps.SweepParam({"IDTN":[3,5]}))

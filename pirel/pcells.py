@@ -1314,7 +1314,51 @@ class TwoPortRes(FBERes):
 
         pt._copy_ports(supercell,cell)
 
+        self._make_ground_connections(cell)
+
         return cell
+
+    def _make_ground_connections(self,cell):
+
+        [ll,lr,ul,ur,c,n,s,w,e]=pt._get_corners(cell)
+
+        margin=pt.Point(self.anchor.size.x-self.anchor.metalized.x,0)
+
+        cell.add_port(
+            name='GroundLX',
+            midpoint=(w-margin).coord,
+            width=ul.y-ll.y,
+            orientation=180)
+
+        cell.add_port(
+            name='GroundRX',
+            midpoint=(e+margin).coord,
+            width=ur.y-lr.y,
+            orientation=0)
+
+        ground_port_lx=cell.ports["GroundLX"]
+        ground_port_rx=cell.ports["GroundRX"]
+
+        for corner,sig,tag in zip([ll,lr,ul,ur],[-1,1,-1,1],['bottom','bottom','top','top']):
+
+            conn_width=cell.ports[tag].width
+
+            if tag=='top':
+                orient=90
+            elif tag=='bottom':
+                orient=270
+
+            conn_port=Port(
+                width=conn_width,
+                midpoint=(corner+sig*pt.Point(conn_width/2,0)+sig*margin).coord,
+                orientation=orient)
+
+            r=Routing()
+            r.layer=(self.plate_layer,)
+            r.source=cell.ports[tag]
+            r.destination=conn_port
+            r.overhang=conn_width
+            cell.add(r.draw())
 
 class TFERes(LFERes):
 
@@ -1463,7 +1507,7 @@ class Routing(LayoutPart):
 
     _tol=1e-3
 
-    _simplification=3
+    _simplification=1
 
     clearance=LayoutParamInterface()
 

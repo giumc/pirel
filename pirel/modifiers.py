@@ -986,6 +986,10 @@ def makeSMDCoupledFilter(cls,smd=pc.SMD):
 
                     cell.add(pt._make_poly_connection(top_previous,this_bottom,self.smd.layer))
 
+                for p in pt._find_ports(ref,'Ground'):
+
+                    cell.add_port(port=p,name=p.name+'_'+str(n))
+
             return cell
 
         def _draw_unit_cell(self):
@@ -1007,9 +1011,15 @@ def makeSMDCoupledFilter(cls,smd=pc.SMD):
 
                 unit_cell.add_port(p)
 
+            for p in pt._find_ports(device_ref,tag='Ground'):
+
+                unit_cell.add_port(p)
+
             unit_cell.add_port(port=smd_ref.ports["N_2"],name='top')
 
             unit_cell<<self._draw_unit_cell_routing(unit_cell)
+
+            self._add_ground_extensions(unit_cell)
 
             return unit_cell
 
@@ -1032,6 +1042,30 @@ def makeSMDCoupledFilter(cls,smd=pc.SMD):
             conn.flatten()
 
             return conn
+
+        def _add_ground_extensions(self,cell):
+
+            tot_width=(pt.Point(cell.size)).x
+
+            device_width=(pt.Point(cell["Device"].parent.size)).x
+
+            ext_width=(tot_width-device_width)/2
+
+            for p in pt._find_ports(cell,'Ground'):
+
+                p_norm=Point(p.normal[1])-Point(p.normal[0])
+
+                p_ext=Port(
+                    name=p.name,
+                    orientation=p.orientation,
+                    width=p.width,
+                    midpoint=(pt.Point(p.midpoint)+p_norm*ext_width).coord)
+
+                cell.add(pt._make_poly_connection(p,p_ext,self.plate_layer))
+
+                cell.ports.pop(p.name)
+
+                cell.add_port(p_ext)
 
         @staticmethod
         def get_components():
@@ -1160,6 +1194,13 @@ def addTwoPortProbe(cls,probe=makeTwoPortProbe(pc.GSGProbe)):
 
                     routing_cell=self._draw_probe_routing()
 
+            try:
+
+                routing_cell.add(self._draw_device_grounds(device_ref,probe_ref,'straight'))
+
+            except:
+
+                routing_cell.add(self._draw_device_grounds(device_ref,probe_ref,'side'))
             # if hasattr(self,'gndvia'):
             #
             #     add_vias(routing_cell,
@@ -1170,9 +1211,9 @@ def addTwoPortProbe(cls,probe=makeTwoPortProbe(pc.GSGProbe)):
 
             cell.add_ref(routing_cell,alias="GroundTrace")
 
-            if issubclass(self.__class__,pc.TwoPortRes):
-
-                add_grounds_twoportres(cell)
+            # if issubclass(self.__class__,pc.TwoPortRes):
+            #
+            #     add_grounds_twoportres(cell)
 
             return cell
 
@@ -1294,6 +1335,68 @@ def addTwoPortProbe(cls,probe=makeTwoPortProbe(pc.GSGProbe)):
             else:
 
                 raise ValueError("OnePortProbed without GSG/GSprobe to be implemented ")
+
+        def _draw_device_grounds(self,device_cell,probe_cell,label):
+
+            output_cell=Device()
+
+            lx_device_ports=[]
+
+            rx_device_ports=[]
+
+            gnd_ports=pt._find_ports(device_cell,'Ground')
+
+            if not gnd_ports:
+
+                return output_cell
+
+            for p in gnd_ports:
+
+                p_adj=Port(
+                    name=p.name,
+                    midpoint=p.midpoint,
+                    width=probe_cell['Port1'].size[1],
+                    orientation=p.orientation)
+
+                if "LX" in p.name:
+
+                    lx_device_ports.append(p_adj)
+
+                elif "RX" in p.name:
+
+                    rx_device_ports.append(p_adj)
+
+            r=pc.MultiRouting()
+
+            r.layer=(self.probe.layer,)
+
+            if label=='side':
+
+                r.source=tuple(pt._find_ports(probe_cell,'GroundLXW'))
+
+            elif label=='straight':
+
+                r.source=tuple(probe_cell.ports['GroundLXN_1'],probe_cell.ports['GroundLXS_2'])
+
+            r.destination=tuple(lx_device_ports)
+
+            # r.clearance=self._bbox_mod(device_cell.bbox)
+
+            output_cell.absorb(output_cell<<r.draw())
+
+            if label=='side':
+
+                r.source=tuple(pt._find_ports(probe_cell,'GroundRXE'))
+
+            elif label=='straight':
+
+                r.source=tuple(probe_cell.ports['GroundLXN_1'],probe_cell.ports['GroundLXS_2'])
+
+            r.destination=tuple(rx_device_ports)
+
+            output_cell.absorb(output_cell<<r.draw())
+
+            return output_cell
 
         def get_components(self):
 
@@ -1585,26 +1688,6 @@ def attach_taper(cell : Device , port : Port , length : float , \
     cell.remove(port)
 
     cell.add_port(new_port)
-
-def add_grounds_twoportres(cell):
-
-    active_cell=cell['DUT'].parent
-
-    [ll_outer,lr_outer,*_]=pt._get_corners(active_cell)
-
-    for res in pt._find_alias(active_cell,'Device'):
-
-        [ll,lr,ul,ur,*_]=pt._get_corners(res)
-
-        cell.add_polygon(
-            [[ll_outer.x,ll.y],[ll.x,ll.y],
-             [ll.x,ul.y],[ll_outer.x,ul.y]])
-
-        import pdb; pdb.set_trace()
-
-        cell.add_polygon(
-            [[lr_outer.x,ll.y],[lr.x,ll.y],
-             [lr.x,ul.y],[lr_outer.x,ul.y]])
 
 _allmodifiers=(
     makeScaled,addPad,addPartialEtch,
