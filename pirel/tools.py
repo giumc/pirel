@@ -88,13 +88,13 @@ class Point:
     def in_box(self,bbox):
 
         tol=1e-3
-        ll=Point(bbox[0])
-        ur=Point(bbox[1])
+        ll=Point(bbox[0])+Point(tol,tol)
+        ur=Point(bbox[1])-Point(tol,tol)
 
-        if  self.x>ll.x-tol and\
-            self.x<ur.x+tol and\
-            self.y>ll.y+tol and\
-            self.y<ur.y-tol:
+        if  (self.x>ll.x and
+            self.x<ur.x and
+            self.y>ll.y and
+            self.y<ur.y):
 
                 return True
 
@@ -254,6 +254,9 @@ class LayoutDefault:
     Anchorlayer=IDTlayer
     Anchoretch_layer=EtchPitlayer
     Anchoretch_choice=True
+
+    #MultiAnchor
+    MultiAnchorn=3
 
     #LFERes
     LFEResactive_area_margin=0.5
@@ -572,31 +575,19 @@ class LayoutPart(ABC) :
         ----------
         blocking : boolean
 
-            if true,block scripts until window is closed.
+            if true,block scripts until window is closed
 
         gds : boolean
 
             if true, gdspy viewer is used.
-            if false (default), phidl viewer is used.
+            if false (default), phidl viewer is used
+
+        joined : boolean
+            if true, a copy of the flattened&joined cell is displayed.
         '''
 
-        if gds:
+        check(self.draw(),blocking=blocking,joined=joined,gds=gds)
 
-            lib=gdspy.GdsLibrary()
-
-            cell=lib.new_cell("Output")
-
-            cell.add(gdspy.CellReference(self.draw()))
-
-            cell.flatten()
-
-            gdspy.LayoutViewer(lib)
-
-        else:
-
-            check(self.draw(),blocking=blocking,joined=joined)
-
-        return
 
     def _bbox_mod(self,bbox):
         ''' Default method that returns bbox for the class .
@@ -913,11 +904,14 @@ def check(device : Device, joined=False, blocking=True,gds=False):
     '''
     set_quickplot_options(blocking=blocking)
 
+
     if joined:
 
-        cell=Device()
-        cell.absorb(cell<<device)
-        cell.flatten()
+        cell=join(device)
+
+    else:
+
+        cell=device
 
     if gds:
 
@@ -925,13 +919,13 @@ def check(device : Device, joined=False, blocking=True,gds=False):
 
         gcell=lib.new_cell("Output")
 
-        gcell.add(device.flatten())
+        gcell.add(cell)
 
         gdspy.LayoutViewer(lib)
 
     else:
 
-        qp(device)
+        qp(cell)
 
 def if_match_import(obj : LayoutPart ,param : dict, tag : str ):
     ''' used to load data in subclasses.
@@ -1492,19 +1486,31 @@ def _find_ports(cell,tag):
 
         tag=[tag]
 
-    for port_name,cell_port in cell.ports.items():
+    if isinstance(cell,Device):
 
-        if all([x in port_name for x in tag]):
+        for port in cell.get_ports():
 
-            output.append(cell_port)
+            if all([x in port.name for x in tag]):
 
-    return output
+                output.append(port)
+
+        return output
+
+    elif isinstance(cell,DeviceReference):
+
+        for port_name,cell_port in cell.ports.items():
+
+            if all([x in port_name for x in tag]):
+
+                output.append(cell_port)
+
+        return output
 
 def _view_points(points):
 
     ax=plt.axes()
 
-    p=ax.plot([p[0] for p in points],[p[1] for p in points])
+    p=ax.plot([p.x for p in points],[p.y for p in points])
 
     p[0].set_linewidth(1)
 
@@ -1637,3 +1643,67 @@ def _find_alias(cell,name):
     else:
 
         return list
+
+def _bbox_to_tuple(bbox):
+
+    try:
+        return tuple(_bbox_to_tuple(i) for i in bbox)
+    except TypeError:
+        return bbox
+
+def draw_array(
+    cell : Device,
+    x : int, y : int,
+    row_spacing : float = 0 ,
+    column_spacing : float = 0 ) -> Device:
+    ''' returns a spaced matrix of identical cells, including ports in the output cell.
+
+    Parameters
+    ----------
+    cell : phidl.Device
+
+    x : int
+        columns of copies
+
+    y : int
+        rows of copies
+
+    row_spacing: float
+
+    column_spacing: float
+
+    Returns
+    -------
+    cell : phidl.Device.
+    '''
+
+    new_cell=pg.Device(cell.name+"array")
+
+    cell_size=Point(cell.size)+Point(column_spacing,row_spacing)
+
+    for j in range(y):
+
+        for i in range(x):
+
+            if y==1 and x==1:
+
+                ref=new_cell.add_ref(cell,alias=cell.name)
+
+            elif y==1:
+
+                ref=new_cell.add_ref(cell,alias=cell.name+'_'+str(i))
+
+            elif x==1:
+
+                ref=new_cell.add_ref(cell,alias=cell.name+'_'+str(j))
+
+            else:
+
+                ref=new_cell.add_ref(cell,alias=cell.name+'_'+str(i)+'_'+str(j))
+
+            ref.move(
+                destination=(Point(cell_size.x*i,cell_size.y*j)).coord)
+
+            _copy_ports(ref,new_cell,suffix='_'+str(i)+'_'+str(j))
+
+    return new_cell

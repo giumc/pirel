@@ -308,13 +308,7 @@ def addOnePortProbe(cls,probe=pc.GSGProbe):
 
                 routing_cell=self._draw_probe_routing()
 
-            if hasattr(self,'gndvia'):
-
-                add_vias(routing_cell,
-                    routing_cell.bbox,
-                    self.gndvia,
-                    spacing=self.gndvia.size*1.25,
-                    tolerance=self.gndvia.size/2)
+            # _add_default_ground_vias(self,routing_cell)
 
             cell.add_ref(routing_cell,alias=self.name+"GroundTrace")
 
@@ -602,7 +596,7 @@ def makeArray(cls,n=2):
 
             port_names=list(unit_cell.ports.keys())
 
-            cell=draw_array(unit_cell,\
+            cell=pt.draw_array(unit_cell,\
                 self.n_blocks,1)
 
             cell.name=self.name
@@ -1033,8 +1027,6 @@ def makeSMDCoupledFilter(cls,smd=pc.SMD):
 
             r.destination=(unit_cell["Coupler"].ports["S_1"],)
 
-            r.trace_width=min(self.smd.size.x,r.source[0].width)
-
             r.set_auto_overhang(True)
 
             conn=r.draw()
@@ -1045,11 +1037,7 @@ def makeSMDCoupledFilter(cls,smd=pc.SMD):
 
         def _add_ground_extensions(self,cell):
 
-            tot_width=(pt.Point(cell.size)).x
-
-            device_width=(pt.Point(cell["Device"].parent.size)).x
-
-            ext_width=(tot_width-device_width)/2
+            ext_width=abs(cell.xmin-cell["Device"].parent.ports["GroundLX"].midpoint[0])
 
             for p in pt._find_ports(cell,'Ground'):
 
@@ -1061,7 +1049,11 @@ def makeSMDCoupledFilter(cls,smd=pc.SMD):
                     width=p.width,
                     midpoint=(pt.Point(p.midpoint)+p_norm*ext_width).coord)
 
-                cell.add(pt._make_poly_connection(p,p_ext,self.plate_layer))
+                conn_cell=pt._make_poly_connection(p,p_ext,(self.idt.layer,self.plate_layer))
+
+                _add_default_ground_vias(self,conn_cell)
+
+                cell.add(conn_cell)
 
                 cell.ports.pop(p.name)
 
@@ -1201,19 +1193,10 @@ def addTwoPortProbe(cls,probe=makeTwoPortProbe(pc.GSGProbe)):
             except:
 
                 routing_cell.add(self._draw_device_grounds(device_ref,probe_ref,'side'))
-            # if hasattr(self,'gndvia'):
-            #
-            #     add_vias(routing_cell,
-            #         routing_cell.bbox,
-            #         self.gndvia,
-            #         spacing=self.gndvia.size*1.25,
-            #         tolerance=self.gndvia.size/2)
+
+            # _add_default_ground_vias(self,routing_cell)
 
             cell.add_ref(routing_cell,alias="GroundTrace")
-
-            # if issubclass(self.__class__,pc.TwoPortRes):
-            #
-            #     add_grounds_twoportres(cell)
 
             return cell
 
@@ -1368,7 +1351,7 @@ def addTwoPortProbe(cls,probe=makeTwoPortProbe(pc.GSGProbe)):
 
             r=pc.MultiRouting()
 
-            r.layer=(self.probe.layer,)
+            r.layer=self.gndlefttrace.layer
 
             if label=='side':
 
@@ -1380,7 +1363,9 @@ def addTwoPortProbe(cls,probe=makeTwoPortProbe(pc.GSGProbe)):
 
             r.destination=tuple(lx_device_ports)
 
-            # r.clearance=self._bbox_mod(device_cell.bbox)
+            r.clearance=pt._bbox_to_tuple(device_cell.bbox)
+
+            r.side='left'
 
             output_cell.absorb(output_cell<<r.draw())
 
@@ -1393,6 +1378,8 @@ def addTwoPortProbe(cls,probe=makeTwoPortProbe(pc.GSGProbe)):
                 r.source=tuple(probe_cell.ports['GroundLXN_1'],probe_cell.ports['GroundLXS_2'])
 
             r.destination=tuple(rx_device_ports)
+
+            r.side='right'
 
             output_cell.absorb(output_cell<<r.draw())
 
@@ -1448,49 +1435,6 @@ def add_compass(device : Device) -> Device:
     device.add_port(port=ports[3],name='W')
 
     return device
-
-def draw_array(
-    cell : Device,
-    x : int, y : int,
-    row_spacing : float = 0 ,
-    column_spacing : float = 0 ) -> Device:
-    ''' returns a spaced matrix of identical cells, including ports in the output cell.
-
-    Parameters
-    ----------
-    cell : phidl.Device
-
-    x : int
-        columns of copies
-
-    y : int
-        rows of copies
-
-    row_spacing: float
-
-    column_spacing: float
-
-    Returns
-    -------
-    cell : phidl.Device.
-    '''
-
-    new_cell=pg.Device(cell.name+"array")
-
-    cell_size=pt.Point(cell.size)+pt.Point(column_spacing,row_spacing)
-
-    for j in range(y):
-
-        for i in range(x):
-
-            ref=new_cell.add_ref(cell,alias=cell.name+'_'+str(i)+'_'+str(j))
-
-            ref.move(
-                destination=(pt.Point(cell_size.x*i,cell_size.y*j)).coord)
-
-            pt._copy_ports(ref,new_cell,suffix='_'+str(i)+'_'+str(j))
-
-    return new_cell
 
 def connect_ports(
     cell,
@@ -1647,7 +1591,7 @@ def add_vias(cell : Device, bbox, via : pt.LayoutPart, spacing : float = 0,toler
 
         raise ValueError("Via is too large for bbox !")
 
-    via_cell=draw_array(via.draw(),
+    via_cell=pt.draw_array(via.draw(),
         nvias_x,nvias_y,
         row_spacing=spacing,
         column_spacing=spacing)
@@ -1669,6 +1613,16 @@ def add_vias(cell : Device, bbox, via : pt.LayoutPart, spacing : float = 0,toler
     cell.add_ref(via_cell,alias="Vias")
 
     # return cell_out
+
+def _add_default_ground_vias(self,cell):
+
+    if hasattr(self,'gndvia'):
+
+        add_vias(cell,
+            cell.bbox,
+            self.gndvia,
+            spacing=self.gndvia.size*1.25,
+            tolerance=self.gndvia.size/2)
 
 def attach_taper(cell : Device , port : Port , length : float , \
     width2 : float, layer=LayoutDefault.layerTop) :

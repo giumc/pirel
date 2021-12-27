@@ -33,7 +33,7 @@ class Text(LayoutPart):
     You can add text to a cell using the add_text() method.
 
     Attributes
-    ----------
+    -----------
     font : string
             if overridden, needs to be in pirel / path
 
@@ -205,11 +205,11 @@ class IDT(LayoutPart) :
         width=totx,
         orientation=-90))
 
-        cell.add_port(Port(name='top',\
-        midpoint=(self.origin+\
-        Point(midx,self.length+self.y_offset)).coord,\
-        width=totx,
-        orientation=90))
+        cell.add_port(
+            name='top',
+            midpoint=Point(midx,self.length+self.y_offset).coord,
+            width=totx,
+            orientation=90)
 
         del unitcell
 
@@ -271,12 +271,8 @@ class IDT(LayoutPart) :
 
     def _draw_unit_cell(self):
 
-        o=self.origin
-
-        rect=pg.rectangle(size=(self.coverage*self.pitch,self.length),\
+        rect=pg.rectangle(size=(self.coverage*self.pitch,self.length),
             layer=self.layer)
-
-        rect.move(origin=(0,0),destination=o.coord)
 
         unitcell=Device()
 
@@ -286,13 +282,13 @@ class IDT(LayoutPart) :
 
         r2 = unitcell << rect
 
-        r2.move(origin=o.coord,\
-        destination=(o+Point(self.pitch,self.y_offset)).coord)
+        r2.move(
+            destination=Point(self.pitch,self.y_offset).coord)
 
         r3= unitcell<< rect
 
-        r3.move(origin=o.coord,\
-            destination=(o+Point(2*self.pitch,0)).coord)
+        r3.move(
+            destination=Point(2*self.pitch,0).coord)
 
         unitcell.absorb(r2)
 
@@ -306,14 +302,18 @@ class IDT(LayoutPart) :
 
 class PartialEtchIDT(IDT):
 
-    def _draw_unit_cell(self):
+    layer_partialetch=pt.LayoutParamInterface()
 
-        o=self.origin
+    def __init__(self,*a,**kw):
+
+        super().__init__(*a,**kw)
+
+        self.layer_partialetch=LayoutDefault.layerPartialEtch
+
+    def _draw_unit_cell(self):
 
         rect=pg.rectangle(size=(self.coverage*self.pitch,self.length),
             layer=self.layer)
-
-        rect.move(origin=(0,0),destination=o.coord)
 
         unitcell=Device()
 
@@ -324,9 +324,9 @@ class PartialEtchIDT(IDT):
         rect_partialetch=pg.rectangle(
             size=(
                 (1-self.coverage)*self.pitch,self.length-self.y_offset),
-            layer=LayoutDefault.layerPartialEtch)
+            layer=self.layer_partialetch)
 
-        rect_partialetch.move(origin=o.coord,
+        rect_partialetch.move(
             destination=(self.pitch*self.coverage,self.y_offset))
 
         rp1=unitcell<<rect_partialetch
@@ -337,27 +337,27 @@ class PartialEtchIDT(IDT):
 
         r2 = unitcell << rect
 
-        r2.move(origin=o.coord,
-        destination=(o+Point(self.pitch,self.y_offset)).coord)
+        r2.move(
+            destination=Point(self.pitch,self.y_offset).coord)
 
         r3= unitcell<< rect
 
-        r3.move(origin=o.coord,\
-            destination=(o+Point(2*self.pitch,0)).coord)
+        r3.move(
+            destination=Point(2*self.pitch,0).coord)
 
         rect_partialetch_side=pg.rectangle(
             size=(
                 (1-self.coverage)*self.pitch/2,self.length-self.y_offset),
-            layer=LayoutDefault.layerPartialEtch)
+            layer=self.layer_partialetch)
 
         petch_side1=unitcell<<rect_partialetch_side
 
         petch_side2=unitcell<<rect_partialetch_side
 
-        petch_side1.move(origin=o.coord,
+        petch_side1.move(
             destination=(-petch_side1.xsize,self.y_offset))
 
-        petch_side2.move(origin=o.coord,
+        petch_side2.move(
             destination=(self.pitch*2+self.pitch*self.coverage,self.y_offset))
 
         unitcell.absorb(r2)
@@ -370,9 +370,11 @@ class PartialEtchIDT(IDT):
 
         unitcell.name="UnitCell"
 
-        del rect,rect_partialetch
-
         return unitcell
+
+    def draw(self):
+
+        return IDT.draw.__wrapped__(self)
 
 class Bus(LayoutPart) :
     ''' Generates pair of bus structure.
@@ -413,11 +415,10 @@ class Bus(LayoutPart) :
         -------
         cell : phidl.Device.
         '''
-        o=self.origin
 
-        pad=pg.rectangle(size=self.size.coord,\
-        layer=self.layer).move(origin=(0,0),\
-        destination=o.coord)
+        pad=pg.rectangle(
+            size=self.size.coord,
+            layer=self.layer)
 
         cell=Device(self.name)
 
@@ -425,17 +426,15 @@ class Bus(LayoutPart) :
         cell.absorb(r1)
         r2=cell <<pad
 
-        r2.move(origin=o.coord,\
-        destination=(o+self.distance).coord)
+        r2.move(
+            destination=self.distance.coord)
 
         cell.absorb(r2)
 
-        cell.add_port(name='conn',\
-        midpoint=(o+Point(self.size.x/2,self.size.y)).coord,\
-        width=self.size.x,\
+        cell.add_port(name='conn',
+        midpoint=Point(self.size.x/2,self.size.y).coord,
+        width=self.size.x,
         orientation=90)
-
-        del pad
 
         return cell
 
@@ -484,12 +483,8 @@ class EtchPit(LayoutPart) :
         -------
         cell : phidl.Device.
         '''
-        o=self.origin
-
         main=pg.rectangle(size=(self.x,self.active_area.y),
             layer=self.layer)
-
-        main.move(destination=o.coord)
 
         etch=Device(self.name)
 
@@ -499,14 +494,14 @@ class EtchPit(LayoutPart) :
 
         etch_rx.move(destination=(self.x+self.active_area.x,0))
 
-        port_up=Port('top',\
-        midpoint=(o+Point(self.x+self.active_area.x/2,self.active_area.y)).coord,\
-        width=self.active_area.x,\
+        port_up=Port('top',
+        midpoint=Point(self.x+self.active_area.x/2,self.active_area.y).coord,
+        width=self.active_area.x,
         orientation=-90)
 
-        port_down=Port('bottom',\
-        midpoint=(o+Point(self.x+self.active_area.x/2,0)).coord,\
-        width=self.active_area.x,\
+        port_down=Port('bottom',
+        midpoint=Point(self.x+self.active_area.x/2,0).coord,
+        width=self.active_area.x,
         orientation=90)
 
         etch.add_port(port_up)
@@ -519,7 +514,7 @@ class Anchor(LayoutPart):
 
     Attributes
     ----------
-    size : PyResLayout.Point
+    size :
         length(Y) and size(X) of anchors
 
     metalized : PyResLayout.Point
@@ -551,66 +546,52 @@ class Anchor(LayoutPart):
 
         super().__init__(*args,**kwargs)
 
-        self.size=copy(LayoutDefault.Anchorsize)
-        self.metalized=copy(LayoutDefault.Anchor_metalized)
+        self.size=LayoutDefault.Anchorsize
+        self.metalized=LayoutDefault.Anchor_metalized
         self.etch_choice=LayoutDefault.Anchoretch_choice
         self.etch_x=LayoutDefault.Anchoretch_x
         self.x_offset=LayoutDefault.Anchorx_offset
-
         self.layer=LayoutDefault.Anchorlayer
         self.etch_layer=LayoutDefault.Anchoretch_layer
 
     def draw(self):
-        ''' Generates layout cell based on current parameters.
-
-        'conn' port is included in the cell.
-
-        Returns
-        -------
-        cell : phidl.Device.
-        '''
 
         self._check_anchor()
 
-        o=self.origin
+        anchor=self._draw_metalized()
 
-        anchor=pg.rectangle(\
-            size=(self.size-Point(2*self.etch_margin.x,-2*self.etch_margin.y)).coord,\
-            layer=self.layer)
-
-        etch_size=Point(\
-        (self.etch_x-self.size.x)/2,\
+        etch_size=Point(
+        (self.etch_x-self.size.x)/2,
         self.size.y)
 
         offset=Point(self.x_offset,0)
 
         cell=Device(self.name)
 
-        etch_sx=pg.rectangle(\
-            size=(etch_size-offset).coord,\
+        etch_sx=pg.rectangle(
+            size=(etch_size-offset).coord,
             layer=self.etch_layer)
 
-        etch_dx=pg.rectangle(\
-            size=(etch_size+offset).coord,\
+        etch_dx=pg.rectangle(
+            size=(etch_size+offset).coord,
             layer=self.etch_layer)
 
-        etch_sx_ref=(cell<<etch_sx).move(origin=(0,0),\
-        destination=(o-Point(0,self.etch_margin.y)).coord)
+        etch_sx_ref=(cell<<etch_sx).move(
+        destination=(Point(0,self.etch_margin.y)).coord)
 
-        anchor_transl=o+Point(etch_sx.size[0]+self.etch_margin.x,-2*self.etch_margin.y)
+        # anchor_transl=Point(etch_sx.size[0]+self.etch_margin.x,-2*self.etch_margin.y)
 
-        anchor_ref=(cell<<anchor).move(origin=(0,0),\
-        destination=anchor_transl.coord)
+        anchor_transl=Point(etch_sx.xsize+self.etch_margin.x,0)
 
-        etchdx_transl=anchor_transl+Point(anchor.size[0]+self.etch_margin.x,+self.etch_margin.y)
+        anchor_ref=(cell<<anchor).move(
+            destination=anchor_transl.coord)
 
-        etch_dx_ref=(cell<<etch_dx).move(origin=(0,0),\
-        destination=etchdx_transl.coord)
+        etchdx_transl=anchor_transl+Point(anchor.xsize+self.etch_margin.x,self.etch_margin.y)
 
-        cell.add_port(name='conn',\
-        midpoint=(anchor_transl+Point(self.size.x/2-self.etch_margin.x,self.size.y+2*self.etch_margin.y)).coord,\
-        width=self.metalized.x,\
-        orientation=90)
+        etch_dx_ref=(cell<<etch_dx).move(
+            destination=etchdx_transl.coord)
+
+        pt._copy_ports(anchor_ref,cell)
 
         if self.etch_choice==True:
 
@@ -622,6 +603,18 @@ class Anchor(LayoutPart):
 
             cell.remove(etch_sx_ref)
             cell.remove(etch_dx_ref)
+
+        return cell
+
+    def _draw_metalized(self):
+
+        cell=pg.rectangle(
+            size=(self.size-Point(2*self.etch_margin.x,-2*self.etch_margin.y)).coord,\
+            layer=self.layer)
+
+        [_,_,_,_,_,n,*_]=pt._get_corners(cell)
+
+        cell.add_port(name='conn',midpoint=n.coord,width=cell.xsize,orientation=90)
 
         return cell
 
@@ -647,6 +640,44 @@ class Anchor(LayoutPart):
 
             # warnings.warn(f"""Metalized Y capped to {self.size.y*1.1 : .2f}""")
             self.metalized=Point(self.metalized.x,self.size.y*1.1)
+
+class MultiAnchor(Anchor):
+    ''' Anchor with multiple anchor points,equally spaced.
+
+    Attributes
+    ----------
+        n : int
+
+        spacing : pt.Point.
+
+    '''
+    n =LayoutParamInterface()
+
+    spacing=LayoutParamInterface()
+
+    def __init__(self,n=1,*a,**kw):
+
+        super().__init__(*a,**kw)
+
+        self.n=LayoutDefault.MultiAnchorn
+
+        self.spacing=pt.Point(self.size.x/3,0)
+
+    def _draw_metalized(self):
+
+        import pdb; pdb.set_trace()
+
+        metalized=super()._draw_metalized()
+
+        metalized_all=pt.draw_array(
+            metalized,x=self.n,y=1,
+            row_spacing=self.spacing.y,column_spacing=self.spacing.x)
+
+        return metalized_all
+
+    def draw(self):
+
+        return Anchor.draw.__wrapped__(self)
 
 class Via(LayoutPart):
     ''' Generates via pattern.
@@ -739,8 +770,6 @@ class GSProbe(LayoutPart):
 
         name=self.name
 
-        o=self.origin
-
         pad_x=self.size.x
 
         if pad_x>self.pitch*2/3:
@@ -752,25 +781,20 @@ class GSProbe(LayoutPart):
         pad_cell=pg.rectangle(size=(pad_x,self.size.y),\
         layer=self.layer)
 
-        pad_cell.move(origin=(0,0),\
-        destination=o.coord)
-
         cell=Device(self.name)
 
         dp=Point(self.pitch,0)
         pad_gnd_sx=cell<<pad_cell
         pad_sig=cell<<pad_cell
-        pad_sig.move(origin=o.coord,\
-        destination=(o+dp).coord)
 
-        cell.add_port(Port(name='gnd_left',\
-        midpoint=(o+Point(pad_x/2+self.pitch,self.size.y)).coord,\
-        width=pad_x,\
+        cell.add_port(Port(name='gnd_left',
+        midpoint=Point(pad_x/2+self.pitch,self.size.y).coord,
+        width=pad_x,
         orientation=90))
 
-        cell.add_port(Port(name='sig',\
-        midpoint=(o+Point(pad_x/2,self.size.y)).coord,\
-        width=pad_x,\
+        cell.add_port(Port(name='sig',
+        midpoint=Point(pad_x/2,self.size.y).coord,
+        width=pad_x,
         orientation=90))
 
         return cell
@@ -1540,15 +1564,17 @@ class Routing(LayoutPart):
 
     def _draw_frame(self):
 
-        rect=pg.bbox(self.clearance,layer=self.layer)
+        frame=Device()
 
-        rect.add_port(self.source)
+        for l in self.layer:
 
-        rect.add_port(self.destination)
+            frame<<pg.bbox(self.clearance,layer=l)
 
-        rect.name=self.name+"frame"
+        frame.add_port(self.source)
 
-        return rect
+        frame.add_port(self.destination)
+
+        return frame
 
     def draw(self):
 
@@ -1586,11 +1612,12 @@ class Routing(LayoutPart):
 
         if Point(s.midpoint).in_box(self.clearance) :
 
-            raise ValueError(f" Source of routing {s.midpoint} is in clearance area {bbox.bbox}")
+            raise ValueError(f" Source of routing {s.midpoint} is in clearance area {self.clearance}")
 
         if Point(d.midpoint).in_box(self.clearance):
-            import pdb; pdb.set_trace()
-            raise ValueError(f" Destination of routing{d.midpoint} is in clearance area{bbox.bbox}")
+            # import pdb; pdb.set_trace()
+            # Point(d.midpoint).in_box(self.clearance)
+            raise ValueError(f" Destination of routing {d.midpoint} is in clearance area{self.clearance}")
 
         try:
 
@@ -1682,19 +1709,31 @@ class Routing(LayoutPart):
 
         if side=='left':
 
-            p_mid=Point(ll.x-extra_width,p1_proj.y)
+            p_below_clearance=Point(ll.x-extra_width,p1_proj.y)
 
         elif side=='right':
 
-            p_mid=Point(lr.x+extra_width,p1_proj.y)
+            p_below_clearance=Point(lr.x+extra_width,p1_proj.y)
 
-        p_mid2=Point(p_mid.x,ur.y+(ll.y-p1_proj.y))
+        p_above_clearance=Point(p_below_clearance.x,ur.y+(ll.y-p1_proj.y))
+
+        p_at_dest=Point(p_below_clearance.x,p2_proj.y)
+
+        if abs(p_at_dest-p_below_clearance)<=abs(p_above_clearance-p_below_clearance):
+
+            p_mid2=p_at_dest
+
+        else:
+
+            p_mid2=p_above_clearance
 
         for p_mid3 in (Point(p_mid2.x,p2_proj.y),Point(p2_proj.x,p_mid2.y)):
 
+            points=[p1,p1_proj,p_below_clearance,p_mid2,p_mid3,p2_proj,p2]
+
             try:
 
-                p=self._make_path(p1,p1_proj,p_mid,p_mid2,p_mid3,p2_proj,p2)
+                p=self._make_path(*points)
 
                 if not self._is_hindered(p,s,d):
 
@@ -1705,12 +1744,6 @@ class Routing(LayoutPart):
                 pass
 
         else:
-
-            # p=self._make_path(p1,p1_proj,p_mid,p_mid2,p_mid3,p2_proj,p2)
-
-            # p=self._draw_non_hindered_path(s,d)
-
-            # self._is_hindered(p)
 
             raise ValueError("path is impossible")
 
@@ -1844,17 +1877,21 @@ class MultiRouting(Routing):
 
     def _draw_frame(self):
 
-        rect=pg.bbox(self.clearance,layer=self.layer)
+        frame=Device()
+
+        for l in self.layer:
+
+            frame<<pg.bbox(self.clearance,layer=l)
 
         for s in self.source:
 
-            rect.add_port(s)
+            frame.add_port(s)
 
         for d in self.destination:
 
-            rect.add_port(d)
+            frame.add_port(d)
 
-        return rect
+        return frame
 
     def draw(self):
 
@@ -2020,7 +2057,7 @@ class ParasiticAwareMultiRouting(MultiRouting):
 
                 return res
 
-_allclasses=(Text,IDT,PartialEtchIDT,Bus,EtchPit,Anchor,Via,Routing,GSProbe,GSGProbe,
+_allclasses=(Text,IDT,PartialEtchIDT,Bus,EtchPit,Anchor,MultiAnchor,Via,Routing,GSProbe,GSGProbe,
 Pad,MultiLayerPad,ViaInPad,LFERes,FBERes,TwoPortRes,TFERes,MultiRouting,ParasiticAwareMultiRouting)
 
 for cls in _allclasses:
