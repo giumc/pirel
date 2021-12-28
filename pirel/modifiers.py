@@ -1437,10 +1437,10 @@ def add_compass(device : Device) -> Device:
     return device
 
 def connect_ports(
-    cell,
-    tags='top',
-    conn_dist=pt.Point(0,100),
-    layers=LayoutDefault.layerTop):
+    cell : Device,
+    tags : str ='top',
+    conn_dist : pt.Point = pt.Point(0,100),
+    layers : int =LayoutDefault.layerTop):
     ''' connects all the ports in the cell with name matching a tag.
 
     Parameters:
@@ -1623,25 +1623,6 @@ def _add_default_ground_vias(self,cell):
             self.gndvia,
             spacing=self.gndvia.size*1.25,
             tolerance=self.gndvia.size/2)
-
-def attach_taper(cell : Device , port : Port , length : float , \
-    width2 : float, layer=LayoutDefault.layerTop) :
-
-    t=pg.taper(length=length,width1=port.width,width2=width2,layer=layer)
-
-    t_ref=cell.add_ref(t)
-
-    t_ref.connect(1,destination=port)
-
-    new_port=t_ref.ports[2]
-
-    new_port.name=port.name
-
-    cell.absorb(t_ref)
-
-    cell.remove(port)
-
-    cell.add_port(new_port)
 
 _allmodifiers=(
     makeScaled,addPad,addPartialEtch,

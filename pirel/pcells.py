@@ -1,32 +1,17 @@
-from pirel.tools import *
 
 import pirel.tools as pt
 
 from phidl.device_layout import Device, Port, DeviceReference, Group
 
-import pathlib
-
 import phidl.geometry as pg
 
 import phidl.path as pp
 
-from phidl import set_quickplot_options
-
-from phidl import quickplot as qp
-
-from phidl import Path,CrossSection
-
-import os
-
-import gdspy
-
-import numpy as np
+from phidl import Path
 
 from copy import copy,deepcopy
 
-import matplotlib.pyplot as plt
-
-class Text(LayoutPart):
+class Text(pt.LayoutPart):
     ''' Class to store text data and to add it in cells.
 
     It controls how the text labels generated are formatted.
@@ -50,25 +35,25 @@ class Text(LayoutPart):
     _msg_err="""Invalid key for text_param.
     Valid options are :{}""".format("\n".join(_valid_names))
 
-    layer=LayoutParamInterface()
+    layer=pt.LayoutParamInterface()
 
-    label=LayoutParamInterface()
+    label=pt.LayoutParamInterface()
 
-    size=LayoutParamInterface()
+    size=pt.LayoutParamInterface()
 
-    font=LayoutParamInterface()
+    font=pt.LayoutParamInterface()
 
     def __init__(self,*a,**kw):
 
         super().__init__(*a,**kw)
 
-        self.layer=LayoutDefault.TextLayer
+        self.layer=pt.LayoutDefault.TextLayer
 
-        self.label=LayoutDefault.TextLabel
+        self.label=pt.LayoutDefault.TextLabel
 
-        self.size=LayoutDefault.TextSize
+        self.size=pt.LayoutDefault.TextSize
 
-        self.font=LayoutDefault.TextFont
+        self.font=pt.LayoutDefault.TextFont
 
     def add_to_cell(self,cell,
         angle=0,*a,**kw):
@@ -118,10 +103,10 @@ class Text(LayoutPart):
 
         return cell
 
-class IDT(LayoutPart) :
+class IDT(pt.LayoutPart) :
     ''' Generates interdigitated structure.
 
-        Derived from LayoutPart.
+        Derived from pt.LayoutPart.
 
         Attributes
         ----------
@@ -142,30 +127,30 @@ class IDT(LayoutPart) :
             finger number.
     '''
 
-    length =LayoutParamInterface()
+    length =pt.LayoutParamInterface()
 
-    pitch = LayoutParamInterface()
+    pitch = pt.LayoutParamInterface()
 
-    y_offset =LayoutParamInterface()
+    y_offset =pt.LayoutParamInterface()
 
-    coverage =LayoutParamInterface()
+    coverage =pt.LayoutParamInterface()
 
-    n =LayoutParamInterface()
+    n =pt.LayoutParamInterface()
 
-    active_area_margin=LayoutParamInterface()
+    active_area_margin=pt.LayoutParamInterface()
 
-    layer=LayoutParamInterface()
+    layer=pt.LayoutParamInterface()
 
     def __init__(self,*args,**kwargs):
 
         super().__init__(*args,**kwargs)
-        self.length=LayoutDefault.IDT_y
-        self.pitch=LayoutDefault.IDTpitch
-        self.y_offset=LayoutDefault.IDTy_offset
-        self.coverage=LayoutDefault.IDTcoverage
-        self.n=LayoutDefault.IDTn
-        self.layer=LayoutDefault.IDTlayer
-        self.active_area_margin=LayoutDefault.LFEResactive_area_margin
+        self.length=pt.LayoutDefault.IDT_y
+        self.pitch=pt.LayoutDefault.IDTpitch
+        self.y_offset=pt.LayoutDefault.IDTy_offset
+        self.coverage=pt.LayoutDefault.IDTcoverage
+        self.n=pt.LayoutDefault.IDTn
+        self.layer=pt.LayoutDefault.IDTlayer
+        self.active_area_margin=pt.LayoutDefault.LFEResactive_area_margin
 
     def draw(self):
         ''' Generates layout cell based on current parameters.
@@ -192,22 +177,22 @@ class IDT(LayoutPart) :
 
         midx=totx/2
 
-        finger_dist=Point(self.pitch*1,\
+        finger_dist=pt.Point(self.pitch*1,\
         self.length+self.y_offset)
 
-        cell=join(cell)
+        cell=pt.join(cell)
 
         cell.name=self.name
 
         cell.add_port(Port(name='bottom',\
         midpoint=(self.origin+\
-        Point(midx,0)).coord,\
+        pt.Point(midx,0)).coord,\
         width=totx,
         orientation=-90))
 
         cell.add_port(
             name='top',
-            midpoint=Point(midx,self.length+self.y_offset).coord,
+            midpoint=pt.Point(midx,self.length+self.y_offset).coord,
             width=totx,
             orientation=90)
 
@@ -220,14 +205,14 @@ class IDT(LayoutPart) :
 
         Returns
         -------
-        size : PyResLayout.Point
+        size : PyResLayout.pt.Point
             finger size as coordinates lenght(length) and width(x).
         '''
         dy=self.length
 
         dx=self.pitch*self.coverage
 
-        return Point(dx,dy)
+        return pt.Point(dx,dy)
 
     @property
     def active_area(self):
@@ -236,12 +221,12 @@ class IDT(LayoutPart) :
 
         y=self.length+self.y_offset
 
-        return Point(x,y)
+        return pt.Point(x,y)
 
     @property
     def probe_distance(self):
 
-        return Point(0,self.active_area.x)
+        return pt.Point(0,self.active_area.x)
 
     @property
     def resistance_squares(self):
@@ -283,12 +268,12 @@ class IDT(LayoutPart) :
         r2 = unitcell << rect
 
         r2.move(
-            destination=Point(self.pitch,self.y_offset).coord)
+            destination=pt.Point(self.pitch,self.y_offset).coord)
 
         r3= unitcell<< rect
 
         r3.move(
-            destination=Point(2*self.pitch,0).coord)
+            destination=pt.Point(2*self.pitch,0).coord)
 
         unitcell.absorb(r2)
 
@@ -308,7 +293,7 @@ class PartialEtchIDT(IDT):
 
         super().__init__(*a,**kw)
 
-        self.layer_partialetch=LayoutDefault.layerPartialEtch
+        self.layer_partialetch=pt.LayoutDefault.layerPartialEtch
 
     def _draw_unit_cell(self):
 
@@ -338,12 +323,12 @@ class PartialEtchIDT(IDT):
         r2 = unitcell << rect
 
         r2.move(
-            destination=Point(self.pitch,self.y_offset).coord)
+            destination=pt.Point(self.pitch,self.y_offset).coord)
 
         r3= unitcell<< rect
 
         r3.move(
-            destination=Point(2*self.pitch,0).coord)
+            destination=pt.Point(2*self.pitch,0).coord)
 
         rect_partialetch_side=pg.rectangle(
             size=(
@@ -376,35 +361,35 @@ class PartialEtchIDT(IDT):
 
         return IDT.draw.__wrapped__(self)
 
-class Bus(LayoutPart) :
+class Bus(pt.LayoutPart) :
     ''' Generates pair of bus structure.
 
-    Derived from LayoutPart.
+    Derived from pt.LayoutPart.
 
     Attributes
     ----------
-    size : PyResLayout.Point
+    size : PyResLayout.pt.Point
         bus size coordinates of length(y) and width(x)
-    distance : PyResLayout.Point
+    distance : PyResLayout.pt.Point
         distance between buses coordinates
     layer : int
         bus layer.
     '''
-    size=LayoutParamInterface()
+    size=pt.LayoutParamInterface()
 
-    distance=LayoutParamInterface()
+    distance=pt.LayoutParamInterface()
 
-    layer=LayoutParamInterface()
+    layer=pt.LayoutParamInterface()
 
     def __init__(self,*args,**kwargs):
 
         super().__init__(*args,**kwargs)
 
-        self.layer = LayoutDefault.layerTop
+        self.layer = pt.LayoutDefault.layerTop
 
-        self.size=copy(LayoutDefault.Bussize)
+        self.size=copy(pt.LayoutDefault.Bussize)
 
-        self.distance=copy(LayoutDefault.Busdistance)
+        self.distance=copy(pt.LayoutDefault.Busdistance)
 
     def draw(self):
         ''' Generates layout cell based on current parameters.
@@ -432,7 +417,7 @@ class Bus(LayoutPart) :
         cell.absorb(r2)
 
         cell.add_port(name='conn',
-        midpoint=Point(self.size.x/2,self.size.y).coord,
+        midpoint=pt.Point(self.size.x/2,self.size.y).coord,
         width=self.size.x,
         orientation=90)
 
@@ -443,14 +428,14 @@ class Bus(LayoutPart) :
 
         return self.size.x/self.size.y/2
 
-class EtchPit(LayoutPart) :
+class EtchPit(pt.LayoutPart) :
     ''' Generates pair of etching trenches.
 
-    Derived from LayoutPart.
+    Derived from pt.LayoutPart.
 
     Attributes
     ----------
-    active_area : PyResLayout.Point
+    active_area : PyResLayout.pt.Point
         area to be etched as length(Y) and width(X)
     x : float
         etch width
@@ -458,21 +443,21 @@ class EtchPit(LayoutPart) :
         etch pit layer
     '''
 
-    active_area=LayoutParamInterface()
+    active_area=pt.LayoutParamInterface()
 
-    x=LayoutParamInterface()
+    x=pt.LayoutParamInterface()
 
-    layer=LayoutParamInterface()
+    layer=pt.LayoutParamInterface()
 
     def __init__(self,*args,**kwargs):
 
         super().__init__(*args,**kwargs)
 
-        self.active_area=copy(LayoutDefault.EtchPitactive_area)
+        self.active_area=copy(pt.LayoutDefault.EtchPitactive_area)
 
-        self.x=LayoutDefault.EtchPit_x
+        self.x=pt.LayoutDefault.EtchPit_x
 
-        self.layer=LayoutDefault.EtchPitlayer
+        self.layer=pt.LayoutDefault.EtchPitlayer
 
     def draw(self):
         ''' Generates layout cell based on current parameters.
@@ -495,12 +480,12 @@ class EtchPit(LayoutPart) :
         etch_rx.move(destination=(self.x+self.active_area.x,0))
 
         port_up=Port('top',
-        midpoint=Point(self.x+self.active_area.x/2,self.active_area.y).coord,
+        midpoint=pt.Point(self.x+self.active_area.x/2,self.active_area.y).coord,
         width=self.active_area.x,
         orientation=-90)
 
         port_down=Port('bottom',
-        midpoint=Point(self.x+self.active_area.x/2,0).coord,
+        midpoint=pt.Point(self.x+self.active_area.x/2,0).coord,
         width=self.active_area.x,
         orientation=90)
 
@@ -509,7 +494,7 @@ class EtchPit(LayoutPart) :
 
         return etch
 
-class Anchor(LayoutPart):
+class Anchor(pt.LayoutPart):
     ''' Generates anchor structure.
 
     Attributes
@@ -517,7 +502,7 @@ class Anchor(LayoutPart):
     size :
         length(Y) and size(X) of anchors
 
-    metalized : PyResLayout.Point
+    metalized : PyResLayout.pt.Point
         metal connection
 
     etch_choice: boolean
@@ -534,25 +519,25 @@ class Anchor(LayoutPart):
 
     '''
 
-    size=LayoutParamInterface()
-    metalized=LayoutParamInterface()
-    etch_choice=LayoutParamInterface(True,False)
-    etch_x=LayoutParamInterface()
-    x_offset=LayoutParamInterface()
-    layer=LayoutParamInterface()
-    etch_layer=LayoutParamInterface()
+    size=pt.LayoutParamInterface()
+    metalized=pt.LayoutParamInterface()
+    etch_choice=pt.LayoutParamInterface(True,False)
+    etch_x=pt.LayoutParamInterface()
+    x_offset=pt.LayoutParamInterface()
+    layer=pt.LayoutParamInterface()
+    etch_layer=pt.LayoutParamInterface()
 
     def __init__(self,*args,**kwargs):
 
         super().__init__(*args,**kwargs)
 
-        self.size=LayoutDefault.Anchorsize
-        self.metalized=LayoutDefault.Anchor_metalized
-        self.etch_choice=LayoutDefault.Anchoretch_choice
-        self.etch_x=LayoutDefault.Anchoretch_x
-        self.x_offset=LayoutDefault.Anchorx_offset
-        self.layer=LayoutDefault.Anchorlayer
-        self.etch_layer=LayoutDefault.Anchoretch_layer
+        self.size=pt.LayoutDefault.Anchorsize
+        self.metalized=pt.LayoutDefault.Anchor_metalized
+        self.etch_choice=pt.LayoutDefault.Anchoretch_choice
+        self.etch_x=pt.LayoutDefault.Anchoretch_x
+        self.x_offset=pt.LayoutDefault.Anchorx_offset
+        self.layer=pt.LayoutDefault.Anchorlayer
+        self.etch_layer=pt.LayoutDefault.Anchoretch_layer
 
     def draw(self):
 
@@ -560,11 +545,11 @@ class Anchor(LayoutPart):
 
         anchor=self._draw_metalized()
 
-        etch_size=Point(
+        etch_size=pt.Point(
         (self.etch_x-self.size.x)/2,
         self.size.y)
 
-        offset=Point(self.x_offset,0)
+        offset=pt.Point(self.x_offset,0)
 
         cell=Device(self.name)
 
@@ -577,16 +562,16 @@ class Anchor(LayoutPart):
             layer=self.etch_layer)
 
         etch_sx_ref=(cell<<etch_sx).move(
-        destination=(Point(0,self.etch_margin.y)).coord)
+        destination=(pt.Point(0,self.etch_margin.y)).coord)
 
-        # anchor_transl=Point(etch_sx.size[0]+self.etch_margin.x,-2*self.etch_margin.y)
+        # anchor_transl=pt.Point(etch_sx.size[0]+self.etch_margin.x,-2*self.etch_margin.y)
 
-        anchor_transl=Point(etch_sx.xsize+self.etch_margin.x,0)
+        anchor_transl=pt.Point(etch_sx.xsize+self.etch_margin.x,0)
 
         anchor_ref=(cell<<anchor).move(
             destination=anchor_transl.coord)
 
-        etchdx_transl=anchor_transl+Point(anchor.xsize+self.etch_margin.x,self.etch_margin.y)
+        etchdx_transl=anchor_transl+pt.Point(anchor.xsize+self.etch_margin.x,self.etch_margin.y)
 
         etch_dx_ref=(cell<<etch_dx).move(
             destination=etchdx_transl.coord)
@@ -609,12 +594,13 @@ class Anchor(LayoutPart):
     def _draw_metalized(self):
 
         cell=pg.rectangle(
-            size=(self.size-Point(2*self.etch_margin.x,-2*self.etch_margin.y)).coord,\
+            size=(self.size-pt.Point(2*self.etch_margin.x,-2*self.etch_margin.y)).coord,\
             layer=self.layer)
 
-        [_,_,_,_,_,n,*_]=pt._get_corners(cell)
+        [_,_,_,_,_,n,s,*_]=pt._get_corners(cell)
 
-        cell.add_port(name='conn',midpoint=n.coord,width=cell.xsize,orientation=90)
+        cell.add_port(name='top',midpoint=n.coord,width=cell.xsize,orientation=90)
+        cell.add_port(name='bottom',midpoint=s.coord,width=cell.xsize,orientation=270)
 
         return cell
 
@@ -626,7 +612,7 @@ class Anchor(LayoutPart):
     @property
     def etch_margin(self):
 
-        return Point((self.size.x-self.metalized.x)/2,\
+        return pt.Point((self.size.x-self.metalized.x)/2,\
             (self.metalized.y-self.size.y)/2)
 
     def _check_anchor(self):
@@ -634,12 +620,12 @@ class Anchor(LayoutPart):
         if self.metalized.x>=self.size.x:
 
             # warnings.warn(f"""Metalized X capped to {self.size.x*0.9 :.2f}\n""")
-            self.metalized=Point(self.size.x*0.9,self.metalized.y)
+            self.metalized=pt.Point(self.size.x*0.9,self.metalized.y)
 
         if self.metalized.y<=self.size.y:
 
             # warnings.warn(f"""Metalized Y capped to {self.size.y*1.1 : .2f}""")
-            self.metalized=Point(self.metalized.x,self.size.y*1.1)
+            self.metalized=pt.Point(self.metalized.x,self.size.y*1.1)
 
 class MultiAnchor(Anchor):
     ''' Anchor with multiple anchor points,equally spaced.
@@ -651,21 +637,19 @@ class MultiAnchor(Anchor):
         spacing : pt.Point.
 
     '''
-    n =LayoutParamInterface()
+    n =pt.LayoutParamInterface()
 
-    spacing=LayoutParamInterface()
+    spacing=pt.LayoutParamInterface()
 
     def __init__(self,n=1,*a,**kw):
 
         super().__init__(*a,**kw)
 
-        self.n=LayoutDefault.MultiAnchorn
+        self.n=pt.LayoutDefault.MultiAnchorn
 
         self.spacing=pt.Point(self.size.x/3,0)
 
     def _draw_metalized(self):
-
-        import pdb; pdb.set_trace()
 
         metalized=super()._draw_metalized()
 
@@ -673,16 +657,55 @@ class MultiAnchor(Anchor):
             metalized,x=self.n,y=1,
             row_spacing=self.spacing.y,column_spacing=self.spacing.x)
 
+        inner_etch=pg.rectangle(
+            size=(self.spacing.x-2*self.etch_margin.x,self.size.y),
+            layer=self.etch_layer)
+
+        if self.n>1:
+
+            for i in range(0,self.n-1):
+
+                ref=metalized_all<<inner_etch
+
+                anchor_dest=pt.Point(metalized_all.ports['top'+"_"+str(i)].endpoints[1])
+
+                ref.move(
+                    origin=(ref.xmin,ref.ymax),
+                    destination=(anchor_dest+pt.Point(self.etch_margin.x,-self.etch_margin.y)).coord)
+
+                metalized_all.absorb(ref)
+
         return metalized_all
 
     def draw(self):
 
-        return Anchor.draw.__wrapped__(self)
+        cell=Anchor.draw.__wrapped__(self)
 
-class Via(LayoutPart):
+        import pdb; pdb.set_trace()
+
+        if self.n>1:
+
+            if self.n%2==1:
+
+                p=cell.ports['top'+'_'+str(int((self.n-1)/2))]
+
+                cell.add_port(port=p,name='conn')
+
+            elif self.n%2==0:
+
+                cell.add_port(
+                    dl.Port(
+                        name='conn',
+                        midpoint=(cell.x,cell.ymax),
+                        width=cell.ports['top_0'].width,
+                        orientation=90))
+
+        return cell
+
+class Via(pt.LayoutPart):
     ''' Generates via pattern.
 
-    Derived from LayoutPart.
+    Derived from pt.LayoutPart.
 
     Attributes
     ----------
@@ -696,26 +719,26 @@ class Via(LayoutPart):
         via layer.
     '''
 
-    size=LayoutParamInterface()
+    size=pt.LayoutParamInterface()
 
-    shape=LayoutParamInterface('square','circle')
+    shape=pt.LayoutParamInterface('square','circle')
 
-    layer=LayoutParamInterface()
+    layer=pt.LayoutParamInterface()
 
     def __init__(self,*args,**kwargs):
 
         super().__init__(*args,**kwargs)
 
-        self.layer=LayoutDefault.Vialayer
-        self.shape=LayoutDefault.Viashape
-        self.size=LayoutDefault.Viasize
-        self.conn_layer=(LayoutDefault.layerTop,LayoutDefault.layerBottom)
+        self.layer=pt.LayoutDefault.Vialayer
+        self.shape=pt.LayoutDefault.Viashape
+        self.size=pt.LayoutDefault.Viasize
+        self.conn_layer=(pt.LayoutDefault.layerTop,pt.LayoutDefault.layerBottom)
 
     def draw(self):
 
         if self.shape=='square':
 
-            cell=pg.rectangle(size=(self.size,self.size),\
+            cell=pg.rectangle(size=(self.size,self.size),
                 layer=self.layer)
 
         elif self.shape=='circle':
@@ -737,14 +760,14 @@ class Via(LayoutPart):
 
         return cell
 
-class GSProbe(LayoutPart):
+class GSProbe(pt.LayoutPart):
     ''' Generates GS pattern.
 
-    Derived from LayoutPart.
+    Derived from pt.LayoutPart.
 
     Attributes
     ----------
-    size : PyResLayout.Point
+    size : PyResLayout.pt.Point
 
     pitch : float
         probe pitch
@@ -753,18 +776,18 @@ class GSProbe(LayoutPart):
         via layer.
     '''
 
-    pitch=LayoutParamInterface()
-    size=LayoutParamInterface()
+    pitch=pt.LayoutParamInterface()
+    size=pt.LayoutParamInterface()
 
-    layer=LayoutParamInterface()
+    layer=pt.LayoutParamInterface()
 
     def __init__(self,*args,**kwargs):
 
         super().__init__(*args,**kwargs)
 
-        self.layer=LayoutDefault.GSProbelayer
-        self.pitch=LayoutDefault.GSProbepitch
-        self.size=copy(LayoutDefault.GSProbesize)
+        self.layer=pt.LayoutDefault.GSProbelayer
+        self.pitch=pt.LayoutDefault.GSProbepitch
+        self.size=copy(pt.LayoutDefault.GSProbesize)
 
     def draw(self):
 
@@ -783,30 +806,30 @@ class GSProbe(LayoutPart):
 
         cell=Device(self.name)
 
-        dp=Point(self.pitch,0)
+        dp=pt.Point(self.pitch,0)
         pad_gnd_sx=cell<<pad_cell
         pad_sig=cell<<pad_cell
 
         cell.add_port(Port(name='gnd_left',
-        midpoint=Point(pad_x/2+self.pitch,self.size.y).coord,
+        midpoint=pt.Point(pad_x/2+self.pitch,self.size.y).coord,
         width=pad_x,
         orientation=90))
 
         cell.add_port(Port(name='sig',
-        midpoint=Point(pad_x/2,self.size.y).coord,
+        midpoint=pt.Point(pad_x/2,self.size.y).coord,
         width=pad_x,
         orientation=90))
 
         return cell
 
-class GSGProbe(LayoutPart):
+class GSGProbe(pt.LayoutPart):
     ''' Generates GSG pattern.
 
-    Derived from LayoutPart.
+    Derived from pt.LayoutPart.
 
     Attributes
     ----------
-    size : PyResLayout.Point
+    size : PyResLayout.pt.Point
 
     pitch : float
         probe pitch
@@ -815,17 +838,17 @@ class GSGProbe(LayoutPart):
         via layer.
     '''
 
-    pitch=LayoutParamInterface()
-    size=LayoutParamInterface()
-    layer=LayoutParamInterface()
+    pitch=pt.LayoutParamInterface()
+    size=pt.LayoutParamInterface()
+    layer=pt.LayoutParamInterface()
 
     def __init__(self,*args,**kwargs):
 
         super().__init__(*args,**kwargs)
 
-        self.layer=LayoutDefault.GSGProbelayer
-        self.pitch=LayoutDefault.GSGProbepitch
-        self.size=copy(LayoutDefault.GSGProbesize)
+        self.layer=pt.LayoutDefault.GSGProbelayer
+        self.pitch=pt.LayoutDefault.GSGProbepitch
+        self.size=copy(pt.LayoutDefault.GSGProbesize)
 
         # self.__class__.draw=cached(self.__class__)(self.__class__.draw)
 
@@ -846,7 +869,7 @@ class GSGProbe(LayoutPart):
 
         cell=Device(self.name)
 
-        dp=Point(self.pitch,0)
+        dp=pt.Point(self.pitch,0)
 
         pad_gnd_lx=cell.add_ref(pad_cell,alias='GroundLX')
 
@@ -867,10 +890,10 @@ class GSGProbe(LayoutPart):
 
         return cell
 
-class Pad(LayoutPart):
+class Pad(pt.LayoutPart):
     ''' Generates Pad geometry.
 
-    Derived from LayoutPart.
+    Derived from pt.LayoutPart.
 
     Attributes
     ----------
@@ -888,21 +911,21 @@ class Pad(LayoutPart):
         via layer.
     '''
 
-    size=LayoutParamInterface()
+    size=pt.LayoutParamInterface()
 
-    distance=LayoutParamInterface()
+    distance=pt.LayoutParamInterface()
 
-    layer=LayoutParamInterface()
+    layer=pt.LayoutParamInterface()
 
-    port=LayoutParamInterface()
+    port=pt.LayoutParamInterface()
 
     def __init__(self,*args,**kwargs):
 
         super().__init__(*args,**kwargs)
-        self.size=LayoutDefault.Padsize
-        self.layer=LayoutDefault.Padlayer
-        self.distance=copy(LayoutDefault.Paddistance)
-        self.port=LayoutDefault.Padport
+        self.size=pt.LayoutDefault.Padsize
+        self.layer=pt.LayoutDefault.Padlayer
+        self.distance=copy(pt.LayoutDefault.Paddistance)
+        self.port=pt.LayoutDefault.Padport
 
     def draw(self):
 
@@ -921,7 +944,7 @@ class Pad(LayoutPart):
             destination=north_port)
 
         r1.absorb(sq_ref)
-        r1=join(r1)
+        r1=pt.join(r1)
         r1.add_port(port=south_port,name='conn')
 
         del r2
@@ -939,16 +962,16 @@ class MultiLayerPad(Pad):
 
     def __init__(self,*a,**k):
 
-        LayoutPart.__init__(self,*a,**k)
+        pt.LayoutPart.__init__(self,*a,**k)
 
-        self.size=LayoutDefault.Padsize
+        self.size=pt.LayoutDefault.Padsize
 
-        self.distance=copy(LayoutDefault.Paddistance)
+        self.distance=copy(pt.LayoutDefault.Paddistance)
 
-        self.port=LayoutDefault.Padport
+        self.port=pt.LayoutDefault.Padport
 
-        self.layer=(LayoutDefault.layerTop,
-                   LayoutDefault.layerBottom)
+        self.layer=(pt.LayoutDefault.layerTop,
+                   pt.LayoutDefault.layerBottom)
 
     def draw(self):
 
@@ -968,7 +991,7 @@ class MultiLayerPad(Pad):
 
             cell.absorb(cell<<p.draw())
 
-        cell.add_port(p.draw().ports['conn'])
+        cell.add_port(p.draw().portspt.join)
 
         return cell
 
@@ -989,7 +1012,7 @@ class ViaInPad(MultiLayerPad):
 
         return {"Via":Via}
 
-class LFERes(LayoutPart):
+class LFERes(pt.LayoutPart):
 
     def __init__(self,*args,**kwargs):
 
@@ -1017,23 +1040,26 @@ class LFERes(LayoutPart):
 
         bus_ref= cell.add_ref(bus_cell,alias="BUS")
 
-        bus_ref.connect(port=bus_cell.ports['conn'],\
-        destination=idt_bottom_port)
+        bus_ref.connect(
+            port=bus_cell.portspt.join,
+            destination=idt_bottom_port)
 
         etch_cell=self.etchpit.draw()
 
         etch_ref=cell.add_ref(etch_cell,alias='EtchPit')
 
-        etch_ref.connect(etch_ref.ports['bottom'],\
-        destination=idt_ref.ports['bottom'],\
-        overlap=-self.bus.size.y-self.anchor.etch_margin.y)
+        etch_ref.connect(
+            etch_ref.ports['bottom'],
+            destination=idt_ref.ports['bottom'],
+            overlap=-self.bus.size.y-self.anchor.etch_margin.y)
 
         anchor_cell=self.anchor.draw()
 
         anchor_bottom=cell.add_ref(anchor_cell,alias='AnchorBottom')
 
-        anchor_bottom.connect(anchor_bottom.ports['conn'],
-        destination=idt_ref.ports['bottom'],overlap=-self.bus.size.y)
+        anchor_bottom.connect(
+            anchor_bottom.portspt.join,
+            destination=idt_ref.ports['bottom'],overlap=-self.bus.size.y)
 
         if not self._stretch_top_margin:
 
@@ -1043,35 +1069,30 @@ class LFERes(LayoutPart):
 
             anchor_top_dev=deepcopy(self.anchor)
 
-            anchor_top_dev.metalized=Point(anchor_top_dev.size.x-2,anchor_top_dev.metalized.y)
+            anchor_top_dev.metalized=pt.Point(anchor_top_dev.size.x-2,anchor_top_dev.metalized.y)
 
             anchor_top=cell.add_ref(anchor_top_dev.draw(),alias='AnchorTop')
 
-            del anchor_top_dev
-
-        anchor_top.connect(anchor_top.ports['conn'],\
+        anchor_top.connect(anchor_top.portspt.join,
             idt_ref.ports['top'],overlap=-self.bus.size.y)
 
-        outport_top=anchor_top.ports['conn']
+        if self.anchor.n>1:
 
-        outport_bottom=anchor_bottom.ports['conn']
+            for i,p in enumerate(pt._find_ports(anchor_top,'bottom')):
+                #port name switched because top anchor is flipped
+                port_num_flipped=int(p.name[-1])
 
-        outport_top.name='top'
-        outport_top.orientation=90
-        outport_bottom.name='bottom'
-        outport_bottom.orientation=-90
+                cell.add_port(port=p,name='top'+'_'+str(self.anchor.n-1-port_num_flipped))
 
-        outport_top.midpoint=(\
-            outport_top.x,\
-            outport_top.y+self.anchor.metalized.y)
-        outport_bottom.midpoint=(\
-            outport_bottom.x,\
-            outport_bottom.y-self.anchor.metalized.y)
+            for p in pt._find_ports(anchor_bottom,'bottom'):
 
-        cell.add_port(outport_top)
-        cell.add_port(outport_bottom)
+                cell.add_port(p)
 
-        del idt_cell,bus_cell,etch_cell,anchor_cell
+        else:
+
+            cell.add_port(anchor_top.ports['bottom'],name='top')
+
+            cell.add_port(anchor_bottom.ports['bottom'])
 
         return cell
 
@@ -1081,13 +1102,13 @@ class LFERes(LayoutPart):
 
         t=super().get_params()
 
-        pop_all_dict(t,["IDT"+x for x in ["Name"]])
+        pt.pop_all_dict(t,["IDT"+x for x in ["Name"]])
 
-        pop_all_dict(t, ["Bus"+x for x in ['Name','DistanceX','DistanceY','SizeX']])
+        pt.pop_all_dict(t, ["Bus"+x for x in ['Name','DistanceX','DistanceY','SizeX']])
 
-        pop_all_dict(t,["EtchPit"+x for x in['Name','ActiveAreaX','ActiveAreaY']])
+        pt.pop_all_dict(t,["EtchPit"+x for x in['Name','ActiveAreaX','ActiveAreaY']])
 
-        pop_all_dict(t,["Anchor"+x for x in ['Name','EtchX','XOffset','EtchChoice']])
+        pt.pop_all_dict(t,["Anchor"+x for x in ['Name','EtchX','XOffset','EtchChoice']])
 
         return t
 
@@ -1099,18 +1120,18 @@ class LFERes(LayoutPart):
 
     def _set_relations(self):
 
-        self.bus.size=Point(\
+        self.bus.size=pt.Point(\
             self.idt.active_area.x-\
             2*self.idt.active_area_margin-\
             self.idt.pitch*(1-self.idt.coverage),\
             self.bus.size.y)
 
-        self.bus.distance=Point(\
+        self.bus.distance=pt.Point(\
             0,self.idt.active_area.y+self.bus.size.y)
 
         self.bus.layer=self.idt.layer
 
-        self.etchpit.active_area=Point(self.idt.active_area.x,\
+        self.etchpit.active_area=pt.Point(self.idt.active_area.x,\
             self.idt.active_area.y+2*self.bus.size.y+self.anchor.etch_margin.y*2)
 
         self.anchor.etch_x=self.etchpit.x*2+self.etchpit.active_area.x
@@ -1121,7 +1142,7 @@ class LFERes(LayoutPart):
         #
         #     warnings.warn(f"Anchor metalized X reduced to {self.bus.size.x}")
         #
-        #     self.anchor.metalized=Point(\
+        #     self.anchor.metalized=pt.Point(\
         #         self.bus.size.x,\
         #         self.anchor.metalized.y)
 
@@ -1160,7 +1181,7 @@ class LFERes(LayoutPart):
     @staticmethod
     def get_components():
 
-        return {'IDT':IDT,"Bus":Bus,"EtchPit":EtchPit,"Anchor":Anchor}
+        return {'IDT':IDT,"Bus":Bus,"EtchPit":EtchPit,"Anchor":MultiAnchor}
 
 class FBERes(LFERes):
     ''' Floating Bottom Electrode Resonator.
@@ -1177,10 +1198,10 @@ class FBERes(LFERes):
                     if 'long', plate is larger than the trench.
 
         '''
-    plate_position=LayoutParamInterface(
+    plate_position=pt.LayoutParamInterface(
         'in, short','out, short','in, long','out, long')
 
-    plate_layer=LayoutParamInterface()
+    plate_layer=pt.LayoutParamInterface()
 
     def __init__(self,*args,**kwargs):
 
@@ -1188,7 +1209,7 @@ class FBERes(LFERes):
 
         self.plate_position='out, short'
 
-        self.plate_layer=LayoutDefault.FBEResplatelayer
+        self.plate_layer=pt.LayoutDefault.FBEResplatelayer
 
     def draw(self):
 
@@ -1207,7 +1228,7 @@ class FBERes(LFERes):
 
             plate_ref=cell.add_ref(plate,alias='Plate')
 
-            transl_rel=Point(self.etchpit.x-4*self.idt.active_area_margin,self.anchor.size.y+2*self.anchor.etch_margin.y+self.bus.size.y\
+            transl_rel=pt.Point(self.etchpit.x-4*self.idt.active_area_margin,self.anchor.size.y+2*self.anchor.etch_margin.y+self.bus.size.y\
                 +self.idt.y_offset*3/4)
 
             lr_cell=pt._get_corners(cell)[0]
@@ -1231,7 +1252,7 @@ class FBERes(LFERes):
 
             plate_ref=cell.add_ref(plate,alias='Plate')
 
-            transl_rel=Point(self.etchpit.x+\
+            transl_rel=pt.Point(self.etchpit.x+\
                     self.idt.active_area_margin,\
                 self.anchor.size.y+\
                 2*self.anchor.etch_margin.y+\
@@ -1260,7 +1281,7 @@ class FBERes(LFERes):
 
             plate_ref=cell.add_ref(plate,alias='Plate')
 
-            transl_rel=Point(self.etchpit.x-\
+            transl_rel=pt.Point(self.etchpit.x-\
                 4*self.idt.active_area_margin,\
                     self.anchor.size.y+2*self.anchor.etch_margin.y)
 
@@ -1287,7 +1308,7 @@ class FBERes(LFERes):
 
             plate_ref=cell.add_ref(plate,alias='Plate')
 
-            transl_rel=Point(self.etchpit.x+\
+            transl_rel=pt.Point(self.etchpit.x+\
                     self.idt.active_area_margin,\
                         self.anchor.size.y+2*self.anchor.etch_margin.y)
 
@@ -1313,7 +1334,7 @@ class TwoPortRes(FBERes):
 
         self.plate_position='in, long'
 
-        self.plate_layer=LayoutDefault.layerBottom
+        self.plate_layer=pt.LayoutDefault.layerBottom
 
     def draw(self):
 
@@ -1386,13 +1407,13 @@ class TwoPortRes(FBERes):
 
 class TFERes(LFERes):
 
-    bottom_layer=LayoutParamInterface()
+    bottom_layer=pt.LayoutParamInterface()
 
     def __init__(self,*args,**kwargs):
 
         super().__init__(*args,**kwargs)
 
-        self.bottom_layer=LayoutDefault.layerBottom
+        self.bottom_layer=pt.LayoutDefault.layerBottom
 
     def draw(self):
 
@@ -1445,7 +1466,7 @@ class TFERes(LFERes):
 
         return cell
 
-class SMD(LayoutPart):
+class SMD(pt.LayoutPart):
     ''' Generate pad landing for SMD one-port component
 
     Attributes
@@ -1458,18 +1479,18 @@ class SMD(LayoutPart):
     distance :pt.Point.
     '''
 
-    layer=LayoutParamInterface()
+    layer=pt.LayoutParamInterface()
 
-    size=LayoutParamInterface()
+    size=pt.LayoutParamInterface()
 
-    distance=LayoutParamInterface()
+    distance=pt.LayoutParamInterface()
 
     def __init__(self,*a,**kw):
 
         super().__init__(*a,**kw)
-        self.layer=LayoutDefault.SMDLayer
-        self.distance=LayoutDefault.SMDDistance
-        self.size=LayoutDefault.SMDSize
+        self.layer=pt.LayoutDefault.SMDLayer
+        self.distance=pt.LayoutDefault.SMDDistance
+        self.size=pt.LayoutDefault.SMDSize
 
     def draw(self):
 
@@ -1499,10 +1520,10 @@ class SMD(LayoutPart):
 
         self.distance=pt.Point(0,400)
 
-class Routing(LayoutPart):
+class Routing(pt.LayoutPart):
     ''' Generate automatic routing connection
 
-    Derived from LayoutPart.
+    Derived from pt.LayoutPart.
 
     Attributes
     ----------
@@ -1533,27 +1554,27 @@ class Routing(LayoutPart):
 
     _simplification=1
 
-    clearance=LayoutParamInterface()
+    clearance=pt.LayoutParamInterface()
 
-    overhang=LayoutParamInterface()
+    overhang=pt.LayoutParamInterface()
 
-    side=LayoutParamInterface('left','right','auto')
+    side=pt.LayoutParamInterface('left','right','auto')
 
-    source=LayoutParamInterface()
+    source=pt.LayoutParamInterface()
 
-    destination=LayoutParamInterface()
+    destination=pt.LayoutParamInterface()
 
-    layer=LayoutParamInterface()
+    layer=pt.LayoutParamInterface()
 
     def __init__(self,*args,**kwargs):
 
         super().__init__(*args,**kwargs)
-        self.clearance=LayoutDefault.Routingclearance
-        self.side=LayoutDefault.Routingside
-        self.source=LayoutDefault.Routingports[0]
-        self.destination=LayoutDefault.Routingports[1]
-        self.layer=LayoutDefault.Routinglayer
-        self.overhang=LayoutDefault.Routingoverhang
+        self.clearance=pt.LayoutDefault.Routingclearance
+        self.side=pt.LayoutDefault.Routingside
+        self.source=pt.LayoutDefault.Routingports[0]
+        self.destination=pt.LayoutDefault.Routingports[1]
+        self.layer=pt.LayoutDefault.Routinglayer
+        self.overhang=pt.LayoutDefault.Routingoverhang
         self._auto_overhang=False
 
     def _check_frame(self):
@@ -1597,7 +1618,7 @@ class Routing(LayoutPart):
                 width=[s.width,d.width],
                 simplify=self._simplification)
 
-        return join(cell)
+        return pt.join(cell)
 
     @property
     def path(self):
@@ -1610,13 +1631,13 @@ class Routing(LayoutPart):
 
             self.overhang=self._calculate_overhang(s,d)
 
-        if Point(s.midpoint).in_box(self.clearance) :
+        if pt.Point(s.midpoint).in_box(self.clearance) :
 
             raise ValueError(f" Source of routing {s.midpoint} is in clearance area {self.clearance}")
 
-        if Point(d.midpoint).in_box(self.clearance):
+        if pt.Point(d.midpoint).in_box(self.clearance):
             # import pdb; pdb.set_trace()
-            # Point(d.midpoint).in_box(self.clearance)
+            # pt.Point(d.midpoint).in_box(self.clearance)
             raise ValueError(f" Destination of routing {d.midpoint} is in clearance area{self.clearance}")
 
         try:
@@ -1639,15 +1660,15 @@ class Routing(LayoutPart):
 
     def _draw_non_hindered_path(self,s,d):
 
-        p1=Point(s.midpoint)
+        p1=pt.Point(s.midpoint)
 
-        p2=Point(d.midpoint)
+        p2=pt.Point(d.midpoint)
 
-        dt1_norm=Point(s.normal[1])-Point(s.normal[0])
+        dt1_norm=pt.Point(s.normal[1])-pt.Point(s.normal[0])
 
         p1_proj=p1+dt1_norm*self.overhang
 
-        dt2_norm=Point(d.normal[1])-Point(d.normal[0])
+        dt2_norm=pt.Point(d.normal[1])-pt.Point(d.normal[0])
 
         p2_proj=p2+dt2_norm*self.overhang
 
@@ -1661,7 +1682,7 @@ class Routing(LayoutPart):
 
             raise ValueError("path is hindered")
 
-        for p_mid in (Point(p1_proj.x,p2_proj.y),Point(p2_proj.x,p1_proj.y)):
+        for p_mid in (pt.Point(p1_proj.x,p2_proj.y),pt.Point(p2_proj.x,p1_proj.y)):
 
             try:
 
@@ -1695,29 +1716,29 @@ class Routing(LayoutPart):
 
             else : return path1
 
-        p1=Point(s.midpoint)
+        p1=pt.Point(s.midpoint)
 
-        p2=Point(d.midpoint)
+        p2=pt.Point(d.midpoint)
 
-        dt1_norm=Point(s.normal[1])-Point(s.normal[0])
+        dt1_norm=pt.Point(s.normal[1])-pt.Point(s.normal[0])
 
         p1_proj=p1+dt1_norm*self.overhang
 
-        dt2_norm=Point(d.normal[1])-Point(d.normal[0])
+        dt2_norm=pt.Point(d.normal[1])-pt.Point(d.normal[0])
 
         p2_proj=p2+dt2_norm*self.overhang
 
         if side=='left':
 
-            p_below_clearance=Point(ll.x-extra_width,p1_proj.y)
+            p_below_clearance=pt.Point(ll.x-extra_width,p1_proj.y)
 
         elif side=='right':
 
-            p_below_clearance=Point(lr.x+extra_width,p1_proj.y)
+            p_below_clearance=pt.Point(lr.x+extra_width,p1_proj.y)
 
-        p_above_clearance=Point(p_below_clearance.x,ur.y+(ll.y-p1_proj.y))
+        p_above_clearance=pt.Point(p_below_clearance.x,ur.y+(ll.y-p1_proj.y))
 
-        p_at_dest=Point(p_below_clearance.x,p2_proj.y)
+        p_at_dest=pt.Point(p_below_clearance.x,p2_proj.y)
 
         if abs(p_at_dest-p_below_clearance)<=abs(p_above_clearance-p_below_clearance):
 
@@ -1727,7 +1748,7 @@ class Routing(LayoutPart):
 
             p_mid2=p_above_clearance
 
-        for p_mid3 in (Point(p_mid2.x,p2_proj.y),Point(p2_proj.x,p_mid2.y)):
+        for p_mid3 in (pt.Point(p_mid2.x,p2_proj.y),pt.Point(p2_proj.x,p_mid2.y)):
 
             points=[p1,p1_proj,p_below_clearance,p_mid2,p_mid3,p2_proj,p2]
 
@@ -1801,8 +1822,8 @@ class Routing(LayoutPart):
     @staticmethod
     def _calculate_overhang(s,d):
 
-        p1=Point(s.midpoint)
-        p2=Point(d.midpoint)
+        p1=pt.Point(s.midpoint)
+        p2=pt.Point(d.midpoint)
 
         dist=abs(p2-p1)
 
@@ -1828,14 +1849,14 @@ class MultiRouting(Routing):
     '''
     def __init__(self,*a,**k):
 
-        LayoutPart.__init__(self,*a,**k)
+        pt.LayoutPart.__init__(self,*a,**k)
 
-        self.source=LayoutDefault.MultiRoutingsources
-        self.destination=LayoutDefault.MultiRoutingdestinations
-        self.clearance=LayoutDefault.Routingclearance
-        self.layer=LayoutDefault.Routinglayer
-        self.side=LayoutDefault.Routingside
-        self.overhang=LayoutDefault.Routingoverhang
+        self.source=pt.LayoutDefault.MultiRoutingsources
+        self.destination=pt.LayoutDefault.MultiRoutingdestinations
+        self.clearance=pt.LayoutDefault.Routingclearance
+        self.layer=pt.LayoutDefault.Routinglayer
+        self.side=pt.LayoutDefault.Routingside
+        self.overhang=pt.LayoutDefault.Routingoverhang
         self._auto_overhang=False
 
     @property
@@ -1996,15 +2017,15 @@ class ParasiticAwareMultiRouting(MultiRouting):
 
     def _make_paware_connection(self,s,d):
 
-        p1=Point(s.midpoint)
+        p1=pt.Point(s.midpoint)
 
-        p2=Point(d.midpoint)
+        p2=pt.Point(d.midpoint)
 
-        p1=p0+Point(0,self.overhang)
+        p1=p0+pt.Point(0,self.overhang)
 
-        p2=Point(d.midpoint[0],p1.y)
+        p2=pt.Point(d.midpoint[0],p1.y)
 
-        p3=Point(p2.x,d.midpoint[1])
+        p3=pt.Point(p2.x,d.midpoint[1])
 
         return self._make_path(p0,p1,p2,p3)
 
@@ -2062,6 +2083,6 @@ Pad,MultiLayerPad,ViaInPad,LFERes,FBERes,TwoPortRes,TFERes,MultiRouting,Parasiti
 
 for cls in _allclasses:
 
-    cls.draw=pirel_cache(cls.draw)
+    cls.draw=pt.pirel_cache(cls.draw)
 
     cls() # to init _params_dict

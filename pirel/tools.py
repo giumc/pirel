@@ -1704,6 +1704,20 @@ def draw_array(
             ref.move(
                 destination=(Point(cell_size.x*i,cell_size.y*j)).coord)
 
-            _copy_ports(ref,new_cell,suffix='_'+str(i)+'_'+str(j))
+            if y==1 and x==1:
+
+                _copy_ports(ref,new_cell)
+
+            elif y==1:
+
+                _copy_ports(ref,new_cell,suffix='_'+str(i))
+
+            elif x==1:
+
+                _copy_ports(ref,new_cell,suffix='_'+str(j))
+
+            else:
+
+                _copy_ports(ref,new_cell,suffix='_'+str(i)+'_'+str(j))
 
     return new_cell
