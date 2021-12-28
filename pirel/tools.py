@@ -1478,7 +1478,7 @@ def _copy_ports(source,dest,prefix='',suffix=''):
 
         dest.add_port(port=p,name=prefix+n+suffix)
 
-def _find_ports(cell,tag):
+def _find_ports(cell,tag,depth=None):
 
     output=[]
 
@@ -1488,7 +1488,7 @@ def _find_ports(cell,tag):
 
     if isinstance(cell,Device):
 
-        for port in cell.get_ports():
+        for port in cell.get_ports(depth=depth):
 
             if all([x in port.name for x in tag]):
 
@@ -1532,15 +1532,20 @@ def _make_poly_connection(p1,p2,layer):
 
         for l in layer:
 
-            d.add_polygon(   [p1.endpoints[0],p1.endpoints[1],p2.endpoints[1],p2.endpoints[0]],
+            d.add_polygon([p1.endpoints[0],p1.endpoints[1],p2.endpoints[1],p2.endpoints[0]],
+            layer=l)
+            d.add_polygon([p1.endpoints[0],p1.endpoints[1],p2.endpoints[0],p2.endpoints[1]],
             layer=l)
 
     except:
 
-        d.add_polygon(   [p1.endpoints[0],p1.endpoints[1],p2.endpoints[1],p2.endpoints[0]],
+        d.add_polygon([p1.endpoints[0],p1.endpoints[1],p2.endpoints[1],p2.endpoints[0]],
         layer=layer)
+        d.add_polygon([p1.endpoints[0],p1.endpoints[1],p2.endpoints[1],p2.endpoints[0]],
+        layer=l)
 
-    return d
+
+    return join(d)
 
 def _copy_layer(cell,l1,l2):
 

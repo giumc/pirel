@@ -1,4 +1,3 @@
-
 import pirel.tools as pt
 
 from phidl.device_layout import Device, Port, DeviceReference, Group
@@ -10,6 +9,8 @@ import phidl.path as pp
 from phidl import Path
 
 from copy import copy,deepcopy
+
+import numpy as np
 
 class Text(pt.LayoutPart):
     ''' Class to store text data and to add it in cells.
@@ -600,6 +601,7 @@ class Anchor(pt.LayoutPart):
         [_,_,_,_,_,n,s,*_]=pt._get_corners(cell)
 
         cell.add_port(name='top',midpoint=n.coord,width=cell.xsize,orientation=90)
+        # cell.add_port(name='conn',midpoint=n.coord,width=cell.xsize,orientation=90)# for legacy
         cell.add_port(name='bottom',midpoint=s.coord,width=cell.xsize,orientation=270)
 
         return cell
@@ -681,24 +683,26 @@ class MultiAnchor(Anchor):
 
         cell=Anchor.draw.__wrapped__(self)
 
-        import pdb; pdb.set_trace()
-
         if self.n>1:
 
             if self.n%2==1:
 
                 p=cell.ports['top'+'_'+str(int((self.n-1)/2))]
 
-                cell.add_port(port=p,name='conn')
+                cell.add_port(port=p,name='top')
 
             elif self.n%2==0:
 
                 cell.add_port(
                     dl.Port(
-                        name='conn',
+                        name='top',
                         midpoint=(cell.x,cell.ymax),
                         width=cell.ports['top_0'].width,
                         orientation=90))
+
+        else:
+
+            cell.add_port(port=cell.ports['top'],name='conn')
 
         return cell
 
@@ -991,7 +995,7 @@ class MultiLayerPad(Pad):
 
             cell.absorb(cell<<p.draw())
 
-        cell.add_port(p.draw().portspt.join)
+        cell.add_port(p.draw().ports['conn'])
 
         return cell
 
@@ -1041,7 +1045,7 @@ class LFERes(pt.LayoutPart):
         bus_ref= cell.add_ref(bus_cell,alias="BUS")
 
         bus_ref.connect(
-            port=bus_cell.portspt.join,
+            port=bus_cell.ports['conn'],
             destination=idt_bottom_port)
 
         etch_cell=self.etchpit.draw()
@@ -1058,7 +1062,7 @@ class LFERes(pt.LayoutPart):
         anchor_bottom=cell.add_ref(anchor_cell,alias='AnchorBottom')
 
         anchor_bottom.connect(
-            anchor_bottom.portspt.join,
+            anchor_bottom.ports['top'],
             destination=idt_ref.ports['bottom'],overlap=-self.bus.size.y)
 
         if not self._stretch_top_margin:
@@ -1073,7 +1077,7 @@ class LFERes(pt.LayoutPart):
 
             anchor_top=cell.add_ref(anchor_top_dev.draw(),alias='AnchorTop')
 
-        anchor_top.connect(anchor_top.portspt.join,
+        anchor_top.connect(anchor_top.ports['top'],
             idt_ref.ports['top'],overlap=-self.bus.size.y)
 
         if self.anchor.n>1:
@@ -1090,7 +1094,7 @@ class LFERes(pt.LayoutPart):
 
         else:
 
-            cell.add_port(anchor_top.ports['bottom'],name='top')
+            cell.add_port(port=anchor_top.ports['bottom'],name='top')
 
             cell.add_port(anchor_bottom.ports['bottom'])
 
@@ -1221,21 +1225,23 @@ class FBERes(LFERes):
 
         super_ref=cell.add_ref(supercell,alias='LFERes')
 
+        [_,_,_,_,_,n_super,*_]=pt._get_corners(supercell)
+
         if self.plate_position=='out, short':
 
-            plate=pg.rectangle(size=(self.etchpit.active_area.x+8*self.idt.active_area_margin,self.idt.length-self.idt.y_offset/2),\
-            layer=self.plate_layer)
+            plate=pg.rectangle(
+                size=(
+                    self.etchpit.active_area.x+8*self.idt.active_area_margin,
+                    self.idt.length-self.idt.y_offset/2),
+                layer=self.plate_layer)
 
             plate_ref=cell.add_ref(plate,alias='Plate')
 
-            transl_rel=pt.Point(self.etchpit.x-4*self.idt.active_area_margin,self.anchor.size.y+2*self.anchor.etch_margin.y+self.bus.size.y\
-                +self.idt.y_offset*3/4)
+            [_,_,_,_,_,n,*_]=pt._get_corners(plate_ref)
 
-            lr_cell=pt._get_corners(cell)[0]
-            lr_plate=pt._get_corners(plate_ref)[0]
-
-            plate_ref.move(origin=lr_plate.coord,\
-            destination=(lr_plate+lr_cell+transl_rel).coord)
+            plate_ref.move(
+                origin=n.coord,
+                destination=(n_super-pt.Point(0,self.anchor.metalized.y)).coord)
 
             cell.absorb(plate_ref)
 
@@ -1243,27 +1249,19 @@ class FBERes(LFERes):
 
         elif self.plate_position=='in, short':
 
-            plate=pg.rectangle(\
-                size=(\
-                    self.etchpit.active_area.x-\
-                        2*self.idt.active_area_margin,\
-                        self.idt.length-self.idt.y_offset/2),\
+            plate=pg.rectangle(
+                size=(
+                    self.etchpit.active_area.x-2*self.idt.active_area_margin,
+                    self.idt.length-self.idt.y_offset/2),
                 layer=self.plate_layer)
 
             plate_ref=cell.add_ref(plate,alias='Plate')
 
-            transl_rel=pt.Point(self.etchpit.x+\
-                    self.idt.active_area_margin,\
-                self.anchor.size.y+\
-                2*self.anchor.etch_margin.y+\
-                self.bus.size.y+\
-                self.idt.y_offset*3/4)
+            [_,_,_,_,_,n,*_]=pt._get_corners(plate_ref)
 
-            lr_cell=pt._get_corners(cell)[0]
-            lr_plate=pt._get_corners(plate_ref)[0]
-
-            plate_ref.move(origin=lr_plate.coord,\
-            destination=(lr_plate+lr_cell+transl_rel).coord)
+            plate_ref.move(
+                origin=n.coord,
+                destination=(n_super-pt.Point(0,self.anchor.metalized.y+self.bus.size.y)).coord)
 
             cell.absorb(plate_ref)
 
@@ -1271,25 +1269,19 @@ class FBERes(LFERes):
 
         elif self.plate_position=='out, long':
 
-            plate=pg.rectangle(\
-                size=(self.etchpit.active_area.x+\
-                        8*self.idt.active_area_margin,\
-                    self.idt.length+\
-                        2*self.bus.size.y+\
-                        self.idt.y_offset),\
+            plate=pg.rectangle(
+                size=(
+                    self.etchpit.active_area.x+8*self.idt.active_area_margin,
+                    self.idt.length+2*self.bus.size.y+self.idt.y_offset),
                 layer=self.plate_layer)
 
             plate_ref=cell.add_ref(plate,alias='Plate')
 
-            transl_rel=pt.Point(self.etchpit.x-\
-                4*self.idt.active_area_margin,\
-                    self.anchor.size.y+2*self.anchor.etch_margin.y)
+            [_,_,_,_,_,n,*_]=pt._get_corners(plate_ref)
 
-            lr_cell=pt._get_corners(cell)[0]
-            lr_plate=pt._get_corners(plate_ref)[0]
-
-            plate_ref.move(origin=lr_plate.coord,\
-            destination=(lr_plate+lr_cell+transl_rel).coord)
+            plate_ref.move(
+                origin=n.coord,
+                destination=(n_super-pt.Point(0,self.anchor.metalized.y+self.bus.size.y)).coord)
 
             cell.absorb(plate_ref)
 
@@ -1297,30 +1289,21 @@ class FBERes(LFERes):
 
         elif self.plate_position=='in, long':
 
-            plate=pg.rectangle(\
-                size=(\
-                    self.etchpit.active_area.x-\
-                        2*self.idt.active_area_margin,\
-                        self.idt.length+\
-                            2*self.bus.size.y+\
-                            self.idt.y_offset),
+            plate=pg.rectangle(
+                size=(
+                    self.etchpit.active_area.x-2*self.idt.active_area_margin,
+                    self.idt.length+2*self.bus.size.y+self.idt.y_offset),
                 layer=self.plate_layer)
 
             plate_ref=cell.add_ref(plate,alias='Plate')
 
-            transl_rel=pt.Point(self.etchpit.x+\
-                    self.idt.active_area_margin,\
-                        self.anchor.size.y+2*self.anchor.etch_margin.y)
+            [_,_,_,_,_,n,*_]=pt._get_corners(plate_ref)
 
-            lr_cell=pt._get_corners(cell)[0]
-            lr_plate=pt._get_corners(plate_ref)[0]
-
-            plate_ref.move(origin=lr_plate.coord,\
-            destination=(lr_plate+lr_cell+transl_rel).coord)
+            plate_ref.move(
+                origin=n.coord,
+                destination=(n_super-pt.Point(0,self.anchor.metalized.y)).coord)
 
             cell.absorb(plate_ref)
-
-            del plate
 
         pt._copy_ports(supercell,cell)
 
@@ -1386,10 +1369,14 @@ class TwoPortRes(FBERes):
 
         for corner,sig,tag in zip([ll,lr,ul,ur],[-1,1,-1,1],['bottom','bottom','top','top']):
 
-            conn_width=cell.ports[tag].width
+            cell_ports=pt._find_ports(cell,tag,depth=0)
+
+            conn_width=cell_ports[0].width
 
             if tag=='top':
+
                 orient=90
+
             elif tag=='bottom':
                 orient=270
 
@@ -1398,10 +1385,10 @@ class TwoPortRes(FBERes):
                 midpoint=(corner+sig*pt.Point(conn_width/2,0)+sig*margin).coord,
                 orientation=orient)
 
-            r=Routing()
+            r=MultiRouting()
             r.layer=(self.plate_layer,)
-            r.source=cell.ports[tag]
-            r.destination=conn_port
+            r.source=tuple(cell_ports)
+            r.destination=(conn_port,)
             r.overhang=conn_width
             cell.add(r.draw())
 
@@ -1450,22 +1437,24 @@ class TFERes(LFERes):
 
         anchor_ref=cell.add_ref(anchor_bottom.draw(),alias="BottomAnchor_Top")
 
-        anchor_ref.connect(anchor_ref.ports['conn'],
+        anchor_ref.connect(anchor_ref.ports['top'],
             destination=cell['TopCell'].ports['top'])
 
-        anchor_ref.rotate(center=anchor_ref.ports['conn'].midpoint,angle=180)
+        anchor_ref.rotate(center=anchor_ref.ports['top'].midpoint,angle=180)
 
         anchor_ref_2=cell.add_ref(anchor_bottom.draw(),alias="BottomAnchor_Top")
 
-        anchor_ref_2.connect(anchor_ref_2.ports['conn'],
+        anchor_ref_2.connect(anchor_ref_2.ports['top'],
             destination=cell['TopCell'].ports['bottom'])
 
-        anchor_ref_2.rotate(center=anchor_ref_2.ports['conn'].midpoint,angle=180)
+        anchor_ref_2.rotate(center=anchor_ref_2.ports['top'].midpoint,angle=180)
 
         pt._copy_ports(lfe_cell,cell)
 
         return cell
 
+class TwoDMR(FBERes):
+    
 class SMD(pt.LayoutPart):
     ''' Generate pad landing for SMD one-port component
 
@@ -1548,7 +1537,7 @@ class Routing(pt.LayoutPart):
 
     _radius=0.1
 
-    _num_pts=30
+    _num_pts=np.arange(20,1000,20)
 
     _tol=1e-3
 
@@ -1581,7 +1570,7 @@ class Routing(pt.LayoutPart):
 
         cell=self._draw_frame()
 
-        check(cell)
+        pt.check(cell)
 
     def _draw_frame(self):
 
@@ -1636,7 +1625,7 @@ class Routing(pt.LayoutPart):
             raise ValueError(f" Source of routing {s.midpoint} is in clearance area {self.clearance}")
 
         if pt.Point(d.midpoint).in_box(self.clearance):
-            # import pdb; pdb.set_trace()
+
             # pt.Point(d.midpoint).in_box(self.clearance)
             raise ValueError(f" Destination of routing {d.midpoint} is in clearance area{self.clearance}")
 
@@ -1644,7 +1633,7 @@ class Routing(pt.LayoutPart):
 
             p=self._draw_non_hindered_path(s,d)
 
-        except Exception as e_non_hind:
+        except ValueError as e_non_hind:
 
                 p=self._draw_hindered_path(s,d,self.side)
 
@@ -1787,7 +1776,7 @@ class Routing(pt.LayoutPart):
 
         else:
 
-            return not is_cell_outside(
+            return not pt.is_cell_outside(
                 test_path_cell,
                 pg.bbox(self.clearance,layer=self.layer[0]),
                 tolerance=0)
@@ -1804,7 +1793,20 @@ class Routing(pt.LayoutPart):
 
         sel_points=pt._check_points_path(*sel_points,trace_width=self._get_max_width())
 
-        return pp.smooth(points=sel_points,radius=self._radius,num_pts=self._num_pts)
+        for num_pts in self._num_pts:
+
+            try:
+
+                path=pp.smooth(points=sel_points,radius=self._radius,num_pts=num_pts)
+
+                return path
+
+            except :
+
+                pass
+
+        #throws error
+        return pp.smooth(points=sel_points,radius=self._radius,num_pts=self._num_pts[-1])
 
     def set_auto_overhang(self,value):
         ''' Sets automatically the routing overhead as 1/5 of distance between source and destination.

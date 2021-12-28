@@ -956,29 +956,21 @@ def makeSMDCoupledFilter(cls,smd=pc.SMD):
 
             for n in range(self.order):
 
-                if n>0:
-
-                    top_previous=ref.ports['top']
-
                 ref=cell.add_ref(unit_cell,alias='n_'+str(n))
 
                 ref.move(destination=(cell_size.x,cell_size.y*n))
 
                 if n==0:
 
-                    cell.add_port(ref.ports['bottom'])
-
-                    cell.ports['bottom'].orientation=270
+                    [cell.add_port(p) for p in pt._find_ports(ref,'bottom')]
 
                 if n==self.order-1:
 
-                    cell.add_port(ref.ports['top'])
+                    [cell.add_port(p) for p in pt._find_ports(ref,'top')]
 
                 if n>0:
 
-                    this_bottom=ref.ports['bottom']
-
-                    cell.add(pt._make_poly_connection(top_previous,this_bottom,self.smd.layer))
+                    self._draw_filter_interconnects(cell,n)
 
                 for p in pt._find_ports(ref,'Ground'):
 
@@ -1011,7 +1003,7 @@ def makeSMDCoupledFilter(cls,smd=pc.SMD):
 
             unit_cell.add_port(port=smd_ref.ports["N_2"],name='top')
 
-            unit_cell<<self._draw_unit_cell_routing(unit_cell)
+            self._draw_unit_cell_routing(unit_cell)
 
             self._add_ground_extensions(unit_cell)
 
@@ -1019,21 +1011,15 @@ def makeSMDCoupledFilter(cls,smd=pc.SMD):
 
         def _draw_unit_cell_routing(self,unit_cell):
 
-            r=pc.MultiRouting()
+            bottom_coupler_port=unit_cell["Coupler"].ports['S_1']
 
-            r.layer=self.smd.layer
+            d=Device()
 
-            r.source=tuple(pt._find_ports(unit_cell["Device"],'top'))
+            for top_device_port in pt._find_ports(unit_cell["Device"],'top',depth=0):
 
-            r.destination=(unit_cell["Coupler"].ports["S_1"],)
+                d.add(pt._make_poly_connection(bottom_coupler_port,top_device_port,self.smd.layer))
 
-            r.set_auto_overhang(True)
-
-            conn=r.draw()
-
-            conn.flatten()
-
-            return conn
+            unit_cell.add(pt.join(d))
 
         def _add_ground_extensions(self,cell):
 
@@ -1058,6 +1044,21 @@ def makeSMDCoupledFilter(cls,smd=pc.SMD):
                 cell.ports.pop(p.name)
 
                 cell.add_port(p_ext)
+
+        def _draw_filter_interconnects(self,cell,n):
+
+            d=Device()
+
+            ref=cell['n_'+str(n)]
+
+            for b in pt._find_ports(ref,'bottom'):
+
+                for t in pt._find_ports(cell['n_'+str(n-1)],'top'):
+
+                    d.add(pt._make_poly_connection(t,b,self.smd.layer))
+
+            cell.add(pt.join(d))
+
 
         @staticmethod
         def get_components():
@@ -1180,17 +1181,20 @@ def addTwoPortProbe(cls,probe=makeTwoPortProbe(pc.GSGProbe)):
 
                 routing_cell=self._draw_probe_routing()
 
-            except:
+            except ValueError:
 
                     self._setup_routings(device_ref,probe_ref,'side')
 
                     routing_cell=self._draw_probe_routing()
 
+
+            import pdb; pdb.set_trace()
+
             try:
 
                 routing_cell.add(self._draw_device_grounds(device_ref,probe_ref,'straight'))
 
-            except:
+            except ValueError:
 
                 routing_cell.add(self._draw_device_grounds(device_ref,probe_ref,'side'))
 
@@ -1282,7 +1286,7 @@ def addTwoPortProbe(cls,probe=makeTwoPortProbe(pc.GSGProbe)):
 
                             groundroute.destination=(probe_cell.ports['GroundRXE_2'],)
 
-                    # groundroute.overhang=groundroute.set_auto_overhang(True)
+                    # groundroute.set_auto_overhang(True)
 
                 #signal routing
                 for index,sigroute in enumerate([self.sig1trace,self.sig2trace]):
@@ -1295,7 +1299,7 @@ def addTwoPortProbe(cls,probe=makeTwoPortProbe(pc.GSGProbe)):
 
                         sigroute.source=(probe_cell.ports['SigN_1'],)
 
-                        dest_port=pt._find_ports(device_cell,'bottom')
+                        dest_port=pt._find_ports(device_cell,'bottom',depth=0)
 
                         sigroute.destination=tuple(dest_port)
 
@@ -1303,13 +1307,15 @@ def addTwoPortProbe(cls,probe=makeTwoPortProbe(pc.GSGProbe)):
 
                     elif index==1:
 
-                        dest_port=pt._find_ports(device_cell,'top')
+                        dest_port=pt._find_ports(device_cell,'top',depth=0)
 
                         sigroute.source=(probe_cell.ports['SigS_2'],)
 
                         sigroute.destination=tuple(dest_port)
 
                         sigroute.trace_width=dest_port[0].width
+
+                    sigroute.set_auto_overhang(True)
 
             elif isinstance(self.probe,pc.GSProbe):
 
@@ -1327,7 +1333,7 @@ def addTwoPortProbe(cls,probe=makeTwoPortProbe(pc.GSGProbe)):
 
             rx_device_ports=[]
 
-            gnd_ports=pt._find_ports(device_cell,'Ground')
+            gnd_ports=pt._find_ports(device_cell,'Ground',depth=0)
 
             if not gnd_ports:
 
@@ -1355,11 +1361,11 @@ def addTwoPortProbe(cls,probe=makeTwoPortProbe(pc.GSGProbe)):
 
             if label=='side':
 
-                r.source=tuple(pt._find_ports(probe_cell,'GroundLXW'))
+                r.source=tuple(pt._find_ports(probe_cell,'GroundLXW'),depth=0)
 
             elif label=='straight':
 
-                r.source=tuple(probe_cell.ports['GroundLXN_1'],probe_cell.ports['GroundLXS_2'])
+                r.source=(probe_cell.ports['GroundLXN_1'],)
 
             r.destination=tuple(lx_device_ports)
 
@@ -1371,11 +1377,11 @@ def addTwoPortProbe(cls,probe=makeTwoPortProbe(pc.GSGProbe)):
 
             if label=='side':
 
-                r.source=tuple(pt._find_ports(probe_cell,'GroundRXE'))
+                r.source=tuple(pt._find_ports(probe_cell,'GroundRXE'),depth=0)
 
             elif label=='straight':
 
-                r.source=tuple(probe_cell.ports['GroundLXN_1'],probe_cell.ports['GroundLXS_2'])
+                r.source=(probe_cell.ports['GroundRXN_1'],)
 
             r.destination=tuple(rx_device_ports)
 
@@ -1411,30 +1417,6 @@ def addTwoPortProbe(cls,probe=makeTwoPortProbe(pc.GSGProbe)):
     return TwoPortProbed
 
 # Device decorator
-
-def add_compass(device : Device) -> Device:
-    ''' add four ports at the bbox of a cell.
-
-    Parameters
-    ----------
-    device : phidl.Device
-
-    Returns
-    -------
-    device : phidl.Device.
-    '''
-
-    bound_cell=pg.compass(size=device.size).move(\
-    origin=(0,0),destination=device.center)
-
-    ports=port=bound_cell.get_ports()
-
-    device.add_port(port=ports[0],name='N')
-    device.add_port(port=ports[1],name='S')
-    device.add_port(port=ports[2],name='E')
-    device.add_port(port=ports[3],name='W')
-
-    return device
 
 def connect_ports(
     cell : Device,

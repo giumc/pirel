@@ -6,12 +6,12 @@ import pirel.tools as pt
 import pirel.addOns.standard_parts as ps5
 
 
-# a=pc.Anchor()
-# print(a)
-# a.view()
-# ma=pc.MultiAnchor()
-# print(ma)
-# ma.view()
+a=pc.Anchor()
+print(a)
+a.view()
+ma=pc.MultiAnchor()
+print(ma)
+ma.view()
 
 # idt=pc.IDT()
 # idt.view()
