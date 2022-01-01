@@ -262,22 +262,6 @@ def prompt_param_table():
 
     return tab
 
-def get_device_param_from_table(tab : pd.DataFrame, tag : str):
-
-    pars=tab.loc[tag].to_dict()
-
-    for name,value in pars.items():
-
-        try:
-
-            pars[name]=value.item()
-
-        except:
-
-            pass
-
-    return pars
-
 def alignment_marks_4layers(scale=[0.2,0.5,1]):
 
     def dr(cell):

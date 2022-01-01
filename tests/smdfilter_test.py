@@ -6,8 +6,11 @@ import pirel.tools as pt
 import pirel.addOns.standard_parts as ps
 
 # t=pc.TwoPortRes('hey')
+#
+# t.view()
+# exit()
 t_aux=pm.addTwoPortProbe(
-    pm.makeSMDCoupledFilter(pm.makeScaled(pc.TwoPortRes),
+    pm.makeSMDCoupledFilter(pm.makeArray(pm.makeScaled(pc.TwoPortRes),2),
     smd=pm.addPassivation(pc.SMD)),
     probe=pm.makeTwoPortProbe(pm.addLargeGround(pc.GSGProbe)))('hey')
 
@@ -20,6 +23,8 @@ t_aux.smd.passivation_layer=(3,)
 t_aux.smd.set_01005()
 t_aux.smd.passivation_scale=pt.Point(2.5,1.5)
 t_aux.smd.passivation_margin=pt.Point(50,50)
+
+t_aux.gndvia.size=25
 # t_aux.anchor.n=1
 # t_aux.probe.ground_size=200
 # t_aux['IDTLength']=250
@@ -27,8 +32,6 @@ t_aux.smd.passivation_margin=pt.Point(50,50)
 # t_aux['AnchorSizeY']=5
 # t_aux['IDTPitch']=7
 # print(t)
-
-t_aux.view()
 
 # t_aux=pm.addTwoPortProbe(
 #     pm.makeSMDCoupledFilter(

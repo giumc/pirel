@@ -79,11 +79,11 @@ class Point:
     @property
     def x(self):
 
-        return round(self._x,3)
+        return round(self._x,6)
 
     @property
     def y(self):
-        return round(self._y,3)
+        return round(self._y,6)
 
     def in_box(self,bbox):
 
@@ -374,6 +374,7 @@ class _LayoutParam:
 
         self._name=name
         self._value=value
+        self._type=value.__class__
 
     @property
     def label(self):
@@ -401,19 +402,19 @@ class _LayoutParam:
     @value.setter
     def value(self,new_value):
 
-        if isinstance(self.value,float):
-
-            if isinstance(new_value,(int,float)):
-
-                self._value=new_value*1.0
-
-        elif self.value.__class__==new_value.__class__:
+        if isinstance(new_value,self._type) or new_value is None:
 
             self._value=new_value
 
         else:
 
-            raise ValueError(f"Cannot assign type {new_value.__class__.__name__} to {self.label}")
+            if isinstance(new_value,int) and self._type==float:
+
+                self._value=new_value
+
+            else:
+
+                raise ValueError(f"Cannot assign type {new_value.__class__.__name__} to {self.label}")
 
     @property
     def x(self):
@@ -779,11 +780,11 @@ class LayoutPart(ABC) :
 
         modkeys=[*df.keys()]
 
-        pop_all_match(modkeys,".*Layer*")
+        pop_all_match(modkeys,"Layer")
 
-        pop_all_match(modkeys,".*Resistance*")
+        pop_all_match(modkeys,"Resistance")
 
-        pop_all_match(modkeys,".*Capacitance*")
+        pop_all_match(modkeys,"Capacitance")
 
         pop_all_dict(df,[item for item in [*df.keys()] if item not in modkeys])
 
@@ -977,13 +978,17 @@ def pop_all_dict(old_dict : dict ,elems : list):
 
 def pop_all_match(l : list , reg : str) -> list:
 
-    from re import compile
+    tbr=[]
 
-    r=compile(reg)
+    for elem in l:
 
-    [l.remove(x) for x in filter(r.match,l)]
+        if reg in elem:
 
-    return l
+            tbr.append(elem)
+
+    for elem in tbr:
+
+        l.remove(elem)
 
 def parallel_res(*args) -> float:
 
@@ -1006,7 +1011,7 @@ def pirel_cache(fun):
 
         params=_get_class_param(cls)
 
-        pop_all_match(params,'.*name*')
+        pop_all_match(params,'name')
 
         dict_name="_"+fun.__name__+"_lookup"
 
@@ -1478,31 +1483,43 @@ def _copy_ports(source,dest,prefix='',suffix=''):
 
         dest.add_port(port=p,name=prefix+n+suffix)
 
-def _find_ports(cell,tag,depth=None):
+def _find_ports(cell,tag,depth=None,exact=False):
 
     output=[]
-
-    if isinstance(tag,str):
-
-        tag=[tag]
 
     if isinstance(cell,Device):
 
         for port in cell.get_ports(depth=depth):
 
-            if all([x in port.name for x in tag]):
+            if exact:
 
-                output.append(port)
+                if port.name==tag:
+
+                    output.append(port)
+
+            else:
+
+                if tag in port.name:
+
+                    output.append(port)
 
         return output
 
     elif isinstance(cell,DeviceReference):
 
-        for port_name,cell_port in cell.ports.items():
+        for port in cell.ports.values():
 
-            if all([x in port_name for x in tag]):
+            if exact:
 
-                output.append(cell_port)
+                if port.name==tag:
+
+                    output.append(port)
+
+            else:
+
+                if tag in port.name:
+
+                    output.append(port)
 
         return output
 
