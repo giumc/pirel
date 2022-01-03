@@ -19,6 +19,7 @@ t_aux=pm.addTwoPortProbe(
 # t_aux=pm.addPassivation(pc.SMD)('hey')
 # t_aux['Layer']=pt.LayoutDefault.layerBottom
 t_aux.spacing=pt.Point(0,250)
+t_aux.gnd_routing_width=150
 t_aux.smd.passivation_layer=(3,)
 t_aux.smd.set_01005()
 t_aux.smd.passivation_scale=pt.Point(2.5,1.5)

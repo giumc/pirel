@@ -1049,7 +1049,7 @@ def addOnePortProbe(cls,probe=pc.GSGProbe):
 
             try:
 
-                self._setup_ground_routings(
+                self._setup_ground_routing(
                     device_cell,
                     probe_ref,
                     'straight')
@@ -1058,7 +1058,7 @@ def addOnePortProbe(cls,probe=pc.GSGProbe):
 
             except:
 
-                self._setup_ground_routings(
+                self._setup_ground_routing(
                     device_cell,
                     probe_ref,
                     'side')
@@ -1166,7 +1166,7 @@ def addOnePortProbe(cls,probe=pc.GSGProbe):
                 port=probe_port,
                 destination=bottom_ports[0])
 
-        def _setup_ground_routings(self,device_cell,probe_cell,label):
+        def _setup_ground_routing(self,device_cell,probe_cell,label):
 
             bbox=super()._bbox_mod(device_cell.bbox)
 
@@ -1288,7 +1288,7 @@ def addTwoPortProbe(cls,probe=makeTwoPortProbe(pc.GSGProbe)):
 
             cell.add(bottom_conn)
 
-            self._setup_ground_routings(device_ref,probe_ref,'side')
+            self._setup_ground_routing(device_ref,probe_ref,'side')
 
             routing_cell=self._draw_ground_routing()
 
@@ -1330,7 +1330,7 @@ def addTwoPortProbe(cls,probe=makeTwoPortProbe(pc.GSGProbe)):
 
                 raise ValueError("To be implemented")
 
-        def _setup_ground_routings(self,device_cell,probe_cell,label):
+        def _setup_ground_routing(self,device_cell,probe_cell,label):
 
             bbox=super()._bbox_mod(device_cell.bbox)
 
@@ -1478,8 +1478,7 @@ def connect_ports(
     cell : Device,
     tag : str ='top',
     layers : tuple = (LayoutDefault.layerTop,),
-    distance : float = 10.0,
-    conn_width : float = None):
+    distance : float = 10.0):
     ''' connects all the ports in the cell with name matching a tag.
 
     Parameters:
@@ -1492,15 +1491,23 @@ def connect_ports(
             offset from port location
 
         layer : tuple.
+
+
+    Returns:
+    ----------
+
+        cell : Device
+            contains routings and connection port
+
     '''
-
-    if len(cell.ports)<=1:
-
-        return
 
     import pirel.pcells as pc
 
     ports=pt._find_ports(cell,tag,depth=0)
+
+    if not ports:
+
+        raise ValueError(f"pm.connect_ports(): no ports with tag {tag} in device {cell.name}")
 
     ports_centroid=pt._get_centroid(*[pt.Point(x.midpoint) for x in ports])
 
@@ -1515,47 +1522,106 @@ def connect_ports(
 
     port_mid_norm=pt.Point(port_mid.normal[1])-pt.Point(port_mid.normal[0])
 
-    midpoint_projected=ports_centroid+port_mid_norm*distance
+    midpoint_projected=ports_centroid+port_mid_norm*(distance+ports_width)
 
-    if conn_width is not None:
+    new_port=Port(
+        name=tag,
+        orientation=ports_orientation,
+        width=ports_width,
+        midpoint=midpoint_projected.coord)
 
-        new_port=Port(
-            name=tag,
-            orientation=-ports_orientation,
-            width=conn_width,
-            midpoint=midpoint_projected.coord)
+    for i,l in enumerate(layers):
+
+        if i==0:
+
+            pad=pg.compass(
+                size=(ports_width,ports_width),
+                layer=l)
+
+        else:
+
+            pad.absorb(
+                pg.compass(
+                    size=(ports_width,ports_width),
+                    layer=l
+                    )
+                )
+
+    output_cell=Device()
+
+    pad_ref=output_cell<<pad
+
+    pad_ref.connect('S',new_port)
+
+    if len(ports)==1:
+
+        left_ports=[]
+
+        right_ports=[]
+
+        center_port=ports[0]
 
     else:
 
-        new_port=Port(
-            name=tag,
-            orientation=-ports_orientation,
-            width=ports_width,
-            midpoint=midpoint_projected.coord)
+        if len(ports)%2==0:
+
+            mid_index=int(len(ports)/2-1)
+
+            left_ports=ports[0:mid_index+1]
+
+            right_ports=ports[mid_index+1:]
+
+            center_port=[]
+
+        else:
+
+            mid_index=int((len(ports)-1)/2)
+
+            left_ports=ports[0:mid_index]
+
+            right_ports=ports[mid_index+1:]
+
+            center_port=ports[mid_index]
+
+    dest_ports=output_cell.get_ports()
 
     connector=pc.MultiRouting()
 
     connector.layer=layers
 
-    connector.source=(new_port,)
+    connector.overhang=distance
 
-    connector.destination=tuple(ports)
+    connector.trace_width=ports_width
 
-    #connector.clearance=tuple(tuple(_) for _ in cell.bbox.tolist())
+    #connect left ports
 
-    connector.overhang=distance/3
+    connector.source=tuple(left_ports)
 
-    connector.set_auto_overhang(False)
+    connector.destination=tuple(pt._find_ports(output_cell,'W'))
 
-    connector.trace_width=None
+    output_cell.add(connector.draw())
 
-    tracecell=pg.deepcopy(connector.draw())
+    #connect left ports
 
-    new_port.orientation=-new_port.orientation
+    connector.source=tuple(right_ports)
 
-    tracecell.add_port(new_port)
+    connector.destination=tuple(pt._find_ports(output_cell,'E'))
 
-    return tracecell
+    output_cell.add(connector.draw())
+
+    if center_port:
+
+        connector.source=(center_port,)
+
+        connector.destination=tuple(pt._find_ports(output_cell,'S'))
+
+        connector.overhang=distance/2
+
+        output_cell.add(connector.draw())
+
+    output_cell.add_port(port=pt._find_ports(output_cell,'N')[0],name=tag)
+
+    return output_cell
 
 def add_pads(cell,pad,tag='top',exact=False):
     ''' add pad designs to a cell, connecting it to selected ports.
