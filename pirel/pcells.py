@@ -378,7 +378,7 @@ class IDT(pt.LayoutPart) :
     @property
     def probe_distance(self):
 
-        return pt.Point(0,self.active_area.x*0.75)
+        return pt.Point(0,self.active_area.x*0.7)
 
     @property
     def resistance_squares(self):
@@ -746,13 +746,13 @@ class Anchor(pt.LayoutPart):
     def _draw_metalized(self):
 
         cell=pg.rectangle(
-            size=(self.size-pt.Point(2*self.etch_margin.x,-2*self.etch_margin.y)).coord,\
+            size=(self.size-pt.Point(2*self.etch_margin.x,-2*self.etch_margin.y)).coord,
             layer=self.layer)
 
         [_,_,_,_,_,n,s,*_]=pt._get_corners(cell)
 
         cell.add_port(name='top',midpoint=n.coord,width=cell.xsize,orientation=90)
-        # cell.add_port(name='conn',midpoint=n.coord,width=cell.xsize,orientation=90)# for legacy
+
         cell.add_port(name='bottom',midpoint=s.coord,width=cell.xsize,orientation=270)
 
         return cell
@@ -765,7 +765,8 @@ class Anchor(pt.LayoutPart):
     @property
     def etch_margin(self):
 
-        return pt.Point((self.size.x-self.metalized.x)/2,\
+        return pt.Point(
+            (self.size.x-self.metalized.x)/2,
             (self.metalized.y-self.size.y)/2)
 
     def _check_anchor(self):
@@ -804,17 +805,19 @@ class MultiAnchor(Anchor):
 
     def _draw_metalized(self):
 
-        metalized=super()._draw_metalized()
-
-        metalized_all=pt.draw_array(
-            metalized,x=self.n,y=1,
-            row_spacing=self.spacing.y,column_spacing=self.spacing.x)
-
-        inner_etch=pg.rectangle(
-            size=(self.spacing.x-2*self.etch_margin.x,self.size.y),
-            layer=self.etch_layer)
-
         if self.n>1:
+
+            self._check_anchor()
+
+            metalized=super()._draw_metalized()
+
+            metalized_all=pt.draw_array(
+                metalized,x=self.n,y=1,
+                row_spacing=self.spacing.y,column_spacing=self.spacing.x+self.etch_margin.x*2)
+
+            inner_etch=pg.rectangle(
+                size=(self.spacing.x,self.size.y),
+                layer=self.etch_layer)
 
             for i in range(0,self.n-1):
 
@@ -828,11 +831,39 @@ class MultiAnchor(Anchor):
 
                 metalized_all.absorb(ref)
 
-        return metalized_all
+            return metalized_all
+
+        else:
+
+            return super()._draw_metalized()
 
     def draw(self):
 
-        cell=Anchor.draw.__wrapped__(self)
+        cell=Device(self.name)
+
+        anchor_metal=cell<<self._draw_metalized()
+
+        remaining_x_lx=(self.etch_x-self.active_x)/2-self.x_offset
+
+        lx_etch=cell<<pg.rectangle(
+            size=(remaining_x_lx,self.size.y),
+            layer=self.etch_layer)
+
+        remaining_x_rx=(self.etch_x-self.active_x)/2+self.x_offset
+
+        rx_etch=cell<<pg.rectangle(
+            size=(remaining_x_rx,self.size.y),
+            layer=self.etch_layer)
+
+        g=Group(lx_etch,anchor_metal,rx_etch)
+
+        g.align(alignment='x')
+
+        g.align(alignment='y')
+
+        g.distribute(spacing=self.etch_margin.x)
+
+        pt._copy_ports(anchor_metal,cell)
 
         if self.n>1:
 
@@ -842,20 +873,30 @@ class MultiAnchor(Anchor):
 
                 cell.add_port(port=p,name='top')
 
-            elif self.n%2==0:
-
+            else:
                 cell.add_port(
-                    dl.Port(
+                    Port(
                         name='top',
                         midpoint=(cell.x,cell.ymax),
                         width=cell.ports['top_0'].width,
-                        orientation=90))
-
-        else:
-
-            cell.add_port(port=cell.ports['top'],name='conn')
+                        orientation=90
+                        )
+                    )
 
         return cell
+
+    @property
+    def active_x(self):
+
+        return self.spacing.x*(self.n-1)+self.n*self.size.x
+
+    def _check_anchor(self):
+
+        super()._check_anchor()
+
+        if self.active_x>=self.etch_x:
+
+            raise ValueError(f"{self.__class__.__name__} error: anchor(s) size needs {self.active_x}, while etch area is only {self.etch_x}")
 
 class Via(pt.LayoutPart):
     ''' Generates via pattern.
@@ -1108,6 +1149,14 @@ class Pad(pt.LayoutPart):
 
         return 1+self.distance/self.port.width
 
+    def get_params(self):
+
+        df=super().get_params()
+
+        df.pop("Port")
+
+        return df
+
 class MultiLayerPad(Pad):
 
     __pad_base=Pad()
@@ -1272,7 +1321,7 @@ class LFERes(pt.LayoutPart):
 
     def _set_relations(self):
 
-        self.bus.size=pt.Point(\
+        self.bus.size=pt.Point(
             self.idt.active_area.x-\
             2*self.idt.active_area_margin-\
             self.idt.pitch*(1-self.idt.coverage),\

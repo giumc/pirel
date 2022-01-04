@@ -12,10 +12,17 @@ import pirel.addOns.standard_parts as ps5
 # print(a)
 # a.view()
 
-# ma=pc.MultiAnchor()
+ma=pc.MultiAnchor()
 
-# print(ma)
-# ma.view()
+ma.n=3
+
+ma.etch_x=100
+
+ma.size=pt.Point(10,30)
+ma.metalized=pt.Point(5,32)
+ma.spacing=pt.Point(20,0)
+print(ma)
+ma.view()
 #
 # idt=pc.IDTSingle()
 # idt.view()
@@ -46,8 +53,8 @@ import pirel.addOns.standard_parts as ps5
 # lferes.plate_over_etch=False
 # lferes.view()
 
-lferes=pc.TwoPortRes()
+# lferes=pc.TwoPortRes()
+#
+# print(lferes)
 
-print(lferes)
-
-lferes.view()
+# lferes.view()

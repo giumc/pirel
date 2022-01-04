@@ -5,9 +5,9 @@ from phidl import set_quickplot_options
 
 set_quickplot_options(blocking=True)
 
-distance=40
+distance=100
 width=20
-spacing=60
+spacing=50
 n=9
 
 d=Device()
@@ -17,8 +17,9 @@ for i in range(n):
     d.add_port(
         Port(
             midpoint=(spacing*i,0),
+            # midpoint=(0,spacing*i),
             width=width,
-            orientation=90,
+            orientation=-90,
             name='top_'+str(i)
         )
     )

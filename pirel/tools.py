@@ -757,12 +757,6 @@ class LayoutPart(ABC) :
 
             df["Resistance"]=self.resistance_squares
 
-        modkeys=[*df.keys()]
-
-        # pop_all_match(modkeys,".*Layer*")
-
-        pop_all_dict(df,[item for item in [*df.keys()] if item not in modkeys])
-
         return df
 
     def export_summary(self):
@@ -786,9 +780,7 @@ class LayoutPart(ABC) :
 
         pop_all_match(modkeys,"Capacitance")
 
-        pop_all_dict(df,[item for item in [*df.keys()] if item not in modkeys])
-
-        return df
+        return {k: df[k] for k in modkeys }
 
     @staticmethod
     def get_components():

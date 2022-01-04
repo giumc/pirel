@@ -24,7 +24,7 @@ t_aux.smd.passivation_layer=(3,)
 t_aux.smd.set_01005()
 t_aux.smd.passivation_scale=pt.Point(2.5,1.5)
 t_aux.smd.passivation_margin=pt.Point(50,50)
-
+t_aux.anchor.n=1
 t_aux.gndvia.size=25
 # t_aux.anchor.n=1
 # t_aux.probe.ground_size=200
@@ -42,8 +42,8 @@ t_aux.gndvia.size=25
 
 # t_aux['ProbePadSize']=pt.Point(100,100)
 # t_aux['RoutingLayer']=(1,)
-
-t_aux.view(joined=True)
+t_aux.view()
+# t_aux.view(joined=True)
 # t_aux.draw().write_gds("TestSMDFilter")
 # main_cell=pc.IDT("hey").draw()
 # main_cell.write_gds('hey')

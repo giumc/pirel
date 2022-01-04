@@ -184,9 +184,12 @@ def chip_frame(
     name=None,
     text_pos={'anchor_source':'s','anchor_dest':'s'}):
 
-    die_cell=pg.basic_die(size=size,\
-        die_name="",layer=layer,draw_bbox=False,
-        street_length=street_length,street_width=street_width)
+    die_cell=pg.basic_die(
+        size=size,
+        die_name="",
+        layer=layer,draw_bbox=False,
+        street_length=street_length,
+        street_width=street_width)
 
     if name is not None:
 
@@ -361,12 +364,12 @@ def add_utility_cell(cell,align_scale=[0.25,0.5,1],position=['top','left']):
 
     g.align(alignment='y')
 
-    g.move(origin=(g.center[0],g.ymax),\
-        destination=(cell.center[0],\
-            cell.ymax-300))
+    g.move(origin=(g.center[0],g.ymax),
+        destination=(cell.center[0],cell.ymax-300))
 
-    maskname_cell.move(origin=(maskname_cell.xmin,maskname_cell.ymin),\
-        destination=(test_cell.xmin,test_cell.ymax+150))
+    maskname_cell.move(
+        origin=(maskname_cell.x,maskname_cell.ymin),
+        destination=(g.x,test_cell.ymax+150))
 
     utility_cell=Device(name="UtilityCell")
 
