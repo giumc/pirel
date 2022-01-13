@@ -1443,6 +1443,23 @@ def _get_centroid(*points):
 
     return Point(x_c,y_c)/len(points)
 
+def _get_centroid_ports(ports):
+
+    if not ports:
+
+        raise ValueError(f"pt._get_centroid_ports(): no ports with tag {tag} in device {cell.name}")
+
+    ports_centroid=_get_centroid(*[Point(x.midpoint) for x in ports])
+
+    ports_width=np.average([x.width for x in ports])
+
+    ports_orientation=np.average([x.orientation for x in ports])
+
+    return Port(
+        orientation=ports_orientation,
+        width=ports_width,
+        midpoint=ports_centroid.coord)
+
 def pick_callable_param(pars : dict):
 
     out_pars={}

@@ -1012,6 +1012,8 @@ def addOnePortProbe(cls,probe=pc.GSGProbe):
 
             gnd_routing_width: float
 
+            sig_routing_layer: tuple
+
             gnd_routing_layer: tuple.
 
         '''
@@ -1020,6 +1022,8 @@ def addOnePortProbe(cls,probe=pc.GSGProbe):
 
         gnd_routing_layer=LayoutParamInterface()
 
+        sig_routing_layer=LayoutParamInterface()
+
         def __init__(self,*args,**kwargs):
 
             cls.__init__(self,*args,**kwargs)
@@ -1027,6 +1031,8 @@ def addOnePortProbe(cls,probe=pc.GSGProbe):
             self.gnd_routing_width=100.0
 
             self.gnd_routing_layer=(self.probe.layer,LayoutDefault.layerBottom)
+
+            self.sig_routing_layer=(self.probe.layer,)
 
         def draw(self):
 
@@ -1040,15 +1046,9 @@ def addOnePortProbe(cls,probe=pc.GSGProbe):
 
             probe_ref=cell.add_ref(probe_cell, alias="Probe")
 
-            sigtrace=connect_ports(
-                device_cell,
-                tag='bottom',
-                layers=(self.idt.layer,),
-                distance=self.idt.probe_distance.y/2)
+            tot_distance=self.idt.probe_distance.y
 
-            cell.absorb(cell<<sigtrace)
-
-            pt._copy_ports(sigtrace,cell)
+            self._add_signal_connection(cell,'bottom')
 
             self._move_probe_ref(cell)
 
@@ -1077,6 +1077,40 @@ def addOnePortProbe(cls,probe=pc.GSGProbe):
             cell.add_ref(routing_cell,alias=self.name+"GroundTrace")
 
             return cell
+
+        def _add_signal_connection(self,cell,tag):
+
+            device_cell=cell["Device"]
+
+            tot_distance=self.idt.probe_distance.y
+
+            ports=pt._find_ports(device_cell,tag,depth=0)
+
+            if len(ports)>1:
+
+                port_mid=pt._get_centroid_ports(ports)
+
+                if tot_distance-port_mid.width>0:
+
+                    sigtrace=connect_ports(
+                        device_cell,
+                        tag=tag,
+                        layers=self.sig_routing_layer,
+                        distance=(tot_distance-port_mid.width)/2)
+
+                    tot_distance=(tot_distance-port_mid.width)/2
+
+                else:
+
+                    raise ValueError("pm.addOnePortProbe() error: probe distance impossible")
+
+                cell.absorb(cell<<sigtrace)
+
+                pt._copy_ports(sigtrace,cell)
+
+            else:
+
+                cell.add_port(port=device_cell.ports[tag])
 
         def export_all(self):
 
@@ -1244,23 +1278,25 @@ def addOnePortProbe(cls,probe=pc.GSGProbe):
 
             sig_trace=self.sigtrace
 
-            probe=self.probe
-
-            sig_trace.layer=(self.idt.layer,)
+            sig_trace.layer=self.sig_routing_layer
 
             sig_trace.source=cell["Probe"].ports["SigN"]
 
             sig_trace.destination=cell.ports["bottom"]
 
-            if cell.ports["bottom"].width>cell["Probe"].ports["SigN"].width:
+            sig_trace.trace_width=self._calc_sig_routing_width(sig_trace.source,sig_trace.destination)
 
-                sig_trace.trace_width=cell["Probe"].ports["SigN"].width
+            sig_trace.set_auto_overhang(True)
+
+        def _calc_sig_routing_width(self,pad_port,device_port):
+
+            if device_port.width>pad_port.width:
+
+                return pad_port.width
 
             else:
 
-                sig_trace.trace_width=cell.ports["bottom"].width
-
-            sig_trace.set_auto_overhang(True)
+                return device_port.width
 
         def _draw_signal_routing(self):
 
@@ -1306,33 +1342,21 @@ def addTwoPortProbe(cls,probe=makeTwoPortProbe(pc.GSGProbe)):
 
             probe_ref=cell.add_ref(probe_cell, alias="Probe")
 
-            bottom_conn=connect_ports(
-                device_cell,
-                tag='bottom',
-                layers=(self.idt.layer,),
-                distance=self.idt.probe_distance.y/2)
+            for tag in ('top','bottom'):
 
-            top_conn=connect_ports(
-                device_cell,
-                tag='top',
-                layers=(self.idt.layer,),
-                distance=self.idt.probe_distance.y/2)
-
-            pt._copy_ports(bottom_conn,cell)
-
-            pt._copy_ports(top_conn,cell)
+                self._add_signal_connection(cell,tag)
 
             self._move_probe_ref(cell)
-
-            cell.add(top_conn)
-
-            cell.add(bottom_conn)
 
             self._setup_ground_routing(device_ref,probe_ref,'side')
 
             routing_cell=self._draw_ground_routing()
 
+            self._setup_signal_routing(cell)
+
             routing_cell.add(self._draw_device_grounds(device_ref,probe_ref,'side'))
+
+            routing_cell.add(self._draw_signal_routing())
 
             _add_default_ground_vias(self,routing_cell)
 
@@ -1370,62 +1394,42 @@ def addTwoPortProbe(cls,probe=makeTwoPortProbe(pc.GSGProbe)):
 
                 raise ValueError("To be implemented")
 
-        def _setup_ground_routing(self,device_cell,probe_cell,label):
+        @staticmethod
+        def get_components():
 
-            bbox=super()._bbox_mod(device_cell.bbox)
+            supercomp=copy(cls.get_components())
 
-            if isinstance(self.probe,pc.GSGProbe):
+            if issubclass(probe,pc.GSGProbe):
 
-                #ground routing setup
-                for index,groundroute in enumerate([self.gndlefttrace,self.gndrighttrace]):
-
-                    groundroute.layer=self.gnd_routing_layer
-
-                    groundroute.clearance=bbox
-
-                    groundroute.trace_width=self.gnd_routing_width
-
-                    if index==0:
-
-                        groundroute.side='left'
-
-                        if label=='straight':
-
-                            groundroute.source=(probe_cell.ports['GroundLXN_1'],)
-
-                            groundroute.destination=(probe_cell.ports['GroundLXS_2'],)
-
-                        elif label=='side':
-
-                            groundroute.source=(probe_cell.ports['GroundLXW_1'],)
-
-                            groundroute.destination=(probe_cell.ports['GroundLXW_2'],)
-
-                    elif index==1:
-
-                        groundroute.side='right'
-
-                        if label=='straight':
-
-                            groundroute.source=(probe_cell.ports['GroundRXN_1'],)
-
-                            groundroute.destination=(probe_cell.ports['GroundRXS_2'],)
-
-                        elif label=='side':
-
-                            groundroute.source=(probe_cell.ports['GroundRXE_1'],)
-
-                            groundroute.destination=(probe_cell.ports['GroundRXE_2'],)
-
-                    # groundroute.set_auto_overhang(True)
-
-            elif isinstance(self.probe,pc.GSProbe):
-
-                raise ValueError("OnePortProbed with GSprobe to be implemented ")
+                supercomp.update({
+                    "Probe":probe,
+                    "Sig1Trace":pc.Routing,
+                    "Sig2Trace":pc.Routing,
+                    "GndLeftTrace":pc.MultiRouting,
+                    "GndRightTrace":pc.MultiRouting,
+                    "GndVia":pc.Via})
 
             else:
 
-                raise ValueError("OnePortProbed without GSG/GSprobe to be implemented ")
+                raise ValueError("To be implemented")
+
+            return supercomp
+
+        def get_params(self):
+
+            df=super().get_params()
+
+            modkeys=[*df.keys()]
+
+            pt.pop_all_match(modkeys,"Sig1Trace")
+
+            pt.pop_all_match(modkeys,"Sig2Trace")
+
+            pt.pop_all_match(modkeys,"GndLeftTrace")
+
+            pt.pop_all_match(modkeys,"GndRightTrace")
+
+            return {k: df[k] for k in modkeys }
 
         def _draw_device_grounds(self,device_cell,probe_cell,label):
 
@@ -1499,6 +1503,91 @@ def addTwoPortProbe(cls,probe=makeTwoPortProbe(pc.GSGProbe)):
 
             return output_cell
 
+        def _setup_ground_routing(self,device_cell,probe_cell,label):
+
+            bbox=super()._bbox_mod(device_cell.bbox)
+
+            if isinstance(self.probe,pc.GSGProbe):
+
+                #ground routing setup
+                for index,groundroute in enumerate([self.gndlefttrace,self.gndrighttrace]):
+
+                    groundroute.layer=self.gnd_routing_layer
+
+                    groundroute.clearance=bbox
+
+                    groundroute.trace_width=self.gnd_routing_width
+
+                    if index==0:
+
+                        groundroute.side='left'
+
+                        if label=='straight':
+
+                            groundroute.source=(probe_cell.ports['GroundLXN_1'],)
+
+                            groundroute.destination=(probe_cell.ports['GroundLXS_2'],)
+
+                        elif label=='side':
+
+                            groundroute.source=(probe_cell.ports['GroundLXW_1'],)
+
+                            groundroute.destination=(probe_cell.ports['GroundLXW_2'],)
+
+                    elif index==1:
+
+                        groundroute.side='right'
+
+                        if label=='straight':
+
+                            groundroute.source=(probe_cell.ports['GroundRXN_1'],)
+
+                            groundroute.destination=(probe_cell.ports['GroundRXS_2'],)
+
+                        elif label=='side':
+
+                            groundroute.source=(probe_cell.ports['GroundRXE_1'],)
+
+                            groundroute.destination=(probe_cell.ports['GroundRXE_2'],)
+
+                    # groundroute.set_auto_overhang(True)
+
+            elif isinstance(self.probe,pc.GSProbe):
+
+                raise ValueError("OnePortProbed with GSprobe to be implemented ")
+
+            else:
+
+                raise ValueError("OnePortProbed without GSG/GSprobe to be implemented ")
+
+        def _setup_signal_routing(self,cell):
+
+            probe=cell["Probe"]
+
+            for sig_trace in (self.sig1trace,self.sig2trace):
+
+                sig_trace.layer=self.sig_routing_layer
+
+                sig_trace.set_auto_overhang(True)
+
+            self.sig1trace.source=probe.ports["SigN_1"]
+
+            self.sig1trace.destination=cell.ports["bottom"]
+
+            self.sig2trace.source=probe.ports["SigS_2"]
+
+            self.sig2trace.destination=cell.ports["top"]
+
+        def _draw_signal_routing(self):
+
+            cell=Device()
+
+            cell.add(self.sig1trace.draw())
+
+            cell.add(self.sig2trace.draw())
+
+            return cell
+
     TwoPortProbed.__name__=f"TwoPortProbed {cls.__name__} with {probe.__name__}"
 
     return TwoPortProbed
@@ -1536,37 +1625,22 @@ def connect_ports(
 
     ports=pt._find_ports(cell,tag,depth=0)
 
-    if not ports:
+    ports_centroid=pt._get_centroid_ports(ports)
 
-        raise ValueError(f"pm.connect_ports(): no ports with tag {tag} in device {cell.name}")
+    if len(ports)==1:
 
-    ports_centroid=pt._get_centroid(*[pt.Point(x.midpoint) for x in ports])
+        raise ValueError("pm.connect_ports() : len(ports) must be >1 ")
 
-    ports_width=np.average([x.width for x in ports])
+    port_mid_norm=pt.Point(ports_centroid.normal[1])-pt.Point(ports_centroid.normal[0])
 
-    ports_orientation=np.average([x.orientation for x in ports])
+    midpoint_projected=Point(ports_centroid.midpoint)+port_mid_norm*(distance+ports_centroid.width)
 
-    port_mid=Port(
-        orientation=ports_orientation,
-        width=ports_width,
-        midpoint=ports_centroid.coord)
-
-    port_mid_norm=pt.Point(port_mid.normal[1])-pt.Point(port_mid.normal[0])
-
-    if distance-ports_width>0:
-
-        midpoint_projected=ports_centroid+port_mid_norm*(distance-ports_width)
-        pad_side=ports_width
-
-    else:
-
-        midpoint_projected=ports_centroid+port_mid_norm*(distance/2)
-        pad_side=distance/2
+    pad_side=ports_centroid.width
 
     new_port=Port(
         name=tag,
-        orientation=ports_orientation,
-        width=ports_width,
+        orientation=ports_centroid.orientation,
+        width=ports_centroid.width,
         midpoint=midpoint_projected.coord)
 
     for i,l in enumerate(layers):
@@ -1580,7 +1654,7 @@ def connect_ports(
         else:
 
             pad.absorb(
-                pg.compass(
+                pad<<pg.compass(
                     size=(pad_side,pad_side),
                     layer=l
                     )
@@ -1592,33 +1666,25 @@ def connect_ports(
 
     pad_ref.connect('S',new_port)
 
-    if len(ports)==1:
+    if len(ports)%2==0:
 
-        output_cell.add_port(port=ports[0],name=tag)
+        mid_index=int(len(ports)/2-1)
 
-        return output_cell
+        left_ports=ports[0:mid_index+1]
+
+        right_ports=ports[mid_index+1:]
+
+        center_port=[]
 
     else:
 
-        if len(ports)%2==0:
+        mid_index=int((len(ports)-1)/2)
 
-            mid_index=int(len(ports)/2-1)
+        left_ports=ports[0:mid_index]
 
-            left_ports=ports[0:mid_index+1]
+        right_ports=ports[mid_index+1:]
 
-            right_ports=ports[mid_index+1:]
-
-            center_port=[]
-
-        else:
-
-            mid_index=int((len(ports)-1)/2)
-
-            left_ports=ports[0:mid_index]
-
-            right_ports=ports[mid_index+1:]
-
-            center_port=ports[mid_index]
+        center_port=ports[mid_index]
 
     dest_ports=output_cell.get_ports()
 
@@ -1626,9 +1692,9 @@ def connect_ports(
 
     connector.layer=layers
 
-    if distance-ports_width>0:
+    if distance-ports_centroid.width>0:
 
-        connector.trace_width=ports_width
+        connector.trace_width=ports_centroid.width
 
         connector.set_auto_overhang(True)
 
@@ -1641,7 +1707,7 @@ def connect_ports(
 
     connector.source=tuple(left_ports)
 
-    if ports_orientation==90:
+    if ports_centroid.orientation==90:
 
         connector.destination=(output_cell["Pad"].ports["W"],)
 
@@ -1651,11 +1717,11 @@ def connect_ports(
 
     output_cell.add(connector.draw())
 
-    #connect left ports
+    #connect right ports
 
     connector.source=tuple(right_ports)
 
-    if ports_orientation==90:
+    if ports_centroid.orientation==90:
 
         connector.destination=(output_cell["Pad"].ports["E"],)
 
@@ -1688,10 +1754,20 @@ def add_pads(cell,pad,tag='top',exact=False):
 
         pad : pt.LayoutPart
 
-        tags : str
+        tags : str (or iterable of str)
             used to find ports
     '''
-    ports=pt._find_ports(cell,tag,depth=0,exact=exact)
+    if not isinstance(tag,str):
+
+        ports=[]
+
+        for t in tag:
+
+            ports.extend(pt._find_ports(cell,t,depth=0,exact=exact))
+
+    else:
+
+        ports=pt._find_ports(cell,tag,depth=0,exact=exact)
 
     for port in ports:
 
@@ -1760,6 +1836,8 @@ def add_vias(cell : Device, bbox, via : pt.LayoutPart, spacing : float = 0,toler
     # return cell_out
 
 def _add_default_ground_vias(self,cell):
+
+    return
 
     if hasattr(self,'gndvia'):
 
