@@ -865,6 +865,12 @@ class MultiAnchor(Anchor):
 
         pt._copy_ports(anchor_metal,cell)
 
+        if not self.etch_choice:
+
+            cell.remove(rx_etch)
+
+            cell.remove(lx_etch)
+
         if self.n>1:
 
             if self.n%2==1:
@@ -1332,7 +1338,7 @@ class LFERes(pt.LayoutPart):
 
         self.bus.layer=self.idt.layer
 
-        self.etchpit.active_area=pt.Point(self.idt.active_area.x,\
+        self.etchpit.active_area=pt.Point(self.idt.active_area.x,
             self.idt.active_area.y+2*self.bus.size.y+self.anchor.etch_margin.y*2)
 
         self.anchor.etch_x=self.etchpit.x*2+self.etchpit.active_area.x
@@ -1744,8 +1750,8 @@ class TFERes(LFERes):
 
         bus_ref=cell.add_ref(bus_bottom.draw(),alias='BottomBus')
 
-        bus_ref.move(origin=(0,0),\
-        destination=(0,-self.bus.size.y))
+        bus_ref.move(
+            destination=(0,-self.bus.size.y))
 
         anchor_bottom=deepcopy(self.anchor)
 
@@ -1756,14 +1762,14 @@ class TFERes(LFERes):
         anchor_ref=cell.add_ref(anchor_bottom.draw(),alias="BottomAnchor_Top")
 
         anchor_ref.connect(anchor_ref.ports['top'],
-            destination=cell['TopCell'].ports['top'])
+            destination=idt_ref.ports['top'],overlap=-self.bus.size.y)
 
         anchor_ref.rotate(center=anchor_ref.ports['top'].midpoint,angle=180)
 
         anchor_ref_2=cell.add_ref(anchor_bottom.draw(),alias="BottomAnchor_Top")
 
         anchor_ref_2.connect(anchor_ref_2.ports['top'],
-            destination=cell['TopCell'].ports['bottom'])
+            destination=idt_ref.ports['bottom'],overlap=-self.bus.size.y)
 
         anchor_ref_2.rotate(center=anchor_ref_2.ports['top'].midpoint,angle=180)
 

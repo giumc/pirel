@@ -12,17 +12,17 @@ import pirel.addOns.standard_parts as ps5
 # print(a)
 # a.view()
 
-ma=pc.MultiAnchor()
-
-ma.n=3
-
-ma.etch_x=100
-
-ma.size=pt.Point(10,30)
-ma.metalized=pt.Point(5,32)
-ma.spacing=pt.Point(20,0)
-print(ma)
-ma.view()
+# ma=pc.MultiAnchor()
+#
+# ma.n=3
+#
+# ma.etch_x=100
+#
+# ma.size=pt.Point(10,30)
+# ma.metalized=pt.Point(5,32)
+# ma.spacing=pt.Point(20,0)
+# print(ma)
+# ma.view()
 #
 # idt=pc.IDTSingle()
 # idt.view()
@@ -58,3 +58,12 @@ ma.view()
 # print(lferes)
 
 # lferes.view()
+
+tfe=pc.TFERes()
+
+tfe.view()
+
+exit()
+probedtfe=pm.addTwoPortProbe(pc.TFERes)()
+
+probedtfe.view()

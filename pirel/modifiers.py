@@ -1046,8 +1046,6 @@ def addOnePortProbe(cls,probe=pc.GSGProbe):
 
             probe_ref=cell.add_ref(probe_cell, alias="Probe")
 
-            tot_distance=self.idt.probe_distance.y
-
             self._add_signal_connection(cell,'bottom')
 
             self._move_probe_ref(cell)
@@ -1082,7 +1080,7 @@ def addOnePortProbe(cls,probe=pc.GSGProbe):
 
             device_cell=cell["Device"]
 
-            tot_distance=self.idt.probe_distance.y
+            tot_distance=self.probe_dut_distance.y
 
             ports=pt._find_ports(device_cell,tag,depth=0)
 
@@ -1098,11 +1096,9 @@ def addOnePortProbe(cls,probe=pc.GSGProbe):
                         layers=self.sig_routing_layer,
                         distance=(tot_distance-port_mid.width)/2)
 
-                    tot_distance=(tot_distance-port_mid.width)/2
-
                 else:
 
-                    raise ValueError("pm.addOnePortProbe() error: probe distance impossible")
+                    raise ValueError("pm.addOnePortProbe() error: probe distance too small for anchor size")
 
                 cell.absorb(cell<<sigtrace)
 
@@ -1342,6 +1338,8 @@ def addTwoPortProbe(cls,probe=makeTwoPortProbe(pc.GSGProbe)):
 
             probe_ref=cell.add_ref(probe_cell, alias="Probe")
 
+            import pdb; pdb.set_trace()
+
             for tag in ('top','bottom'):
 
                 self._add_signal_connection(cell,tag)
@@ -1376,7 +1374,7 @@ def addTwoPortProbe(cls,probe=makeTwoPortProbe(pc.GSGProbe)):
 
             self.probe.offset=pt.Point(
                 (top_port_midpoint.x-bottom_port_midpoint.x),
-                (top_port_midpoint.y-bottom_port_midpoint.y)+2*self.idt.probe_distance.y)
+                (top_port_midpoint.y-bottom_port_midpoint.y)+2*self.probe_dut_distance.y)
 
         def _draw_ground_routing(self):
 
@@ -1625,6 +1623,8 @@ def connect_ports(
 
     ports=pt._find_ports(cell,tag,depth=0)
 
+    ports.sort(key=lambda x: x.midpoint[0])
+
     ports_centroid=pt._get_centroid_ports(ports)
 
     if len(ports)==1:
@@ -1633,7 +1633,7 @@ def connect_ports(
 
     port_mid_norm=pt.Point(ports_centroid.normal[1])-pt.Point(ports_centroid.normal[0])
 
-    midpoint_projected=Point(ports_centroid.midpoint)+port_mid_norm*(distance+ports_centroid.width)
+    midpoint_projected=Point(ports_centroid.midpoint)+port_mid_norm*(distance)
 
     pad_side=ports_centroid.width
 
@@ -1690,19 +1690,22 @@ def connect_ports(
 
     connector=pc.MultiRouting()
 
+    connector.set_auto_overhang(True)
+
     connector.layer=layers
 
-    if distance-ports_centroid.width>0:
+    # if distance-ports_centroid.width>0:
 
-        connector.trace_width=ports_centroid.width
+    connector.trace_width=ports_centroid.width
 
-        connector.set_auto_overhang(True)
+    connector.set_auto_overhang(True)
 
-    else:
-
-        connector.trace_width=None
-        connector.overhang=distance/2
-
+    # else:
+    #
+    #     connector.trace_width=None
+    #
+    #     connector.overhang=distance/2
+    #
     #connect left ports
 
     connector.source=tuple(left_ports)
