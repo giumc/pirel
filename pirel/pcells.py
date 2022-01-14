@@ -1762,16 +1762,16 @@ class TFERes(LFERes):
         anchor_ref=cell.add_ref(anchor_bottom.draw(),alias="BottomAnchor_Top")
 
         anchor_ref.connect(anchor_ref.ports['top'],
-            destination=idt_ref.ports['top'],overlap=-self.bus.size.y)
+            destination=idt_ref.ports['top'],overlap=-self.bus.size.y-self.idt.y_offset)
 
-        anchor_ref.rotate(center=anchor_ref.ports['top'].midpoint,angle=180)
+        # anchor_ref.rotate(center=anchor_ref.ports['top'].midpoint,angle=180)
 
         anchor_ref_2=cell.add_ref(anchor_bottom.draw(),alias="BottomAnchor_Top")
 
         anchor_ref_2.connect(anchor_ref_2.ports['top'],
-            destination=idt_ref.ports['bottom'],overlap=-self.bus.size.y)
+            destination=idt_ref.ports['bottom'],overlap=-self.bus.size.y-self.idt.y_offset)
 
-        anchor_ref_2.rotate(center=anchor_ref_2.ports['top'].midpoint,angle=180)
+        # anchor_ref_2.rotate(center=anchor_ref_2.ports['top'].midpoint,angle=180)
 
         pt._copy_ports(lfe_cell,cell)
 
