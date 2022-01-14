@@ -260,9 +260,10 @@ def addLargeGround(probe):
 
             cell=pg.deepcopy(oldprobe)
 
-            groundpad=pg.compass(
-                size=(self.ground_size,self.ground_size),
-                layer=self.layer)
+            groundpad=pt._draw_multilayer(
+                'compass',
+                layers=self.ground_layer,
+                size=(self.ground_size,self.ground_size))
 
             [_,_,ul,ur,*_]=pt._get_corners(groundpad)
 
@@ -282,7 +283,7 @@ def addLargeGround(probe):
 
                     groundref=cell.add_ref(groundpad,alias=alias)
 
-                    groundref.move(origin=ur.coord,\
+                    groundref.move(origin=ur.coord,
                     destination=dest)
 
                     pt._copy_ports(groundref,cell,prefix="GroundLX")
@@ -301,8 +302,9 @@ def addLargeGround(probe):
 
                     groundref=cell.add_ref(groundpad,alias=alias)
 
-                    groundref.move(origin=ul.coord,\
-                    destination=dest)
+                    groundref.move(
+                        origin=ul.coord,
+                        destination=dest)
 
                     for portname in cell[alias].ports:
 
@@ -311,8 +313,6 @@ def addLargeGround(probe):
                     pt._copy_ports(groundref,cell,prefix="GroundRX")
 
             return cell
-
-    # LargeGnd.draw=pt.cached(LargeGnd)(LargeGnd.draw)
 
     LargeGrounded.__name__=" ".join([probe.__name__,"w Large Ground"])
 
@@ -1010,29 +1010,17 @@ def addOnePortProbe(cls,probe=pc.GSGProbe):
         -----------
             ground_conn_style : ('straight','side')
 
-            gnd_routing_width: float
-
-            sig_routing_layer: tuple
-
-            gnd_routing_layer: tuple.
+            gnd_routing_width: float.
 
         '''
 
         gnd_routing_width=LayoutParamInterface()
-
-        gnd_routing_layer=LayoutParamInterface()
-
-        sig_routing_layer=LayoutParamInterface()
 
         def __init__(self,*args,**kwargs):
 
             cls.__init__(self,*args,**kwargs)
 
             self.gnd_routing_width=100.0
-
-            self.gnd_routing_layer=(self.probe.layer,LayoutDefault.layerBottom)
-
-            self.sig_routing_layer=(self.probe.layer,)
 
         def draw(self):
 
@@ -1080,27 +1068,35 @@ def addOnePortProbe(cls,probe=pc.GSGProbe):
 
             device_cell=cell["Device"]
 
-            tot_distance=self.probe_dut_distance.y
-
             ports=pt._find_ports(device_cell,tag,depth=0)
+
+            distance=self.probe_dut_distance.y-self.probe_conn_distance.y
 
             if len(ports)>1:
 
                 port_mid=pt._get_centroid_ports(ports)
 
-                if tot_distance-port_mid.width>0:
+                if distance-port_mid.width>0:
 
                     sigtrace=connect_ports(
                         device_cell,
                         tag=tag,
-                        layers=self.sig_routing_layer,
-                        distance=(tot_distance-port_mid.width)/2)
+                        layers=self.probe.sig_layer,
+                        distance=distance-port_mid.width,
+                        metal_width=port_mid.width)
 
                 else:
 
-                    raise ValueError("pm.addOnePortProbe() error: probe distance too small for anchor size")
+                    sigtrace=connect_ports(
+                        device_cell,
+                        tag=tag,
+                        layers=self.probe.sig_layer,
+                        distance=0,
+                        metal_width=distance)
 
                 cell.absorb(cell<<sigtrace)
+
+                sigtrace.ports[tag].width=self.probe.size.x
 
                 pt._copy_ports(sigtrace,cell)
 
@@ -1153,35 +1149,28 @@ def addOnePortProbe(cls,probe=pc.GSGProbe):
 
             if hasattr(self,'pad'):
 
-                if self.pad.size+self.pad.distance>base_dist.y:
-
-                    return pt.Point(base_dist.x,self.pad.size+self.pad.distance)
-
-                else:
-
-                    return base_dist
+                return pt.Point(base_dist.x,self.pad.size+self.pad.distance+base_dist.y)
 
             elif hasattr(self.probe,'pad'):
 
-                if self.probe.pad.size+self.probe.pad.distance>base_dist.y:
-
-                    return pt.Point(base_dist.x,self.probe.pad.size+self.probe.pad.distance)
-
-                else:
-
-                    return base_dist
+                return pt.Point(base_dist.x,self.probe.pad.size+self.probe.pad.distance+base_dist.y)
 
             else:
 
                 return base_dist
+
+        @property
+        def probe_conn_distance(self):
+
+            tot_distance=self.probe_dut_distance
+
+            return pt.Point(tot_distance.x,tot_distance.y*3/4)
 
         def _move_probe_ref(self,cell):
 
             device_ref=cell["Device"]
 
             probe_ref=cell["Probe"]
-
-            probe_dut_distance=self.probe_dut_distance
 
             bottom_ports=pt._find_ports(cell,'bottom',depth=0,exact=True)
 
@@ -1196,7 +1185,7 @@ def addOnePortProbe(cls,probe=pc.GSGProbe):
             probe_ref.connect(
                 port=probe_port,
                 destination=bottom_ports[0],
-                overlap=-probe_dut_distance.y/2)
+                overlap=-self.probe_conn_distance.y)
 
         def _setup_ground_routing(self,cell,label):
 
@@ -1210,7 +1199,7 @@ def addOnePortProbe(cls,probe=pc.GSGProbe):
 
                 for index,groundroute in enumerate([self.gndlefttrace,self.gndrighttrace]):
 
-                    groundroute.layer=self.gnd_routing_layer
+                    groundroute.layer=self.probe.ground_layer
 
                     groundroute.clearance=bbox
 
@@ -1274,7 +1263,7 @@ def addOnePortProbe(cls,probe=pc.GSGProbe):
 
             sig_trace=self.sigtrace
 
-            sig_trace.layer=self.sig_routing_layer
+            sig_trace.layer=self.probe.sig_layer
 
             sig_trace.source=cell["Probe"].ports["SigN"]
 
@@ -1288,11 +1277,11 @@ def addOnePortProbe(cls,probe=pc.GSGProbe):
 
             if device_port.width>pad_port.width:
 
-                return pad_port.width
+                return device_port.width
 
             else:
 
-                return device_port.width
+                return None
 
         def _draw_signal_routing(self):
 
@@ -1337,8 +1326,6 @@ def addTwoPortProbe(cls,probe=makeTwoPortProbe(pc.GSGProbe)):
             probe_cell=self.probe.draw()
 
             probe_ref=cell.add_ref(probe_cell, alias="Probe")
-
-            import pdb; pdb.set_trace()
 
             for tag in ('top','bottom'):
 
@@ -1510,7 +1497,7 @@ def addTwoPortProbe(cls,probe=makeTwoPortProbe(pc.GSGProbe)):
                 #ground routing setup
                 for index,groundroute in enumerate([self.gndlefttrace,self.gndrighttrace]):
 
-                    groundroute.layer=self.gnd_routing_layer
+                    groundroute.layer=self.probe.ground_layer
 
                     groundroute.clearance=bbox
 
@@ -1564,7 +1551,7 @@ def addTwoPortProbe(cls,probe=makeTwoPortProbe(pc.GSGProbe)):
 
             for sig_trace in (self.sig1trace,self.sig2trace):
 
-                sig_trace.layer=self.sig_routing_layer
+                sig_trace.layer=self.probe.sig_layer
 
                 sig_trace.set_auto_overhang(True)
 
@@ -1572,9 +1559,13 @@ def addTwoPortProbe(cls,probe=makeTwoPortProbe(pc.GSGProbe)):
 
             self.sig1trace.destination=cell.ports["bottom"]
 
+            self.sig1trace.trace_width=self._calc_sig_routing_width(self.sig1trace.source,self.sig1trace.destination)
+
             self.sig2trace.source=probe.ports["SigS_2"]
 
             self.sig2trace.destination=cell.ports["top"]
+
+            self.sig2trace.trace_width=self._calc_sig_routing_width(self.sig2trace.source,self.sig2trace.destination)
 
         def _draw_signal_routing(self):
 
@@ -1596,7 +1587,8 @@ def connect_ports(
     cell : Device,
     tag : str ='top',
     layers : tuple = (LayoutDefault.layerTop,),
-    distance : float = 10.0):
+    distance : float = 10.0,
+    metal_width: float= 10.0):
     ''' connects all the ports in the cell with name matching a tag.
 
     Parameters:
@@ -1633,7 +1625,7 @@ def connect_ports(
 
     port_mid_norm=pt.Point(ports_centroid.normal[1])-pt.Point(ports_centroid.normal[0])
 
-    midpoint_projected=Point(ports_centroid.midpoint)+port_mid_norm*(distance)
+    midpoint_projected=Point(ports_centroid.midpoint)+port_mid_norm*(distance+metal_width)
 
     pad_side=ports_centroid.width
 
@@ -1643,110 +1635,27 @@ def connect_ports(
         width=ports_centroid.width,
         midpoint=midpoint_projected.coord)
 
-    for i,l in enumerate(layers):
-
-        if i==0:
-
-            pad=pg.compass(
-                size=(pad_side,pad_side),
-                layer=l)
-
-        else:
-
-            pad.absorb(
-                pad<<pg.compass(
-                    size=(pad_side,pad_side),
-                    layer=l
-                    )
-                )
-
     output_cell=Device()
 
-    pad_ref=output_cell.add_ref(pad,alias="Pad")
+    for p in ports:
 
-    pad_ref.connect('S',new_port)
+        straight_conn=output_cell<<pt._draw_multilayer(
+            'compass',
+            layers,size=(p.width,abs(midpoint_projected.y-p.midpoint[1])))
 
-    if len(ports)%2==0:
+        straight_conn.connect("S",p)
 
-        mid_index=int(len(ports)/2-1)
+    cross_conn=output_cell<<pt._draw_multilayer(
+        'compass',
+        layers,size=(output_cell.xsize,metal_width))
 
-        left_ports=ports[0:mid_index+1]
+    cross_conn.connect('S',new_port,overlap=metal_width)
 
-        right_ports=ports[mid_index+1:]
+    output=pt.join(output_cell)
 
-        center_port=[]
+    output.add_port(new_port)
 
-    else:
-
-        mid_index=int((len(ports)-1)/2)
-
-        left_ports=ports[0:mid_index]
-
-        right_ports=ports[mid_index+1:]
-
-        center_port=ports[mid_index]
-
-    dest_ports=output_cell.get_ports()
-
-    connector=pc.MultiRouting()
-
-    connector.set_auto_overhang(True)
-
-    connector.layer=layers
-
-    # if distance-ports_centroid.width>0:
-
-    connector.trace_width=ports_centroid.width
-
-    connector.set_auto_overhang(True)
-
-    # else:
-    #
-    #     connector.trace_width=None
-    #
-    #     connector.overhang=distance/2
-    #
-    #connect left ports
-
-    connector.source=tuple(left_ports)
-
-    if ports_centroid.orientation==90:
-
-        connector.destination=(output_cell["Pad"].ports["W"],)
-
-    else:
-
-        connector.destination=(output_cell["Pad"].ports["E"],)
-
-    output_cell.add(connector.draw())
-
-    #connect right ports
-
-    connector.source=tuple(right_ports)
-
-    if ports_centroid.orientation==90:
-
-        connector.destination=(output_cell["Pad"].ports["E"],)
-
-    else:
-
-        connector.destination=(output_cell["Pad"].ports["W"],)
-
-    output_cell.add(connector.draw())
-
-    if center_port:
-
-        connector.source=(center_port,)
-
-        connector.destination=(output_cell["Pad"].ports["S"],)
-
-        connector.set_auto_overhang(True)
-
-        output_cell.add(connector.draw())
-
-    output_cell.add_port(port=output_cell["Pad"].ports["N"],name=tag)
-
-    return output_cell
+    return output
 
 def add_pads(cell,pad,tag='top',exact=False):
     ''' add pad designs to a cell, connecting it to selected ports.

@@ -962,11 +962,9 @@ class Via(pt.LayoutPart):
 
         return cell
 
-class GSProbe(pt.LayoutPart):
-    ''' Generates GS pattern.
 
-    Derived from pt.LayoutPart.
-
+class Probe(pt.LayoutPart):
+    '''
     Attributes
     ----------
     size : PyResLayout.pt.Point
@@ -974,22 +972,32 @@ class GSProbe(pt.LayoutPart):
     pitch : float
         probe pitch
 
-    layer : int
-        via layer.
+    sig_layer : tuple of int
+        signal layer
+
+    ground_layer : tuple of int
+        ground layer.
     '''
 
     pitch=pt.LayoutParamInterface()
+
     size=pt.LayoutParamInterface()
 
-    layer=pt.LayoutParamInterface()
+    sig_layer=pt.LayoutParamInterface()
+
+    ground_layer=pt.LayoutParamInterface()
 
     def __init__(self,*args,**kwargs):
 
         super().__init__(*args,**kwargs)
 
-        self.layer=pt.LayoutDefault.GSProbelayer
-        self.pitch=pt.LayoutDefault.GSProbepitch
-        self.size=copy(pt.LayoutDefault.GSProbesize)
+        self.sig_layer=pt.LayoutDefault.Probesiglayer
+        self.ground_layer=pt.LayoutDefault.Probegroundlayer
+        self.pitch=pt.LayoutDefault.Probepitch
+        self.size=pt.LayoutDefault.Probesize
+
+class GSProbe(Probe):
+    ''' Generates GS pattern.'''
 
     def draw(self):
 
@@ -1003,12 +1011,15 @@ class GSProbe(pt.LayoutPart):
 
             # warnings.warn("Pad size too large, capped to pitch*2/3")
 
-        pad_cell=pg.rectangle(size=(pad_x,self.size.y),\
-        layer=self.layer)
+        pad_cell=pt._draw_multilayer(
+            'rectangle',
+            layers=self.sig_layer,
+            size=(pad_x,self.size.y))
 
         cell=Device(self.name)
 
         dp=pt.Point(self.pitch,0)
+
         pad_gnd_sx=cell<<pad_cell
         pad_sig=cell<<pad_cell
 
@@ -1024,34 +1035,8 @@ class GSProbe(pt.LayoutPart):
 
         return cell
 
-class GSGProbe(pt.LayoutPart):
-    ''' Generates GSG pattern.
-
-    Derived from pt.LayoutPart.
-
-    Attributes
-    ----------
-    size : PyResLayout.pt.Point
-
-    pitch : float
-        probe pitch
-
-    layer : int
-        via layer.
-    '''
-
-    pitch=pt.LayoutParamInterface()
-    size=pt.LayoutParamInterface()
-    layer=pt.LayoutParamInterface()
-
-    def __init__(self,*args,**kwargs):
-
-        super().__init__(*args,**kwargs)
-
-        self.layer=pt.LayoutDefault.GSGProbelayer
-        self.pitch=pt.LayoutDefault.GSGProbepitch
-        self.size=pt.LayoutDefault.GSGProbesize
-        # self.__class__.draw=cached(self.__class__)(self.__class__.draw)
+class GSGProbe(Probe):
+    ''' Generates GSG pattern.'''
 
     def draw(self):
 
@@ -1065,20 +1050,26 @@ class GSGProbe(pt.LayoutPart):
 
             # warnings.warn("Pad size too large, capped to pitch*9/10")
 
-        pad_cell=pg.compass(
-            size=(pad_x,self.size.y),
-            layer=self.layer)
+        sig_cell=pt._draw_multilayer(
+            'compass',
+            layers=self.sig_layer,
+            size=(pad_x,self.size.y))
+
+        gnd_cell=pt._draw_multilayer(
+            'compass',
+            layers=self.ground_layer,
+            size=(pad_x,self.size.y))
 
         cell=Device(self.name)
 
         dp=pt.Point(self.pitch,0)
 
-        pad_gnd_lx=cell.add_ref(pad_cell,alias='GroundLX')
+        pad_gnd_lx=cell.add_ref(gnd_cell,alias='GroundLX')
 
-        pad_sig=cell.add_ref(pad_cell,alias='Sig')
+        pad_sig=cell.add_ref(sig_cell,alias='Sig')
         pad_sig.move(destination=dp.coord)
 
-        pad_gnd_rx=cell.add_ref(pad_cell,alias='GroundRX')
+        pad_gnd_rx=cell.add_ref(gnd_cell,alias='GroundRX')
         pad_gnd_rx.move(destination=(2*dp).coord)
 
         pt._copy_ports(pad_sig,cell,prefix='Sig')
@@ -1086,6 +1077,7 @@ class GSGProbe(pt.LayoutPart):
         pt._copy_ports(pad_gnd_lx,cell,prefix='GroundLX')
 
         return cell
+
 
 class Pad(pt.LayoutPart):
     ''' Generates Pad geometry.
@@ -2149,6 +2141,7 @@ class Routing(pt.LayoutPart):
         p2_proj=p2+dt2_norm*self.overhang
 
         return p1,p1_proj,p2_proj,p2
+
     @staticmethod
     def _calculate_overhang(s,d):
 

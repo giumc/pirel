@@ -277,15 +277,12 @@ class LayoutDefault:
     Viashape='square'
     Viasize=20
 
-    #GSGProbe
+    #Probe
 
-    GSGProbelayer=layerTop
-    GSGProbepitch=200.0
-    GSGProbesize=Point(100,100)
-
-    GSProbelayer=GSGProbelayer
-    GSProbepitch=GSGProbepitch
-    GSProbesize=GSGProbesize
+    Probesiglayer=(layerTop,)
+    Probegroundlayer=(layerTop,layerBottom)
+    Probepitch=200.0
+    Probesize=Point(100,100)
 
     #TFERes
 
@@ -311,8 +308,8 @@ class LayoutDefault:
         width=50,orientation=90),\
             Port(name='3',midpoint=(200,80),\
             width=50,orientation=-90))
-    #GSGProbe_LargePad
-    GSGProbe_LargePadground_size=200.0
+    #Probe_LargePad
+    Probe_LargePadground_size=200.0
 
     #ParametricArray
 
@@ -1682,6 +1679,22 @@ def _bbox_to_tuple(bbox):
     except TypeError:
         return bbox
 
+def _draw_multilayer(command,layers=(1,2),*a,**kw):
+
+    for i,l in enumerate(layers):
+
+        if i==0:
+
+            conn=eval('pg.'+command)(layer=l,*a,**kw)
+
+        else:
+
+            conn.absorb(
+                conn<<eval('pg.'+command)(layer=l,*a,**kw))
+
+    return conn
+
+    p.width,abs(midpoint_projected.y-p.midpoint[1]),layers
 def draw_array(
     cell : Device,
     x : int, y : int,

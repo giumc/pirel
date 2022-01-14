@@ -7,7 +7,9 @@ import pirel.addOns.standard_parts as ps5
 
 
 #
+# gsg=pc.GSGProbe()
 
+# gsg.view()
 # a=pc.Anchor()
 # print(a)
 # a.view()
@@ -59,11 +61,12 @@ import pirel.addOns.standard_parts as ps5
 
 # lferes.view()
 
-tfe=pc.TFERes()
-
-tfe.view()
-
-exit()
+# tfe=pc.TFERes()
+#
+# tfe.anchor.n=1
+#
+# tfe.view()
+#
 probedtfe=pm.addTwoPortProbe(pc.TFERes)()
 
 probedtfe.view()
