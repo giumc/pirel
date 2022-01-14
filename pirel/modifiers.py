@@ -623,14 +623,20 @@ def makeNpaths(cls, pad=pc.Pad, n=4, test_device_decorator=None):
             sigconn=connect_ports(
                 cell,
                 tag='top',
-                layers=(self.idt.layer,),
+                layers=self.pad.layer,
                 distance=self.idt.probe_distance.y/2)
 
+            _add_default_ground_vias(self,sigconn)
+
             cell.add(sigconn)
+
+            sigconn.ports['top'].width=self.pad.size
 
             pt._copy_ports(sigconn,cell)
 
             add_pads(cell,self.pad,tag='top',exact=True)
+
+            _add_default_ground_vias(self,cell["Pad"].parent)
 
             out_cell=pg.Device(self.name)
 
@@ -654,19 +660,7 @@ def makeNpaths(cls, pad=pc.Pad, n=4, test_device_decorator=None):
 
                     refs[-1].move(destination=(0,-self.comm_pad_length))
 
-            comm_pad=Device()
-
-            try:
-
-                for l in self.pad.layer:
-
-                    comm_pad<<pg.rectangle(size=(out_cell.xsize,self.comm_pad_length),layer=l)
-
-            except:
-
-                comm_pad<<pg.rectangle(
-                    size=(out_cell.xsize,self.comm_pad_length),
-                    layer=self.pad.layer)
+            comm_pad=pt._draw_multilayer('rectangle',layers=self.pad.layer,size=(out_cell.xsize,self.comm_pad_length))
 
             _add_default_ground_vias(self,comm_pad)
 
@@ -709,7 +703,7 @@ def makeNpaths(cls, pad=pc.Pad, n=4, test_device_decorator=None):
 
             pars=copy(cls.get_params(self))
 
-            tbr=['PadDistance',]
+            tbr=['PadDistance','PadPort']
 
             if hasattr(self,'test'):
 
@@ -1093,6 +1087,8 @@ def addOnePortProbe(cls,probe=pc.GSGProbe):
                         layers=self.probe.sig_layer,
                         distance=0,
                         metal_width=distance)
+
+                _add_default_ground_vias(self,sigtrace)
 
                 cell.absorb(cell<<sigtrace)
 
@@ -1588,7 +1584,7 @@ def connect_ports(
     tag : str ='top',
     layers : tuple = (LayoutDefault.layerTop,),
     distance : float = 10.0,
-    metal_width: float= 10.0):
+    metal_width: float = None):
     ''' connects all the ports in the cell with name matching a tag.
 
     Parameters:
@@ -1622,6 +1618,10 @@ def connect_ports(
     if len(ports)==1:
 
         raise ValueError("pm.connect_ports() : len(ports) must be >1 ")
+
+    if metal_width is None:
+
+        metal_width=ports_centroid.width
 
     port_mid_norm=pt.Point(ports_centroid.normal[1])-pt.Point(ports_centroid.normal[0])
 
@@ -1681,13 +1681,17 @@ def add_pads(cell,pad,tag='top',exact=False):
 
         ports=pt._find_ports(cell,tag,depth=0,exact=exact)
 
+    pad_cell=Device()
+
     for port in ports:
 
         pad.port=port
 
-        pad_ref=cell.add_ref(pad.draw())
+        pad_ref=pad_cell.add_ref(pad.draw())
 
         pad_ref.connect('conn',destination=port)
+
+    cell.add_ref(pad_cell,alias="Pad")
 
 def add_vias(cell : Device, bbox, via : pt.LayoutPart, spacing : float = 0,tolerance: float = 0):
 
@@ -1749,7 +1753,7 @@ def add_vias(cell : Device, bbox, via : pt.LayoutPart, spacing : float = 0,toler
 
 def _add_default_ground_vias(self,cell):
 
-    return
+    # return
 
     if hasattr(self,'gndvia'):
 

@@ -962,7 +962,6 @@ class Via(pt.LayoutPart):
 
         return cell
 
-
 class Probe(pt.LayoutPart):
     '''
     Attributes
@@ -1078,7 +1077,6 @@ class GSGProbe(Probe):
 
         return cell
 
-
 class Pad(pt.LayoutPart):
     ''' Generates Pad geometry.
 
@@ -1147,14 +1145,6 @@ class Pad(pt.LayoutPart):
 
         return 1+self.distance/self.port.width
 
-    def get_params(self):
-
-        df=super().get_params()
-
-        df.pop("Port")
-
-        return df
-
 class MultiLayerPad(Pad):
 
     __pad_base=Pad()
@@ -1179,6 +1169,8 @@ class MultiLayerPad(Pad):
         pars=self.get_params()
 
         pars.pop("Layer")
+
+        import pdb; pdb.set_trace()
 
         p=self.__pad_base
 
