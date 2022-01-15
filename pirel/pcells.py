@@ -1147,8 +1147,6 @@ class Pad(pt.LayoutPart):
 
 class MultiLayerPad(Pad):
 
-    __pad_base=Pad()
-
     def __init__(self,*a,**k):
 
         pt.LayoutPart.__init__(self,*a,**k)
@@ -1164,27 +1162,31 @@ class MultiLayerPad(Pad):
 
     def draw(self):
 
-        cell=pg.Device(self.name)
+        r1=pt._draw_multilayer(
+            "compass",
+            layers=self.layer,
+            size=(self.port.width,self.distance))
 
-        pars=self.get_params()
+        north_port=r1.ports['N']
+        south_port=r1.ports['S']
 
-        pars.pop("Layer")
+        r2=pt._draw_multilayer(
+            'compass',
+            layers=self.layer,
+            size=(self.size,self.size))
 
-        import pdb; pdb.set_trace()
+        sq_ref=r1<<r2
 
-        p=self.__pad_base
+        sq_ref.connect(r2.ports['S'],
+            destination=north_port)
 
-        p.set_params(pars)
+        r1.absorb(sq_ref)
 
-        for layer in self.layer:
+        r1=pt.join(r1)
 
-            p.layer=layer
+        r1.add_port(port=south_port,name='conn')
 
-            cell.absorb(cell<<p.draw())
-
-        cell.add_port(p.draw().ports['conn'])
-
-        return cell
+        return r1
 
 class ViaInPad(MultiLayerPad):
 

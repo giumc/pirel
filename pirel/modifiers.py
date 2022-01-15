@@ -252,7 +252,7 @@ def addLargeGround(probe):
 
             probe.__init__(self,*args,**kwargs)
 
-            self.ground_size=LayoutDefault.GSGProbe_LargePadground_size
+            self.ground_size=LayoutDefault.LargePadground_size
 
         def draw(self):
 

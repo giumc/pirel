@@ -263,13 +263,6 @@ class LayoutDefault:
     #FBERes
 
     FBEResplatelayer=layerBottom
-    #GSProbe
-    GSProbepitch = 150.0
-    GSProbepad_size = Point(80,80)
-
-    GSProbelayer = layerTop
-    GSProberouting = True
-    GSProbespacing = Point(20,30)
 
     #Via
 
@@ -284,6 +277,7 @@ class LayoutDefault:
     Probepitch=200.0
     Probesize=Point(100,100)
 
+    LargePadground_size=250
     #TFERes
 
     TFEResbottomlayer=layerBottom
