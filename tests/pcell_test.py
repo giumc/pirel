@@ -61,12 +61,13 @@ import pirel.addOns.standard_parts as ps5
 
 # lferes.view()
 
-# tfe=pc.TFERes()
-#
-# tfe.anchor.n=1
-#
-# tfe.view()
-#
-probedtfe=pm.addTwoPortProbe(pc.TFERes)()
+tfe=pc.TFERes()
 
-probedtfe.view()
+tfe.anchor.n=2
+
+tfe["AnchorSpacingX"]=30
+tfe.view()
+# #
+# probedtfe=pm.addTwoPortProbe(pc.TFERes)()
+#
+# probedtfe.view()

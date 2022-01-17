@@ -1675,20 +1675,27 @@ def _bbox_to_tuple(bbox):
 
 def _draw_multilayer(command,layers=(1,2),*a,**kw):
 
-    for i,l in enumerate(layers):
+    try:
 
-        if i==0:
+        for i,l in enumerate(layers):
 
-            conn=eval('pg.'+command)(layer=l,*a,**kw)
+            if i==0:
 
-        else:
+                conn=eval('pg.'+command)(layer=l,*a,**kw)
 
-            conn.absorb(
-                conn<<eval('pg.'+command)(layer=l,*a,**kw))
+            else:
 
-    return conn
+                conn.absorb(
+                    conn<<eval('pg.'+command)(layer=l,*a,**kw))
 
-    p.width,abs(midpoint_projected.y-p.midpoint[1]),layers
+        return conn
+        
+    except TypeError:
+
+        conn=eval('pg.'+command)(layer=layers,*a,**kw)
+
+        return conn
+
 def draw_array(
     cell : Device,
     x : int, y : int,

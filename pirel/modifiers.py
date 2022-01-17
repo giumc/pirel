@@ -620,19 +620,25 @@ def makeNpaths(cls, pad=pc.Pad, n=4, test_device_decorator=None):
 
             cell=pg.deepcopy(cls.draw(self))
 
-            sigconn=connect_ports(
-                cell,
-                tag='top',
-                layers=self.pad.layer,
-                distance=self.idt.probe_distance.y/2)
+            try:
 
-            _add_default_ground_vias(self,sigconn)
+                sigconn=connect_ports(
+                    cell,
+                    tag='top',
+                    layers=self.pad.layer,
+                    distance=self.idt.probe_distance.y/2)
 
-            cell.add(sigconn)
+                _add_default_ground_vias(self,sigconn)
 
-            sigconn.ports['top'].width=self.pad.size
+                cell.add(sigconn)
 
-            pt._copy_ports(sigconn,cell)
+                sigconn.ports['top'].width=self.pad.size
+
+                pt._copy_ports(sigconn,cell)
+
+            except ValueError :
+
+                self.pad.distance=self.idt.probe_distance.y
 
             add_pads(cell,self.pad,tag='top',exact=True)
 
@@ -822,20 +828,26 @@ def makeSMDCoupledFilter(cls,smd=pc.SMD):
 
             bottom_coupler_port=unit_cell["Coupler"].ports['S_1']
 
-            trace_cell=connect_ports(
-                unit_cell["Device"],
-                tag='top',
-                layers=self.smd.layer,
-                distance=self.spacing.y/3)
+            try:
 
-            trace_cell.ports['top'].width=self.smd.size.x
+                trace_cell=connect_ports(
+                    unit_cell["Device"],
+                    tag='top',
+                    layers=self.smd.layer,
+                    distance=self.spacing.y/3)
+
+                trace_cell.ports['top'].width=self.smd.size.x
+
+            except ValueError:
+
+                pass
 
             trace_cell.add(
-                pt._make_poly_connection(
-                    trace_cell.ports['top'],
-                    bottom_coupler_port,
-                    layer=self.smd.layer)
-                    )
+            pt._make_poly_connection(
+                trace_cell.ports['top'],
+                bottom_coupler_port,
+                layer=self.smd.layer)
+                )
 
             unit_cell.add(trace_cell)
 
@@ -873,13 +885,19 @@ def makeSMDCoupledFilter(cls,smd=pc.SMD):
 
             ref=cell['n_'+str(n)]
 
-            trace_cell=connect_ports(
-                ref,
-                tag='bottom',
-                layers=self.smd.layer,
-                distance=self.spacing.y/3)
+            try:
 
-            trace_cell.ports['bottom'].width=self.smd.size.x
+                trace_cell=connect_ports(
+                    ref,
+                    tag='bottom',
+                    layers=self.smd.layer,
+                    distance=self.spacing.y/3)
+
+                trace_cell.ports['bottom'].width=self.smd.size.x
+
+            except ValueError :
+
+                pass
 
             routing=pc.PolyRouting()
 
@@ -1064,9 +1082,9 @@ def addOnePortProbe(cls,probe=pc.GSGProbe):
 
             ports=pt._find_ports(device_cell,tag,depth=0)
 
-            distance=self.probe_dut_distance.y-self.probe_conn_distance.y
-
             if len(ports)>1:
+
+                distance=self.probe_dut_distance.y-self.probe_conn_distance.y
 
                 port_mid=pt._get_centroid_ports(ports)
 
@@ -1178,10 +1196,21 @@ def addOnePortProbe(cls,probe=pc.GSGProbe):
 
                 probe_port=probe_ref.ports['SigN_1']
 
-            probe_ref.connect(
-                port=probe_port,
-                destination=bottom_ports[0],
-                overlap=-self.probe_conn_distance.y)
+            top_ports=pt._find_ports(device_ref,'top')
+
+            if len(top_ports)>1:
+
+                probe_ref.connect(
+                    port=probe_port,
+                    destination=bottom_ports[0],
+                    overlap=-self.probe_conn_distance.y)
+
+            else:
+
+                probe_ref.connect(
+                    port=probe_port,
+                    destination=bottom_ports[0],
+                    overlap=-self.probe_dut_distance.y)
 
         def _setup_ground_routing(self,cell,label):
 
@@ -1753,7 +1782,7 @@ def add_vias(cell : Device, bbox, via : pt.LayoutPart, spacing : float = 0,toler
 
 def _add_default_ground_vias(self,cell):
 
-    # return
+    return
 
     if hasattr(self,'gndvia'):
 
