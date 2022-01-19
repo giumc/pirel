@@ -32,12 +32,16 @@ import pirel.addOns.standard_parts as ps5
 # idt=pc.IDT()
 # idt.view()
 
-# tdmr=pc.TwoDMR()
-#
-# tdmr.idt.pitch=10
-# tdmr.anchor.n=1
-#
-# print(tdmr)
+tdmr=pc.TwoDMR()
+
+tdmr.idt.pitch=10
+tdmr.anchor.n=1
+
+print(tdmr)
+
+tdmr.view()
+
+exit()
 #
 # tdmr.view()
 #

@@ -458,26 +458,10 @@ def addPassivation(cls,
 
             master_ref=cell.add_ref(supercell,alias='Device')
 
-
-            rect=pg.rectangle(
-                size=(
-                    master_ref.size[0]*self.passivation_scale.x,
-                    master_ref.size[1]*self.passivation_scale.y))
-
-            rect.move(origin=rect.center,
-                destination=master_ref.center)
-
-            pa=pg.boolean(rect,
-                pg.bbox(
-                    master_ref.bbox+
-                    np.array([(-1*self.passivation_margin).coord, self.passivation_margin.coord])),
-                    operation='xor')
-
-            for l in self.passivation_layer:
-
-                cell.add_polygon(pa.get_polygons(),layer=(l,0))
-
-            [ll,lr,ul,ul,c,n,s,w,e]=pt._get_corners(cell)
+            add_passivation(cell,
+                self.passivation_margin,
+                self.passivation_scale,
+                self.passivation_layer)
 
             if issubclass(cls,pc.SMD):
 
@@ -505,6 +489,10 @@ def addPassivation(cls,
                     top_port,
                     master_ref.ports['N_2'],
                     layer=self.layer))
+
+            else:
+
+                pt._copy_ports(supercell,cell)
 
             return cell
 
@@ -1606,6 +1594,28 @@ def addTwoPortProbe(cls,probe=makeTwoPortProbe(pc.GSGProbe)):
 
     return TwoPortProbed
 
+def addGroundVias(cls):
+
+    class withGroundVia(cls):
+
+        def draw(self):
+
+            cell=pg.deepcopy(cls.draw(self))
+
+            _add_default_ground_vias(self,cell)
+
+            return cell
+
+        @staticmethod
+        def get_components():
+
+            supercomp=copy(cls.get_components())
+
+            supercomp.update({"GndVia":pc.Via})
+
+            return supercomp
+
+    return withGroundVia
 # Device decorator
 
 def connect_ports(
@@ -1780,9 +1790,32 @@ def add_vias(cell : Device, bbox, via : pt.LayoutPart, spacing : float = 0,toler
 
     # return cell_out
 
-def _add_default_ground_vias(self,cell):
+def add_passivation(cell,margin,scale,layer):
 
-    return
+    rect=pg.rectangle(
+        size=(
+            cell.xsize*scale.x,
+            cell.ysize*scale.y))
+
+    margin_rect=pg.rectangle(
+        size=(margin.x*cell.xsize,
+        margin.y*cell.ysize))
+
+    rect.move(origin=rect.center,
+        destination=cell.center)
+
+    margin_rect.move(origin=margin_rect.center,
+            destination=cell.center)
+
+    pa=pg.boolean(rect,
+        margin_rect,
+        operation='xor')
+
+    for l in layer:
+
+            cell.add_polygon(pa.get_polygons(),layer=(l,0))
+
+def _add_default_ground_vias(self,cell):
 
     if hasattr(self,'gndvia'):
 

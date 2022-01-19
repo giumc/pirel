@@ -1419,20 +1419,19 @@ class TwoDMR(pt.LayoutPart):
 
         anchor_cell=self.anchor.draw()
 
-        if not self._stretch_top_margin:
+        anchor_top=cell.add_ref(anchor_cell,alias='AnchorTop')
 
-            anchor_top=cell.add_ref(anchor_cell,alias='AnchorTop')
+        anchor_cell_bottom=pt.join(anchor_cell).remove_polygons(lambda pt,lay,dt : lay==self.anchor.layer )
 
-        else:
+        pt._copy_ports(anchor_top,anchor_cell_bottom)
 
-            anchor_top_dev=deepcopy(self.anchor)
-
-            anchor_top_dev.metalized=pt.Point(anchor_top_dev.size.x-2,anchor_top_dev.metalized.y)
-
-            anchor_top=cell.add_ref(anchor_top_dev.draw(),alias='AnchorTop')
+        anchor_bottom=cell.add_ref(anchor_cell_bottom,alias='AnchorBottom')
 
         anchor_top.connect(anchor_top.ports['top'],
             idt_ref.ports['top'],overlap=-self.bus.size.y)
+
+        anchor_bottom.connect(anchor_bottom.ports['top'],
+            idt_ref.ports['bottom'],overlap=-self.bus.size.y)
 
         if self.anchor.n>1:
 
@@ -1445,6 +1444,7 @@ class TwoDMR(pt.LayoutPart):
         else:
 
             cell.add_port(port=anchor_top.ports['bottom'],name='top')
+            cell.add_port(anchor_bottom.ports['bottom'])
 
         return cell
 
