@@ -1032,9 +1032,9 @@ def addOnePortProbe(cls,probe=pc.GSGProbe):
 
             cell.add_ref(device_cell, alias="Device")
 
-            probe_ref=cell.add_ref(probe_cell, alias="Probe")
-
             self._add_signal_connection(cell,'bottom')
+
+            probe_ref=cell.add_ref(probe_cell, alias="Probe")
 
             self._move_probe_ref(cell)
 
@@ -1151,15 +1151,13 @@ def addOnePortProbe(cls,probe=pc.GSGProbe):
 
             if hasattr(self,'pad'):
 
-                return pt.Point(base_dist.x,self.pad.size+self.pad.distance+base_dist.y)
+                base_dist=pt.Point(base_dist.x,self.pad.size+self.pad.distance+base_dist.y)
 
-            elif hasattr(self.probe,'pad'):
+            if hasattr(self.probe,'pad'):
 
-                return pt.Point(base_dist.x,self.probe.pad.size+self.probe.pad.distance+base_dist.y)
+                base_dist=pt.Point(base_dist.x,self.probe.pad.size+self.probe.pad.distance+base_dist.y)
 
-            else:
-
-                return base_dist
+            return base_dist
 
         @property
         def probe_conn_distance(self):
@@ -1616,6 +1614,40 @@ def addGroundVias(cls):
             return supercomp
 
     return withGroundVia
+
+def connectPorts(cls,tags,layers,distance):
+
+    if isinstance(tags,str):
+
+        tags=[tag]
+
+    class connectedPorts(cls):
+
+        def draw(self):
+
+            cell=Device(self.name)
+
+            supercell=super().draw()
+
+            cell<<supercell
+
+            for t in tags:
+
+                connector=connect_ports(
+                    supercell,
+                    t,
+                    layers=layers,
+                    distance=distance)
+
+                cell<<connector
+
+                pt._copy_ports(connector,cell)
+
+            return cell
+
+    connectPorts.__name__=f"{cls.__name__} w connected Ports"
+
+    return connectedPorts
 # Device decorator
 
 def connect_ports(
