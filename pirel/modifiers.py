@@ -420,6 +420,13 @@ def makeArray(cls,n=2):
 
                         return pt.parallel_res((r+x_dist/l)/2,(r+2*x_dist/l)/(n_blocks-2))
 
+        @property
+        def active_area(self):
+
+            active_area=super().active_area
+
+            return pt.Point(active_area.x*self.n_blocks,active_area.y)
+
         def export_all(self):
 
             df=super().export_all()
@@ -572,346 +579,6 @@ def makeFixture(cls,style='open'):
 
     return Fixture
 
-def makeNpaths(cls, pad=pc.Pad, n=4, test_device_decorator=None):
-
-    if not isinstance(n,int):
-
-        raise ValueError(f"n needs to be integer, {n.__class__.__name__} was passed")
-
-    if not issubclass(pad,LayoutPart):
-
-        raise ValueError(f"pad needs to be a LayoutPart, {pad.__class__.__name__} was passed")
-
-    class NpathsOf(cls):
-
-        n_copies=LayoutParamInterface()
-
-        spacing=LayoutParamInterface()
-
-        comm_pad_length=LayoutParamInterface()
-
-        def __init__(self,*a,**k):
-
-            cls.__init__(self,*a,**k)
-
-            self.n_copies=n
-
-            self.spacing=LayoutDefault.NPathSpacing
-
-            self.comm_pad_length=LayoutDefault.NPathCommLength
-
-            NpathsOf._set_relations(self)
-
-        def draw(self):
-
-            NpathsOf._set_relations(self)
-
-            cell=pg.deepcopy(cls.draw(self))
-
-            try:
-
-                sigconn=connect_ports(
-                    cell,
-                    tag='top',
-                    layers=self.pad.layer,
-                    distance=self.idt.probe_distance.y/2)
-
-                _add_default_ground_vias(self,sigconn)
-
-                cell.add(sigconn)
-
-                sigconn.ports['top'].width=self.pad.size
-
-                pt._copy_ports(sigconn,cell)
-
-            except ValueError :
-
-                self.pad.distance=self.idt.probe_distance.y
-
-            add_pads(cell,self.pad,tag='top',exact=True)
-
-            _add_default_ground_vias(self,cell["Pad"].parent)
-
-            out_cell=pg.Device(self.name)
-
-            refs=[]
-
-            for n in range(1,self.n_copies+1):
-
-                refs.append(out_cell.add_ref(cell,alias='Device'+str(n)))
-
-                origin=pt.Point(refs[-1].xmin,refs[-1].ymin)
-
-                transl=pt.Point(n*refs[-1].xsize,0)+n*self.spacing
-
-                refs[-1].move(destination=transl.coord)
-
-                if n%2==0 :
-
-                    refs[-1].rotate(
-                        angle=180,
-                        center=(refs[-1].center[0],refs[-1].ymin))
-
-                    refs[-1].move(destination=(0,-self.comm_pad_length))
-
-            comm_pad=pt._draw_multilayer('rectangle',layers=self.pad.layer,size=(out_cell.xsize,self.comm_pad_length))
-
-            _add_default_ground_vias(self,comm_pad)
-
-            comm_pad.move(origin=(comm_pad.xmin,comm_pad.ymin),
-                         destination=(out_cell.xmin,out_cell.ymin+(out_cell.ysize-self.comm_pad_length)/2))
-
-            out_cell.add_ref(comm_pad,alias='CommPad')
-
-            if hasattr(self,'test'):
-
-                test_ref=DeviceReference(self.test.draw())
-
-                g=Group([out_cell,test_ref])
-
-                g.align(alignment='x')
-                g.align(alignment='y')
-
-                g.distribute(direction='x')
-
-                out_cell.add(test_ref)
-
-            return out_cell
-
-        @staticmethod
-        def get_components():
-
-            pars=copy(cls.get_components())
-
-            pars.update({"Pad":pad,"GndVia":pc.Via})
-
-            if test_device_decorator is not None:
-
-                test_device=test_device_decorator(cls)
-
-                pars.update({"Test":test_device})
-
-            return pars
-
-        def get_params(self):
-
-            pars=copy(cls.get_params(self))
-
-            tbr=['PadDistance','PadPort']
-
-            if hasattr(self,'test'):
-
-                modkeys=[*pars.keys()]
-
-                for test_param in modkeys:
-
-                    if "Test"+test_param in modkeys:
-
-                        tbr.append("Test"+test_param)
-
-            pt.pop_all_dict(pars,tbr)
-
-            return pars
-
-        def _set_relations(self):
-
-            try:
-
-                cls._set_relations(self)
-
-            except:
-
-                pass
-
-            self.pad.distance=self.idt.probe_distance.y/2
-
-            if hasattr(self,'test'):
-
-                self.test.set_params(self.get_params())
-
-    NpathsOf.__name__=" ".join([f"{n} paths of",cls.__name__])
-
-    return NpathsOf
-
-def makeSMDCoupledFilter(cls,smd=pc.SMD):
-
-    class SMDCoupledFilterOf(cls):
-
-        order=LayoutParamInterface()
-
-        spacing=LayoutParamInterface()
-
-        def __init__(self,*a,**kw):
-
-            cls.__init__(self,*a,**kw)
-
-            self.order=3
-
-            self.spacing=pt.Point(0,100)
-
-        def draw(self):
-
-            cell=Device(self.name)
-
-            unit_cell=self._draw_unit_cell()
-
-            cell_size=pt.Point(unit_cell.size+self.spacing.coord)
-
-            for n in range(self.order):
-
-                ref=cell.add_ref(unit_cell,alias='n_'+str(n))
-
-                ref.move(destination=(cell_size.x,cell_size.y*n))
-
-                if n==0:
-
-                    [cell.add_port(p) for p in pt._find_ports(ref,'bottom')]
-
-                if n==self.order-1:
-
-                    [cell.add_port(p) for p in pt._find_ports(ref,'top')]
-
-                if n>0:
-
-                    self._draw_filter_interconnects(cell,n)
-
-                for p in pt._find_ports(ref,'Ground',depth=0):
-
-                    cell.add_port(port=p,name=p.name+'_'+str(n))
-
-            return cell
-
-        def _draw_unit_cell(self):
-
-            base_device=cls.draw(self)
-
-            unit_cell=Device("FilterUnitCell")
-
-            device_ref=unit_cell.add_ref(base_device,alias="Device")
-
-            smd_ref=unit_cell.add_ref(self.smd.draw(),alias='Coupler')
-
-            smd_ref.move(origin=(smd_ref.x,smd_ref.ymin),
-                destination=(device_ref.x,device_ref.ymax))
-
-            smd_ref.move(destination=self.spacing.coord)
-
-            for p in pt._find_ports(device_ref,tag='bottom'):
-
-                unit_cell.add_port(p)
-
-            for p in pt._find_ports(device_ref,tag='Ground'):
-
-                unit_cell.add_port(p)
-
-            unit_cell.add_port(port=smd_ref.ports["N_2"],name='top')
-
-            self._draw_unit_cell_routing(unit_cell)
-
-            self._add_ground_extensions(unit_cell)
-
-            return unit_cell
-
-        def _draw_unit_cell_routing(self,unit_cell):
-
-            bottom_coupler_port=unit_cell["Coupler"].ports['S_1']
-
-            try:
-
-                trace_cell=connect_ports(
-                    unit_cell["Device"],
-                    tag='top',
-                    layers=self.smd.layer,
-                    distance=self.spacing.y/3)
-
-                trace_cell.ports['top'].width=self.smd.size.x
-
-            except ValueError:
-
-                pass
-
-            trace_cell.add(
-            pt._make_poly_connection(
-                trace_cell.ports['top'],
-                bottom_coupler_port,
-                layer=self.smd.layer)
-                )
-
-            unit_cell.add(trace_cell)
-
-        def _add_ground_extensions(self,cell):
-
-            try:
-
-                ext_width=abs(cell.xmin-cell["Device"].parent.ports["GroundLX"].midpoint[0])
-
-            except KeyError:
-
-                ext_width=abs(cell.xmin-cell["Device"].parent.ports["GroundLX_0"].midpoint[0])
-
-            for p in pt._find_ports(cell,'Ground',depth=0):
-
-                p_norm=Point(p.normal[1])-Point(p.normal[0])
-
-                p_ext=Port(
-                    name=p.name,
-                    orientation=p.orientation,
-                    width=p.width,
-                    midpoint=(pt.Point(p.midpoint)+p_norm*ext_width).coord)
-
-                conn_cell=pt._make_poly_connection(p,p_ext,(self.idt.layer,self.plate_layer))
-
-                _add_default_ground_vias(self,conn_cell)
-
-                cell.add(conn_cell)
-
-                cell.ports.pop(p.name)
-
-                cell.add_port(p_ext)
-
-        def _draw_filter_interconnects(self,cell,n):
-
-            ref=cell['n_'+str(n)]
-
-            try:
-
-                trace_cell=connect_ports(
-                    ref,
-                    tag='bottom',
-                    layers=self.smd.layer,
-                    distance=self.spacing.y/3)
-
-                trace_cell.ports['bottom'].width=self.smd.size.x
-
-            except ValueError :
-
-                pass
-
-            routing=pc.PolyRouting()
-
-            routing.source=trace_cell.ports['bottom']
-
-            routing.destination=cell['n_'+str(n-1)].ports['top']
-
-            routing.layer=self.smd.layer
-
-            trace_cell.add(routing.draw())
-
-            cell.add(pt.join(trace_cell))
-
-        @staticmethod
-        def get_components():
-
-            pars=copy(cls.get_components())
-
-            pars.update({"SMD":smd})
-
-            return pars
-
-    SMDCoupledFilterOf.__name__=" ".join(["SMD coupled filter of",cls.__name__])
-
-    return SMDCoupledFilterOf
-
 def makeTwoPortProbe(cls):
 
     class TwoPort(cls):
@@ -1023,6 +690,8 @@ def addOnePortProbe(cls,probe=pc.GSGProbe):
             self.gnd_routing_width=100.0
 
         def draw(self):
+
+            self._set_relations()
 
             device_cell=cls.draw(self)
 
@@ -1615,13 +1284,21 @@ def addGroundVias(cls):
 
     return withGroundVia
 
-def connectPorts(cls,tags,layers,distance):
+def connectPorts(cls,tags,layers):
 
     if isinstance(tags,str):
 
         tags=[tag]
 
     class connectedPorts(cls):
+
+        connector_distance=LayoutParamInterface()
+
+        def __init__(self,*a,**kw):
+
+            super().__init__(*a,**kw)
+
+            self.connector_distance=pt.Point(0,100)
 
         def draw(self):
 
@@ -1637,7 +1314,7 @@ def connectPorts(cls,tags,layers,distance):
                     supercell,
                     t,
                     layers=layers,
-                    distance=distance)
+                    distance=self.connector_distance.y)
 
                 cell<<connector
 
@@ -1856,8 +1533,8 @@ def _add_default_ground_vias(self,cell):
             self.gndvia,
             spacing=self.gndvia.size*1.25,
             tolerance=self.gndvia.size/2)
-
-_allmodifiers=(
-    makeScaled,addPad,addPartialEtch,
-    addOnePortProbe,addLargeGround,
-    makeArray,makeFixture,makeNpaths)
+#
+# _allmodifiers=(
+#     makeScaled,addPad,addPartialEtch,
+#     addOnePortProbe,addLargeGround,
+#     makeArray,makeFixture,makeNpaths)

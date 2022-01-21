@@ -336,11 +336,12 @@ class IDT(pt.LayoutPart) :
 
         cell.name=self.name
 
-        cell.add_port(Port(name='bottom',\
-        midpoint=(self.origin+\
-        pt.Point(midx,0)).coord,\
-        width=totx,
-        orientation=-90))
+        cell.add_port(
+            Port(name='bottom',
+            midpoint=(
+                pt.Point(midx,0).coord),
+            width=totx,
+            orientation=-90))
 
         cell.add_port(
             name='top',
@@ -952,9 +953,6 @@ class Via(pt.LayoutPart):
 
             raise ValueError("Via shape can be \'square\' or \'circle\'")
 
-        cell.move(origin=(0,0),\
-            destination=self.origin.coord)
-
         cell.add_port(Port(name='conn',\
         midpoint=cell.center,\
         width=cell.xmax-cell.xmin,\
@@ -1371,6 +1369,13 @@ class LFERes(pt.LayoutPart):
 
         return height/width
 
+    @property
+    def active_area(self):
+
+        return pt.Point(
+            self.idt.active_area.x+2*self.etchpit.x,
+            self.idt.active_area.y+2*self.bus.size.y+2*self.anchor.metalized.y)
+        
     @staticmethod
     def get_components():
 

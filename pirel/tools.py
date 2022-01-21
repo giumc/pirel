@@ -554,8 +554,8 @@ class LayoutPart(ABC) :
 
         self.name=name
 
-        self.origin=LayoutDefault.origin
-
+        self._connected=False
+        
         for p,cls in self.get_components().items():
 
             setattr(self,p.lower(),cls(name=self.name+p))
@@ -1689,7 +1689,7 @@ def _draw_multilayer(command,layers=(1,2),*a,**kw):
                     conn<<eval('pg.'+command)(layer=l,*a,**kw))
 
         return conn
-        
+
     except TypeError:
 
         conn=eval('pg.'+command)(layer=layers,*a,**kw)

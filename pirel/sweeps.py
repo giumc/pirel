@@ -1,6 +1,7 @@
 
 from phidl.device_layout import Group,Device
 
+import phidl.geometry as pg
 import test
 
 import matplotlib.pyplot as plt
@@ -840,6 +841,8 @@ class PMatrix(PArray):
     def __init__(self,device,x_param,y_param,*a,**k):
 
         super().__init__(device,x_param,*a,**k)
+
+        self._pack=False
         self.y_spacing=pt.LayoutDefault.Matrixy_spacing
         self.y_param=y_param
         self.labels_top=None
@@ -866,6 +869,8 @@ class PMatrix(PArray):
         x_param=self.x_param
 
         df={}
+
+        dlist=[]
 
         for index in range(len(y_param)):
 
@@ -913,21 +918,15 @@ class PMatrix(PArray):
 
             new_cell=PArray.draw(self)
 
+            dlist.extend(new_cell.references)
+
             print("\033[K",end='')
 
             master_cell<<new_cell
 
             cells.append(new_cell)
 
-        g=Group(cells)
-
-        g.distribute(direction='y',spacing=self.y_spacing)
-
-        g.align(alignment='x')
-
         device._set_params(df_original)
-
-        del device, cells ,g
 
         self.labels_top=top_label_matrix
 
@@ -935,7 +934,25 @@ class PMatrix(PArray):
 
         self.name=master_name
 
-        return master_cell
+        if not self._pack:
+
+            g=Group(cells)
+
+            g.distribute(direction='y',spacing=self.y_spacing)
+
+            g.align(alignment='x')
+
+            return master_cell
+
+        else:
+
+            dlist_new=[]
+
+            for d in dlist:
+
+                dlist_new.append(pg.deepcopy(d.parent))
+
+            return pg.packer(dlist_new,aspect_ratio=(2,1))
 
     def auto_labels(self,top=True,bottom=True,top_label='',bottom_label='',\
         col_index=0,row_index=0):
