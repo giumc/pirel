@@ -555,7 +555,7 @@ class LayoutPart(ABC) :
         self.name=name
 
         self._connected=False
-        
+
         for p,cls in self.get_components().items():
 
             setattr(self,p.lower(),cls(name=self.name+p))
@@ -868,7 +868,21 @@ def _get_corners(device : Device) :
     w=Point(bbox[0,0],device.center[1])
     e=Point(bbox[1,0],device.center[1])
     c=Point(device.center)
-    return ll,lr,ul,ur,c,n,s,w,e
+
+    class ReferencePoints():
+        pass
+
+    r=ReferencePoints()
+    r.ll=ll
+    r.lr=lr
+    r.ul=ul
+    r.ur=ur
+    r.c=c
+    r.n=n
+    r.s=s
+    r.w=w
+    r.e=e
+    return r
 
 def check(device : Device, joined=False, blocking=True,gds=False):
     ''' Shows the device layout.
@@ -1598,47 +1612,9 @@ def _move_relative_to_cell(
 
 def _anchor_selector(text,cell):
 
-    ll,lr,ul,ur,c,n,s,w,e=_get_corners(cell)
-
-    if text=='ll':
-
-        return ll
-
-    elif text=='lr':
-
-        return lr
-
-    elif text=='ul':
-
-        return ul
-
-    elif text=='ur':
-
-        return ur
-
-    elif text=='c':
-
-        return c
-
-    elif text=='n':
-
-        return n
-
-    elif text=='s':
-
-        return s
-
-    elif text=='w':
-
-        return w
-
-    elif text=='e':
-
-        return e
-
-    else :
-
-        raise ValueError()
+    r=_get_corners(cell)
+    
+    return r.__getattr__(text)
 
 def _remove_alias(cell,name):
 

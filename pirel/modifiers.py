@@ -265,7 +265,7 @@ def addLargeGround(probe):
                 layers=self.ground_layer,
                 size=(self.ground_size,self.ground_size))
 
-            [_,_,ul,ur,*_]=pt._get_corners(groundpad)
+            r=pt._get_corners(groundpad)
 
             for alias in cell.aliases:
 
@@ -283,7 +283,7 @@ def addLargeGround(probe):
 
                     groundref=cell.add_ref(groundpad,alias=alias)
 
-                    groundref.move(origin=ur.coord,
+                    groundref.move(origin=r.ur.coord,
                     destination=dest)
 
                     pt._copy_ports(groundref,cell,prefix="GroundLX")
@@ -303,7 +303,7 @@ def addLargeGround(probe):
                     groundref=cell.add_ref(groundpad,alias=alias)
 
                     groundref.move(
-                        origin=ul.coord,
+                        origin=r.ul.coord,
                         destination=dest)
 
                     for portname in cell[alias].ports:
@@ -470,19 +470,21 @@ def addPassivation(cls,
                 self.passivation_scale,
                 self.passivation_layer)
 
+            r=pt._get_corners(cell)
+
             if issubclass(cls,pc.SMD):
 
                 bottom_port=Port(
                     name='S_1',
                     width=self.size.x,
                     orientation=270,
-                    midpoint=s.coord)
+                    midpoint=r.s.coord)
 
                 top_port=Port(
                     name='N_2',
                     width=self.size.x,
                     orientation=90,
-                    midpoint=n.coord)
+                    midpoint=r.n.coord)
 
                 cell.add_port(top_port)
                 cell.add_port(bottom_port)
