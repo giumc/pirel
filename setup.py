@@ -5,7 +5,7 @@ install_requires=[
 ]
 
 setup(name='pirel',
-      version='0.1',
+      version='0.2',
       description='Python Package based on amccaugh\phidl for piezoelectric resonator GDS layout',
       author='Giuseppe Michetti',
       author_email='michetti.g@northeastern.edu',

@@ -1,8 +1,10 @@
+import pandas as pd
+
 import phidl.geometry as pg
 
 import phidl.device_layout as dl
 
-from phidl.device_layout import Group
+from phidl.device_layout import Group,Device,DeviceReference
 
 import pathlib
 
@@ -10,8 +12,9 @@ import gdspy
 
 import numpy as np
 
-from pirel.tools import *
-from pirel.pcells import *
+import pirel.tools as pt
+
+import pirel.pcells as pc
 
 def resistivity_test_cell():
 
@@ -26,9 +29,11 @@ def resistivity_test_cell():
 
     with open(str(pathlib.Path(__file__).parent/'ResistivityTest.gds'), 'rb') as infile:
 
-        cell=pg.import_gds(infile)
+        cell=pg.import_gds(infile,cellname='TestCell')
 
-        cell=join(cell)
+        cell=pt.join(cell)
+
+        cell.name='ResistivityTest'
 
         return cell
 
@@ -139,7 +144,7 @@ def verniers(scale=[1, 0.5, 0.1],layers=[1,2],label='TE',text_size=20,reversed=F
 
         xcell<<x
 
-    xcell=join(xcell)
+    xcell=pt.join(xcell)
 
     vern_x=cell<<xcell
     vern_y=cell<<xcell
@@ -167,86 +172,40 @@ def verniers(scale=[1, 0.5, 0.1],layers=[1,2],label='TE',text_size=20,reversed=F
     cell<<label
     cell<<cutlab
 
-    cell=join(cell)
+    cell=pt.join(cell)
 
     return cell
 
-def chip_frame(name="Default",size=(20e3,20e3),layer=LayoutDefault.layerTop,logos=None):
+def chip_frame(
+    size=(20e3,20e3),
+    street_width=150,
+    street_length=1e3,
+    layer=pt.LayoutDefault.layerTop,
+    name=None,
+    text_pos={'anchor_source':'s','anchor_dest':'s'}):
 
-    street_length=size[0]/5
+    die_cell=pg.basic_die(
+        size=size,
+        die_name="",
+        layer=layer,draw_bbox=False,
+        street_length=street_length,
+        street_width=street_width)
 
-    street_width=150
+    if name is not None:
 
-    die_cell=pg.basic_die(size=size,\
-        die_name="",layer=layer,draw_bbox=False,
-        street_length=street_length,street_width=street_width)
+        cell=dl.Device(name=str(name.label))
 
-    cell=dl.Device(name=name)
+    else:
+
+        cell=dl.Device(name='default')
 
     cell.absorb(cell<<die_cell)
 
-    text_cell=TextParam(\
-        {'size':800,\
-        'label':name,\
-        'location':'top',\
-        'distance':Point(0,0),\
-        'layer':layer}).draw()
+    if name is not None:
 
-    text_cell.move(origin=(text_cell.xmax,text_cell.ymax),\
-        destination=(cell.xmax-street_width*1.2,cell.ymax-street_width*1.2))
+        text_cell=name.draw()
 
-    cell.add(text_cell)
-
-    if logos is not None:
-
-        if isinstance(logos,str):
-
-            logos=pathlib.Path(logos)
-
-        elif isinstance(logos,list) or isinstance(logos,tuple):
-
-            cells_logo=[]
-
-            for p in logos:
-
-                if isinstance(p,str):
-
-                    # import pdb ; pdb.set_trace()
-
-                    cells_logo.append(import_gds(p))
-
-                elif isinstance(p,pathlib.Path):
-
-                    cells_logo.append(import_gds(str(p.absolute())))
-
-    g=Group(cells_logo)
-    g.distribute(direction='x',spacing=150)
-    g.align(alignment='y')
-
-    logo_cell=dl.Device(name="logos")
-
-    for c in cells_logo:
-
-        logo_cell.add(c)
-
-    logo_cell.flatten()
-
-    logo3=cell<<logo_cell
-
-    logo3.move(origin=(logo3.xmin,logo3.ymin),\
-        destination=(cell.xmin+1.1*street_width,cell.ymin+1.1*street_width))
-
-    logo4=cell<<logo_cell
-
-    logo4.move(origin=(logo4.xmax,logo4.ymin),\
-        destination=(cell.xmax-1.1*street_width,cell.ymin+1.1*street_width))
-
-    # restest=resistivity_test_cell()
-    #
-    # restest.move(origin=(restest.xmin,restest.ymax),\
-    #     destination=(cell.xmin+1.1*street_width,cell.ymax-1.1*street_width))
-
-    # cell.add(restest)
+        pt._move_relative_to_cell(cell<<text_cell,cell,**text_pos)
 
     return cell
 
@@ -254,9 +213,9 @@ def align_TE_on_via():
 
     cell=dl.Device("Align TE on VIA")
 
-    circle=pg.circle(radius=50,layer=LayoutDefault.layerVias)
+    circle=pg.circle(radius=50,layer=pt.LayoutDefault.layerVias)
 
-    cross=pg.cross(width=30,length=250,layer=LayoutDefault.layerVias)
+    cross=pg.cross(width=30,length=250,layer=pt.LayoutDefault.layerVias)
 
     g=Group([circle,cross])
 
@@ -264,9 +223,9 @@ def align_TE_on_via():
     g.align(alignment='y')
     circle.add(cross)
 
-    viapattern=pg.union(circle,'A+B',layer=LayoutDefault.layerVias)
+    viapattern=pg.union(circle,'A+B',layer=pt.LayoutDefault.layerVias)
 
-    TEpattern=pg.union(circle,'A+B',layer=LayoutDefault.layerTop).copy('tmp',scale=0.8)
+    TEpattern=pg.union(circle,'A+B',layer=pt.LayoutDefault.layerTop).copy('tmp',scale=0.8)
 
     cell.add(viapattern)
     cell.add(TEpattern)
@@ -278,25 +237,274 @@ def align_TE_on_via():
 
     return cell
 
-def dice(cell,width=100,layer=LayoutDefault.layerTop,spacing=150):
+def prompt_param_table():
 
-    street_length=min(cell.xsize,cell.ysize)/2.5
+    import tkinter as tk
 
-    die_cell=pg.basic_die(size=(cell.xsize+2*(width+spacing) , cell.ysize+2*(width+spacing)),\
-            die_name="",layer=layer,draw_bbox=False,
-            street_length=street_length,street_width=width)
+    from tkinter import filedialog
 
-    g=Group([die_cell,cell])
+    root = tk.Tk()
+
+    root.withdraw()
+
+    root.call('wm', 'attributes', '.', '-topmost', True)
+
+    file_path = filedialog.askopenfilename()
+
+    from IPython import get_ipython
+
+    if get_ipython() is not None:
+
+        get_ipython().run_line_magic('gui','qt')
+
+    tab=pd.read_excel(file_path)
+
+    tab.set_index(tab.columns[0],inplace=True)
+
+    tab.index.name='Tag'
+
+    return tab
+
+def alignment_marks_4layers(scale=[0.2,0.5,1]):
+
+    def dr(cell):
+
+        return DeviceReference(cell)
+
+    BElayer=pt.LayoutDefault.layerBottom
+    TElayer=pt.LayoutDefault.layerTop
+    VIAlayer=pt.LayoutDefault.layerVias
+    ETCHlayer=pt.LayoutDefault.layerEtch
+    PETCHlayer=pt.LayoutDefault.layerPartialEtch
+    Zerolayer=pt.LayoutDefault.layerPad
+
+    align1=verniers(scale,layers=[BElayer,VIAlayer],label='VIA',reversed=True)
+    align_ph=pg.bbox(align1.bbox) #only for space
+    align2=verniers(scale,layers=[BElayer,TElayer],label='TE')
+    align3=verniers(scale,layers=[BElayer,ETCHlayer],label='ETCH')
+    align4=verniers(scale,layers=[BElayer,PETCHlayer],label='PETCH')
+
+    text=pc.Text()
+    text.size=300
+    text.layer=(BElayer,TElayer,ETCHlayer,PETCHlayer,VIAlayer)
+    text.label="Align to BE"
+
+    t1=text.draw()
+
+    g=Group([align1,dr(align_ph),align2,align3,align4,t1])
+    g.distribute(direction='x',spacing=150)
+    g.align(alignment='y')
+
+    align5=verniers(scale,layers=[TElayer,VIAlayer],label='VIA',reversed=True)
+    align6=verniers(scale,layers=[TElayer,ETCHlayer],label='ETCH')
+    align7=verniers(scale,layers=[TElayer,PETCHlayer],label='PETCH')
+
+    text.layer=(TElayer,ETCHlayer,PETCHlayer,VIAlayer)
+    text.label='Align to TE'
+    t2=text.draw()
+
+    g2=Group([align5,dr(align_ph),dr(align_ph),align6,align7,t2])
+    g2.distribute(direction='x',spacing=150)
+    g2.align(alignment='y')
+
+    align8=verniers(scale,layers=[Zerolayer,VIAlayer],label='VIA',reversed=True)
+    align9=verniers(scale,layers=[Zerolayer,BElayer],label='BE')
+    align10=verniers(scale,layers=[Zerolayer,TElayer],label='TE')
+    align11=verniers(scale,layers=[Zerolayer,ETCHlayer],label='ETCH')
+    align12=verniers(scale,layers=[Zerolayer,PETCHlayer],label='PETCH')
+
+    text.layer=(Zerolayer,BElayer,TElayer,ETCHlayer,PETCHlayer,VIAlayer)
+    text.label="Align to Pad"
+
+    t3=text.draw()
+
+    g3=Group([align8,align9,align10,align11,align12,t3])
+    g3.distribute(direction='x',spacing=150)
+    g3.align(alignment='y')
+
+    g_tot=Group([g,g2,g3])
+    g_tot.distribute(direction='y',spacing=150)
+    g_tot.align(alignment='xmin')
+
+    cell=Device("Alignments")
+
+    for c in [align1,align2,align3,align4,t1]:
+
+        cell.add(c)
+
+    for c in [align5,align6,align7,t2]:
+        cell.add(c)
+
+    for c in [align8,align9,align10,align11,align12,t3]:
+        cell.add(c)
+
+    return cell
+
+def add_utility_cell(cell,align_scale=[0.25,0.5,1],position=['top','left']):
+
+    align_mark=alignment_marks_4layers(scale=align_scale)
+
+    test_cell=resistivity_test_cell()
+
+    align_via=Device('Align_Via')
+
+    maskname_cell=mask_names()
+
+    align_via.add_array(
+        align_TE_on_via(),
+        rows=3,
+        columns=1,
+        spacing=(0,350))
+
+    align_via.flatten()
+
+    g=Group([align_via,align_mark,test_cell])
+
+    g.distribute(direction='x',spacing=100)
 
     g.align(alignment='y')
 
-    g.align(alignment='x')
+    g.move(origin=(g.center[0],g.ymax),
+        destination=(cell.center[0],cell.ymax-300))
 
-    cell.add(die_cell)
+    maskname_cell.move(
+        origin=(maskname_cell.x,maskname_cell.ymin),
+        destination=(g.x,test_cell.ymax+150))
 
-    TextParam(\
-        {'size':700,\
-        'label':cell.name,\
-        'location':'bottom',\
-        'distance':Point(0,-width-spacing/2),\
-        'layer':layer}).add_text(cell)
+    utility_cell=Device(name="UtilityCell")
+
+    if isinstance(position,str):
+
+        position=[position]
+
+    if 'top' in position:
+
+        utility_cell<<align_mark
+        utility_cell<<align_via
+        utility_cell<<test_cell
+        utility_cell<<maskname_cell
+
+    if 'left' in position:
+
+        t2=utility_cell<<align_mark
+        t3=utility_cell<<align_via
+        g=Group(t2,t3)
+
+        g.rotate(angle=90,center=(t2.xmin,t2.ymin))
+
+        g.move(origin=(t2.xmin,t2.center[1]),\
+            destination=(cell.xmin,cell.center[1]))
+
+    cell<<utility_cell
+
+def mask_names(
+    names=(
+        "Bottom Electrode","Top Electrode",
+        "Via Layer","Etch Layer",
+        "PartialEtch Layer","Pad Layer"),
+    layers=(
+        pt.LayoutDefault.layerBottom,
+        pt.LayoutDefault.layerTop,
+        pt.LayoutDefault.layerVias,
+        pt.LayoutDefault.layerEtch,
+        pt.LayoutDefault.layerPartialEtch,
+        pt.LayoutDefault.layerPad),
+    size=250):
+    """ Prints array of strings on different layers.
+
+        Mostly useful for Layer Sorting on masks.
+
+        Parameters
+        ----------
+            names : iterable of str
+
+            layers : iterable of int
+
+            size : float
+
+        Returns
+        -------
+            cell : phidl.Device.
+    """
+
+    text=pc.Text()
+
+    text['Size']=size
+
+    if not len(names)==len(layers):
+
+        raise ValueError("Unbalanced mask names/layers combo")
+
+    else:
+
+        text_cells=[]
+
+        for label,layer in zip(names,layers):
+
+            text['Label']=label
+
+            text['Layer']=(layer,)
+
+            text_cells.append(text.draw())
+
+        g=Group(text_cells)
+
+        g.distribute(direction='x',spacing=size)
+
+        cell_name=Device(name='Mask Names')
+
+        for x in text_cells:
+
+            cell_name.absorb(cell_name<<x)
+
+        return cell_name
+
+def load_gds(cells):
+
+    if isinstance(cells,str):
+
+        cells=pathlib.Path(cells)
+
+    elif isinstance(cells,list) or isinstance(cells,tuple):
+
+        cells_logo=[]
+
+        for p in cells:
+
+            if isinstance(p,str):
+
+                # import pdb ; pdb.set_trace()
+
+                cells_logo.append(pg.import_gds(p))
+
+            elif isinstance(p,pathlib.Path):
+
+                cells_logo.append(pg.import_gds(str(p.absolute())))
+
+    g=Group(cells_logo)
+
+    g.distribute(direction='x',spacing=150)
+
+    g.align(alignment='y')
+
+    logo_cell=dl.Device(name="cells")
+
+    for c in cells_logo:
+
+        logo_cell.add(c)
+
+    logo_cell.flatten()
+
+    logo_cell.name='Logos'
+
+    return logo_cell
+
+def open_in_klayout(path):
+
+    if isinstance(path,str):
+
+        path=pathlib.Path(path)
+
+    import subprocess
+
+    subprocess.call(["klayout_app", "-s", path.absolute()])
