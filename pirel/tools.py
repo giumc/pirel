@@ -512,7 +512,12 @@ class LayoutParamInterface:
 
             old_param=getattr(owner,self.private_name)
 
-            old_param.value=new_value
+            try:
+                old_param.value=new_value
+
+            except Exception as e:
+
+                raise ValueError(f"""Error while assigning {self.public_name} of {owner.__class__.__name__}""") from e
 
     def __get__(self,owner,objtype=None):
 
@@ -1613,8 +1618,8 @@ def _move_relative_to_cell(
 def _anchor_selector(text,cell):
 
     r=_get_corners(cell)
-    
-    return r.__getattr__(text)
+
+    return r.__getattribute__(text)
 
 def _remove_alias(cell,name):
 
