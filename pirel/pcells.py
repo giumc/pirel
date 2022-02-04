@@ -172,19 +172,19 @@ class IDTSingle(pt.LayoutPart) :
 
         cell.flatten()
 
-        [_,_,_,_,_,n,s,_,_]=pt._get_corners(cell)
+        r=pt._get_corners(cell)
 
         port_width=cell.xsize+(1-self.coverage)*self.pitch
 
         cell.add_port(
             Port(name='bottom',
-            midpoint=s.coord,
+            midpoint=r.s.coord,
             width=port_width,
             orientation=-90))
 
         cell.add_port(
             Port(name='top',
-            midpoint=n.coord,
+            midpoint=r.n.coord,
             width=port_width,
             orientation=90))
 
@@ -750,11 +750,11 @@ class Anchor(pt.LayoutPart):
             size=(self.size-pt.Point(2*self.etch_margin.x,-2*self.etch_margin.y)).coord,
             layer=self.layer)
 
-        [_,_,_,_,_,n,s,*_]=pt._get_corners(cell)
+        r=pt._get_corners(cell)
 
-        cell.add_port(name='top',midpoint=n.coord,width=cell.xsize,orientation=90)
+        cell.add_port(name='top',midpoint=r.n.coord,width=cell.xsize,orientation=90)
 
-        cell.add_port(name='bottom',midpoint=s.coord,width=cell.xsize,orientation=270)
+        cell.add_port(name='bottom',midpoint=r.s.coord,width=cell.xsize,orientation=270)
 
         return cell
 
@@ -1375,7 +1375,7 @@ class LFERes(pt.LayoutPart):
         return pt.Point(
             self.idt.active_area.x+2*self.etchpit.x,
             self.idt.active_area.y+2*self.bus.size.y+2*self.anchor.metalized.y)
-        
+
     @staticmethod
     def get_components():
 
@@ -1562,7 +1562,7 @@ def addBottomPlate(cls):
 
             super_ref=cell.add_ref(supercell,alias=cls.__name__)
 
-            [_,_,_,_,_,n_super,*_]=pt._get_corners(supercell)
+            super_r=pt._get_corners(supercell)
 
             if self.plate_over_etch:
 
@@ -1586,7 +1586,7 @@ def addBottomPlate(cls):
 
             plate_ref=cell.add_ref(plate,alias='Plate')
 
-            [_,_,_,_,_,n,*_]=pt._get_corners(plate_ref)
+            r=pt._get_corners(plate_ref)
 
             if self.plate_under_bus:
 
@@ -1597,8 +1597,8 @@ def addBottomPlate(cls):
                 trasl=pt.Point(0,-self.anchor.metalized.y-self.bus.size.y-self.idt.y_offset)
 
             plate_ref.move(
-                origin=n.coord,
-                destination=(n_super+trasl).coord)
+                origin=r.n.coord,
+                destination=(super_r.n+trasl).coord)
 
             cell.absorb(plate_ref)
 
@@ -1662,26 +1662,26 @@ class TwoPortRes(FBERes):
 
     def _make_ground_connections(self,cell):
 
-        [ll,lr,ul,ur,c,n,s,w,e]=pt._get_corners(cell)
+        r=pt._get_corners(cell)
 
         margin=pt.Point(self.anchor.size.x-self.anchor.metalized.x,0)
 
         cell.add_port(
             name='GroundLX',
-            midpoint=(w-margin).coord,
-            width=ul.y-ll.y,
+            midpoint=(r.w-margin).coord,
+            width=r.ul.y-r.ll.y,
             orientation=180)
 
         cell.add_port(
             name='GroundRX',
-            midpoint=(e+margin).coord,
-            width=ur.y-lr.y,
+            midpoint=(r.e+margin).coord,
+            width=r.ur.y-r.lr.y,
             orientation=0)
 
         ground_port_lx=cell.ports["GroundLX"]
         ground_port_rx=cell.ports["GroundRX"]
 
-        for corner,sig,tag in zip([ll,lr,ul,ur],[-1,1,-1,1],['bottom','bottom','top','top']):
+        for corner,sig,tag in zip([r.ll,r.lr,r.ul,r.ur],[-1,1,-1,1],['bottom','bottom','top','top']):
 
             cell_ports=pt._find_ports(cell,tag,depth=0)
 
@@ -1699,13 +1699,13 @@ class TwoPortRes(FBERes):
                 midpoint=(corner+sig*pt.Point(conn_width/2,0)+sig*margin).coord,
                 orientation=orient)
 
-            r=MultiRouting()
-            r.layer=(self.plate_layer,)
-            r.source=tuple(cell_ports)
-            r.destination=(conn_port,)
-            r.overhang=conn_width*2
-            r.trace_width=None
-            cell.add(r.draw())
+            rou=MultiRouting()
+            rou.layer=(self.plate_layer,)
+            rou.source=tuple(cell_ports)
+            rou.destination=(conn_port,)
+            rou.overhang=conn_width*2
+            rou.trace_width=None
+            cell.add(rou.draw())
 
 class TFERes(LFERes):
 
@@ -1997,7 +1997,7 @@ class Routing(pt.LayoutPart):
 
     def _draw_hindered_path(self,s,d,side='auto'):
 
-        ll,lr,ul,ur,*_=pt._get_corners(pg.bbox(self.clearance))
+        r=pt._get_corners(pg.bbox(self.clearance))
 
         extra_width=self._get_max_width()
 
@@ -2015,13 +2015,13 @@ class Routing(pt.LayoutPart):
 
         if side=='left':
 
-            p_below_clearance=pt.Point(ll.x-extra_width,p1_proj.y)
+            p_below_clearance=pt.Point(r.ll.x-extra_width,p1_proj.y)
 
         elif side=='right':
 
-            p_below_clearance=pt.Point(lr.x+extra_width,p1_proj.y)
+            p_below_clearance=pt.Point(r.lr.x+extra_width,p1_proj.y)
 
-        p_above_clearance=pt.Point(p_below_clearance.x,ur.y+(ll.y-p1_proj.y))
+        p_above_clearance=pt.Point(p_below_clearance.x,r.ur.y+(r.ll.y-p1_proj.y))
 
         p_at_dest=pt.Point(p_below_clearance.x,p2_proj.y)
 
