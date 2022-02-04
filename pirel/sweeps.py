@@ -952,7 +952,7 @@ class PMatrix(PArray):
 
                 dlist_new.append(pg.deepcopy(d.parent))
 
-            return pg.packer(dlist_new,aspect_ratio=(2,1))
+            return pg.packer(dlist_new,aspect_ratio=(2,1),spacing=max(self.x_spacing,self.y_spacing))
 
     def auto_labels(self,top=True,bottom=True,top_label='',bottom_label='',\
         col_index=0,row_index=0):

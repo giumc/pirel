@@ -331,7 +331,7 @@ def makeArray(cls,n=2):
     '''class decorator to make arrays of identical pcells.
 
     Also ports are arrayed.'''
-    
+
     if not isinstance(n,int):
 
         raise ValueError(" n needs to be integer")
@@ -971,7 +971,7 @@ def addOnePortProbe(cls,probe=pc.GSGProbe):
 
             if device_port.width>pad_port.width:
 
-                return device_port.width
+                return pad_port.width
 
             else:
 
@@ -1539,6 +1539,8 @@ def add_passivation(cell,margin,scale,layer):
             cell.add_polygon(pa.get_polygons(),layer=(l,0))
 
 def _add_default_ground_vias(self,cell):
+
+    return
 
     if hasattr(self,'gndvia'):
 
