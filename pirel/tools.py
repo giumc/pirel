@@ -16,6 +16,8 @@ from phidl.device_layout import Port,CellArray,Device,DeviceReference
 
 import phidl.device_layout as dl
 
+import phidl.path as pp
+
 from IPython import get_ipython
 
 import matplotlib.pyplot as plt
@@ -1747,3 +1749,17 @@ def draw_array(
                 _copy_ports(ref,new_cell,suffix='_'+str(i)+'_'+str(j))
 
     return new_cell
+
+def _extend_port(port,length,layer):
+
+    p1=Point(port.midpoint)
+
+    dir=Point(port.normal[1])-Point(port.normal[0])
+
+    p2=p1+dir*length
+
+    path=pp.smooth(points=[p1.coord,p2.coord])
+
+    x_sec=dl.CrossSection(width=port.width,layer=layer)
+
+    return x_sec.extrude(path)
