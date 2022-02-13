@@ -1009,7 +1009,7 @@ class GSProbe(Probe):
             # warnings.warn("Pad size too large, capped to pitch*2/3")
 
         pad_cell=pt._draw_multilayer(
-            'rectangle',
+            'pg.rectangle',
             layers=self.sig_layer,
             size=(pad_x,self.size.y))
 
@@ -1048,12 +1048,12 @@ class GSGProbe(Probe):
             # warnings.warn("Pad size too large, capped to pitch*9/10")
 
         sig_cell=pt._draw_multilayer(
-            'compass',
+            'pg.compass',
             layers=self.sig_layer,
             size=(pad_x,self.size.y))
 
         gnd_cell=pt._draw_multilayer(
-            'compass',
+            'pg.compass',
             layers=self.ground_layer,
             size=(pad_x,self.size.y))
 
@@ -1161,7 +1161,7 @@ class MultiLayerPad(Pad):
     def draw(self):
 
         r1=pt._draw_multilayer(
-            "compass",
+            "pg.compass",
             layers=self.layer,
             size=(self.port.width,self.distance))
 
@@ -1169,7 +1169,7 @@ class MultiLayerPad(Pad):
         south_port=r1.ports['S']
 
         r2=pt._draw_multilayer(
-            'compass',
+            'pg.compass',
             layers=self.layer,
             size=(self.size,self.size))
 
@@ -1657,8 +1657,8 @@ class TwoPortRes(FBERes):
 
         ur=pt.Point(bbox[1])
 
-        return ((ll.x+self.anchor.metalized.x,ll.y),
-                (ur.x-self.anchor.metalized.x,ur.y))
+        return ((ll.x+self.anchor.metalized.x+0.005,ll.y),
+                (ur.x-self.anchor.metalized.x-0.005,ur.y))
 
     def _make_ground_connections(self,cell):
 
@@ -1703,7 +1703,7 @@ class TwoPortRes(FBERes):
             rou.layer=(self.plate_layer,)
             rou.source=tuple(cell_ports)
             rou.destination=(conn_port,)
-            rou.overhang=conn_width*2
+            rou.overhang=conn_width
             rou.trace_width=None
             cell.add(rou.draw())
 
@@ -2050,7 +2050,7 @@ class Routing(pt.LayoutPart):
                 pass
 
         else:
-
+#
             raise ValueError("path is impossible")
 
     def _is_hindered(self,path):

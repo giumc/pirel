@@ -16,7 +16,7 @@ from phidl.device_layout import Port,CellArray,Device,DeviceReference
 
 import phidl.device_layout as dl
 
-import phidl.path as pp
+import phidl.path as path
 
 from IPython import get_ipython
 
@@ -587,7 +587,6 @@ class LayoutPart(ABC) :
 
         check(self.draw(),blocking=blocking,joined=joined,gds=gds)
 
-
     def _bbox_mod(self,bbox):
         ''' Default method that returns bbox for the class .
 
@@ -832,6 +831,7 @@ def join(device : Device) -> Device:
     ----------
     device : phidl.Device.
     '''
+
     out_cell=pg.union(device,by_layer=True, precision=0.001,join_first=False)
 
     return out_cell
@@ -908,7 +908,6 @@ def check(device : Device, joined=False, blocking=True,gds=False):
 
     '''
     set_quickplot_options(blocking=blocking)
-
 
     if joined:
 
@@ -1664,18 +1663,18 @@ def _draw_multilayer(command,layers=(1,2),*a,**kw):
 
             if i==0:
 
-                conn=eval('pg.'+command)(layer=l,*a,**kw)
+                conn=eval(command)(layer=l,*a,**kw)
 
             else:
 
                 conn.absorb(
-                    conn<<eval('pg.'+command)(layer=l,*a,**kw))
+                    conn<<eval(command)(layer=l,*a,**kw))
 
         return conn
 
     except TypeError:
 
-        conn=eval('pg.'+command)(layer=layers,*a,**kw)
+        conn=eval(command)(layer=layers,*a,**kw)
 
         return conn
 
@@ -1750,7 +1749,7 @@ def draw_array(
 
     return new_cell
 
-def _extend_port(port,length,layer):
+def _extend_port(port,width,length,layer):
 
     p1=Point(port.midpoint)
 
@@ -1758,8 +1757,31 @@ def _extend_port(port,length,layer):
 
     p2=p1+dir*length
 
-    path=pp.smooth(points=[p1.coord,p2.coord])
+    p=path.smooth(points=[p1.coord,p2.coord])
 
-    x_sec=dl.CrossSection(width=port.width,layer=layer)
+    output=Device()
+    try:
 
-    return x_sec.extrude(path)
+        for l in layer:
+
+            output.add(p.extrude(width=width,layer=l))
+
+    except TypeError:
+
+        output.add(p.extrude(width=width,layer=layer))
+
+    return output
+
+def _shift_port(port,dist):
+
+    port_mid_norm=Point(port.normal[1])-Point(port.normal[0])
+
+    midpoint_projected=Point(port.midpoint)+port_mid_norm*dist
+
+    new_port=Port(
+        name=port.name+'shifted',
+        orientation=port.orientation,
+        width=port.width,
+        midpoint=midpoint_projected.coord)
+
+    return new_port

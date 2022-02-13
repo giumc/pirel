@@ -270,7 +270,7 @@ def addLargeGround(probe):
             cell=pg.deepcopy(oldprobe)
 
             groundpad=pt._draw_multilayer(
-                'compass',
+                'pg.compass',
                 layers=self.ground_layer,
                 size=(self.ground_size,self.ground_size))
 
@@ -697,11 +697,15 @@ def addOnePortProbe(cls,probe=pc.GSGProbe):
 
         gnd_routing_width=LayoutParamInterface()
 
+        parasitic_control=LayoutParamInterface()
+
         def __init__(self,*args,**kwargs):
 
             cls.__init__(self,*args,**kwargs)
 
             self.gnd_routing_width=100.0
+
+            self.parasitic_control=True
 
         def draw(self):
 
@@ -777,8 +781,24 @@ def addOnePortProbe(cls,probe=pc.GSGProbe):
                         distance=0,
                         metal_width=distance)
 
-                _add_default_ground_vias(self,sigtrace)
+                # _add_default_ground_vias(self,sigtrace)
 
+                if not self.parasitic_control:
+
+                    sigtrace.ports[tag].width=sigtrace.xsize
+
+                    paux=pt._shift_port(sigtrace.ports[tag],self.probe_conn_distance.y/3)
+
+                    paux.width=self.probe.size.x
+
+                    sigtrace.add(pt._make_poly_connection(
+                        sigtrace.ports[tag],paux,self.probe.sig_layer))
+
+                    # sigtrace.remove(sigtrace.ports[tag])
+
+                    # sigtrace.add_port(port=paux,name=tag)
+
+                # import pdb; pdb.set_trace()
                 cell.absorb(cell<<sigtrace)
 
                 sigtrace.ports[tag].width=self.probe.size.x
@@ -1035,11 +1055,15 @@ def addTwoPortProbe(cls,probe=makeTwoPortProbe(pc.GSGProbe)):
 
             routing_cell.add(self._draw_device_grounds(device_ref,probe_ref,'side'))
 
-            routing_cell.add(self._draw_signal_routing())
+            routing_cell.add(self._draw_ground_extensions(cell))
+
+            cell.add_ref(routing_cell,alias="GroundTrace")
+
+            routing_cell.add(self._draw_ground_extensions(cell))
 
             _add_default_ground_vias(self,routing_cell)
 
-            cell.add_ref(routing_cell,alias="GroundTrace")
+            routing_cell.add(self._draw_signal_routing())
 
             return cell
 
@@ -1162,7 +1186,13 @@ def addTwoPortProbe(cls,probe=makeTwoPortProbe(pc.GSGProbe)):
 
             r.side='left'
 
-            output_cell.absorb(output_cell<<r.draw())
+            try:
+
+                output_cell.absorb(output_cell<<r.draw())
+
+            except Exception:
+
+                import pdb; pdb.set_trace()
 
             ## right connections
 
@@ -1270,6 +1300,52 @@ def addTwoPortProbe(cls,probe=makeTwoPortProbe(pc.GSGProbe)):
             cell.add(self.sig2trace.draw())
 
             return cell
+
+        def _draw_ground_extensions(self,cell):
+
+            device_cell=cell["Device"]
+
+            output_cell=Device()
+
+            lx_device_ports=[]
+
+            rx_device_ports=[]
+
+            gnd_ports=pt._find_ports(device_cell,'Ground',depth=0)
+
+            if not gnd_ports:
+
+                return output_cell
+
+            for p in gnd_ports:
+
+                if "LX" in p.name:
+
+                    lx_device_ports.append(p)
+
+                elif "RX" in p.name:
+
+                    rx_device_ports.append(p)
+
+            for p in lx_device_ports:
+
+                ext_length=abs(cell.xmin-p.midpoint[0]+self.gnd_routing_width)
+
+                output_cell.add(pt._extend_port(p,
+                    width=p.width,
+                    length=ext_length,
+                    layer=self.gndlefttrace.layer))
+
+            for p in rx_device_ports:
+
+                ext_length=abs(cell.xmax-p.midpoint[0]-self.gnd_routing_width)
+
+                output_cell.add(pt._extend_port(p,
+                    width=p.width,
+                    length=ext_length,
+                    layer=self.gndlefttrace.layer))
+
+            return output_cell
 
     TwoPortProbed.__name__=f"TwoPortProbed {cls.__name__} with {probe.__name__}"
 
@@ -1402,13 +1478,13 @@ def connect_ports(
     for p in ports:
 
         straight_conn=output_cell<<pt._draw_multilayer(
-            'compass',
+            'pg.compass',
             layers,size=(p.width,abs(midpoint_projected.y-p.midpoint[1])))
 
         straight_conn.connect("S",p)
 
     cross_conn=output_cell<<pt._draw_multilayer(
-        'compass',
+        'pg.compass',
         layers,size=(output_cell.xsize,metal_width))
 
     cross_conn.connect('S',new_port,overlap=metal_width)
@@ -1541,7 +1617,6 @@ def add_passivation(cell,margin,scale,layer):
 def _add_default_ground_vias(self,cell):
 
     return
-
     if hasattr(self,'gndvia'):
 
         add_vias(cell,

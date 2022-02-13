@@ -880,7 +880,7 @@ class PMatrix(PArray):
 
             device._set_params(df)
 
-            print("drawing array {} of {}".format(index+1,len(y_param)),end='\r')
+            # print("drawing array {} of {}".format(index+1,len(y_param)),end='\r')
 
             if top_label_matrix is not None:
 
