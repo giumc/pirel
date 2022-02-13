@@ -1578,8 +1578,9 @@ def _make_poly_connection(p1,p2,layer):
 
         d.add_polygon([p1.endpoints[0],p1.endpoints[1],p2.endpoints[1],p2.endpoints[0]],
         layer=layer)
+
         d.add_polygon([p1.endpoints[0],p1.endpoints[1],p2.endpoints[1],p2.endpoints[0]],
-        layer=l)
+        layer=layer)
 
 
     return join(d)

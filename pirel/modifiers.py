@@ -454,13 +454,15 @@ def makeArray(cls,n=2):
 def addPassivation(cls,
     margin=LayoutDefault.PassivationMargin,
     scale=LayoutDefault.PassivationScale,
-    layer=LayoutDefault.PassivationLayer):
+    layer=LayoutDefault.PassivationLayer,
+    absolute_mode=False):
 
     class Passivated(cls):
 
         passivation_margin=LayoutParamInterface()
         passivation_scale=LayoutParamInterface()
         passivation_layer=LayoutParamInterface()
+        passivation_absolute_mode=LayoutParamInterface()
 
         def __init__(self,*a,**kw):
 
@@ -468,6 +470,7 @@ def addPassivation(cls,
             self.passivation_margin=margin
             self.passivation_scale=scale
             self.passivation_layer=layer
+            self.passivation_absolute_mode=absolute_mode
 
         def draw(self):
 
@@ -480,7 +483,8 @@ def addPassivation(cls,
             add_passivation(cell,
                 self.passivation_margin,
                 self.passivation_scale,
-                self.passivation_layer)
+                self.passivation_layer,
+                self.passivation_absolute_mode)
 
             r=pt._get_corners(cell)
 
@@ -781,8 +785,6 @@ def addOnePortProbe(cls,probe=pc.GSGProbe):
                         distance=0,
                         metal_width=distance)
 
-                # _add_default_ground_vias(self,sigtrace)
-
                 if not self.parasitic_control:
 
                     sigtrace.ports[tag].width=sigtrace.xsize
@@ -794,11 +796,6 @@ def addOnePortProbe(cls,probe=pc.GSGProbe):
                     sigtrace.add(pt._make_poly_connection(
                         sigtrace.ports[tag],paux,self.probe.sig_layer))
 
-                    # sigtrace.remove(sigtrace.ports[tag])
-
-                    # sigtrace.add_port(port=paux,name=tag)
-
-                # import pdb; pdb.set_trace()
                 cell.absorb(cell<<sigtrace)
 
                 sigtrace.ports[tag].width=self.probe.size.x
@@ -1589,16 +1586,29 @@ def add_vias(cell : Device, bbox, via : pt.LayoutPart, spacing : float = 0,toler
 
     # return cell_out
 
-def add_passivation(cell,margin,scale,layer):
+def add_passivation(cell,margin,scale,layer,absolute_mode=False):
 
-    rect=pg.rectangle(
-        size=(
-            cell.xsize*scale.x,
-            cell.ysize*scale.y))
+    if not absolute_mode:
 
-    margin_rect=pg.rectangle(
-        size=(margin.x*cell.xsize,
-        margin.y*cell.ysize))
+        rect=pg.rectangle(
+            size=(
+                cell.xsize*scale.x,
+                cell.ysize*scale.y))
+
+        margin_rect=pg.rectangle(
+            size=(margin.x*cell.xsize,
+            margin.y*cell.ysize))
+
+    else:
+
+        rect=pg.rectangle(
+            size=(
+                scale.x,
+                scale.y))
+
+        margin_rect=pg.rectangle(
+            size=(margin.x,
+            margin.y))
 
     rect.move(origin=rect.center,
         destination=cell.center)
