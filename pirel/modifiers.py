@@ -2,7 +2,13 @@ import pirel.pcells as pc
 
 import pirel.tools as pt
 
+import pirel.sketch_tools as st
+
+import pirel.port_tools as ppt
+
 import phidl.geometry as pg
+
+import phidl.routing as pr
 
 from phidl.device_layout import Port,CellArray,Device,DeviceReference,Group
 
@@ -163,7 +169,7 @@ def addPad(cls, pad=pc.Pad, side='top'):
 
             d_ref=cell.add_ref(cls.draw(self),alias='Device')
 
-            pt._copy_ports(d_ref,cell)
+            ppt.copy_ports(d_ref,cell)
 
             add_pads(cell,self.pad,side)
 
@@ -269,12 +275,11 @@ def addLargeGround(probe):
 
             cell=pg.deepcopy(oldprobe)
 
-            groundpad=pt._draw_multilayer(
-                'pg.compass',
-                layers=self.ground_layer,
+            groundpad=pg.compass(
+                layer=self.ground_layer,
                 size=(self.ground_size,self.ground_size))
 
-            r=pt._get_corners(groundpad)
+            r=st.get_corners(groundpad)
 
             for alias in cell.aliases:
 
@@ -295,7 +300,7 @@ def addLargeGround(probe):
                     groundref.move(origin=r.ur.coord,
                     destination=dest)
 
-                    pt._copy_ports(groundref,cell,prefix="GroundLX")
+                    ppt.copy_ports(groundref,cell,prefix="GroundLX")
 
                 if 'GroundRX' in alias:
 
@@ -319,7 +324,7 @@ def addLargeGround(probe):
 
                         cell.remove(cell[alias].ports[portname])
 
-                    pt._copy_ports(groundref,cell,prefix="GroundRX")
+                    ppt.copy_ports(groundref,cell,prefix="GroundRX")
 
             return cell
 
@@ -350,7 +355,7 @@ def makeArray(cls,n=2):
 
             unit_cell=cls.draw(self)
 
-            cell=pt.draw_array(
+            cell=draw_array(
                 unit_cell,
                 self.n_blocks,1)
 
@@ -362,9 +367,9 @@ def makeArray(cls,n=2):
 
         def _make_internal_ground_connections(self,cell):
 
-            lx_ports=pt._find_ports(cell,'GroundLX',depth=0)
+            lx_ports=ppt.find_ports(cell,'GroundLX',depth=0)
 
-            rx_ports=pt._find_ports(cell,'GroundRX',depth=0)
+            rx_ports=ppt.find_ports(cell,'GroundRX',depth=0)
 
             if len(lx_ports)<=1 or len(rx_ports)<=1:
 
@@ -378,7 +383,7 @@ def makeArray(cls,n=2):
 
             polyconn=pc.PolyRouting()
 
-            polyconn.layer=(self.plate_layer,)
+            polyconn.layer=self.plate_layer
 
             for l,r in zip(lx_ports,rx_ports):
 
@@ -486,7 +491,7 @@ def addPassivation(cls,
                 self.passivation_layer,
                 self.passivation_absolute_mode)
 
-            r=pt._get_corners(cell)
+            r=st.get_corners(cell)
 
             if issubclass(cls,pc.SMD):
 
@@ -505,19 +510,19 @@ def addPassivation(cls,
                 cell.add_port(top_port)
                 cell.add_port(bottom_port)
 
-                cell.add(pt._make_poly_connection(
+                cell.add(pr.route_quad(
                     bottom_port,
                     master_ref.ports['S_1'],
                     layer=self.layer))
 
-                cell.add(pt._make_poly_connection(
+                cell.add(pr.route_quad(
                     top_port,
                     master_ref.ports['N_2'],
                     layer=self.layer))
 
             else:
 
-                pt._copy_ports(supercell,cell)
+                ppt.copy_ports(supercell,cell)
 
             return cell
 
@@ -563,7 +568,7 @@ def makeFixture(cls,style='open'):
 
                         trace_cell.destination=subcell.ports['bottom']
 
-                        trace_cell.layer=(self.idt.layer,)
+                        trace_cell.layer=self.idt.layer
 
                         subcell.add(trace_cell.draw())
 
@@ -759,20 +764,20 @@ def addOnePortProbe(cls,probe=pc.GSGProbe):
 
             device_cell=cell["Device"]
 
-            ports=pt._find_ports(device_cell,tag,depth=0)
+            ports=ppt.find_ports(device_cell,tag,depth=0)
 
             if len(ports)>1:
 
                 distance=self.probe_dut_distance.y-self.probe_conn_distance.y
 
-                port_mid=pt._get_centroid_ports(ports)
+                port_mid=st.get_centroid_ports(*ports)
 
                 if distance-port_mid.width>0:
 
                     sigtrace=connect_ports(
                         device_cell,
                         tag=tag,
-                        layers=self.probe.sig_layer,
+                        layer=self.probe.sig_layer,
                         distance=distance-port_mid.width,
                         metal_width=port_mid.width)
 
@@ -781,7 +786,7 @@ def addOnePortProbe(cls,probe=pc.GSGProbe):
                     sigtrace=connect_ports(
                         device_cell,
                         tag=tag,
-                        layers=self.probe.sig_layer,
+                        layer=self.probe.sig_layer,
                         distance=0,
                         metal_width=distance)
 
@@ -789,18 +794,18 @@ def addOnePortProbe(cls,probe=pc.GSGProbe):
 
                     sigtrace.ports[tag].width=sigtrace.xsize
 
-                    paux=pt._shift_port(sigtrace.ports[tag],self.probe_conn_distance.y/3)
+                    paux=ppt.shift_port(sigtrace.ports[tag],self.probe_conn_distance.y/3)
 
                     paux.width=self.probe.size.x
 
-                    sigtrace.add(pt._make_poly_connection(
-                        sigtrace.ports[tag],paux,self.probe.sig_layer))
+                    sigtrace.add(pr.route_quad(
+                        sigtrace.ports[tag],paux,layer=self.probe.sig_layer))
 
                 cell.absorb(cell<<sigtrace)
 
                 sigtrace.ports[tag].width=self.probe.size.x
 
-                pt._copy_ports(sigtrace,cell)
+                ppt.copy_ports(sigtrace,cell)
 
             else:
 
@@ -872,7 +877,7 @@ def addOnePortProbe(cls,probe=pc.GSGProbe):
 
             probe_ref=cell["Probe"]
 
-            bottom_ports=pt._find_ports(cell,'bottom',depth=0,exact=True)
+            bottom_ports=ppt.find_ports(cell,'bottom',depth=0,exact=True)
 
             try:
 
@@ -882,7 +887,7 @@ def addOnePortProbe(cls,probe=pc.GSGProbe):
 
                 probe_port=probe_ref.ports['SigN_1']
 
-            top_ports=pt._find_ports(device_ref,'top')
+            top_ports=ppt.find_ports(device_ref,'top')
 
             if len(top_ports)>1:
 
@@ -924,7 +929,7 @@ def addOnePortProbe(cls,probe=pc.GSGProbe):
 
                         if label=='straight':
 
-                            groundroute.source=(probe_ref.ports['GroundLXN'],)
+                            groundroute.source=probe_ref.ports['GroundLXN']
 
                         elif label=='side':
 
@@ -942,7 +947,7 @@ def addOnePortProbe(cls,probe=pc.GSGProbe):
 
                             groundroute.source=(probe_ref.ports['GroundRXE'],)
 
-                    dest_ports=pt._find_ports(device_ref,'top')
+                    dest_ports=ppt.find_ports(device_ref,'top')
 
                     groundroute.destination=tuple(dest_ports)
 
@@ -964,7 +969,7 @@ def addOnePortProbe(cls,probe=pc.GSGProbe):
 
                 routing_cell.absorb(routing_cell<<self.gndrighttrace.draw())
 
-                return pt.join(routing_cell)
+                return st.join(routing_cell)
 
             else :
 
@@ -1066,13 +1071,13 @@ def addTwoPortProbe(cls,probe=makeTwoPortProbe(pc.GSGProbe)):
 
         def _setup_probe(self,device_cell):
 
-            top_ports=[pt.Point(p.midpoint) for p in pt._find_ports(device_cell,'top',depth=0)]
+            top_ports=[pt.Point(p.midpoint) for p in ppt.find_ports(device_cell,'top',depth=0)]
 
-            bottom_ports=[pt.Point(p.midpoint) for p in pt._find_ports(device_cell,'bottom',depth=0)]
+            bottom_ports=[pt.Point(p.midpoint) for p in ppt.find_ports(device_cell,'bottom',depth=0)]
 
-            top_port_midpoint=pt._get_centroid(*top_ports)
+            top_port_midpoint=st.get_centroid(*top_ports)
 
-            bottom_port_midpoint=pt._get_centroid(*bottom_ports)
+            bottom_port_midpoint=st.get_centroid(*bottom_ports)
 
             self.probe.offset=pt.Point(
                 (top_port_midpoint.x-bottom_port_midpoint.x),
@@ -1139,7 +1144,7 @@ def addTwoPortProbe(cls,probe=makeTwoPortProbe(pc.GSGProbe)):
 
             rx_device_ports=[]
 
-            gnd_ports=pt._find_ports(device_cell,'Ground',depth=0)
+            gnd_ports=ppt.find_ports(device_cell,'Ground',depth=0)
 
             if not gnd_ports:
 
@@ -1173,7 +1178,7 @@ def addTwoPortProbe(cls,probe=makeTwoPortProbe(pc.GSGProbe)):
 
             if label=='side':
 
-                r.source=tuple(pt._find_ports(probe_cell,'GroundLXW',depth=0))
+                r.source=tuple(ppt.find_ports(probe_cell,'GroundLXW',depth=0))
 
             elif label=='straight':
 
@@ -1195,7 +1200,7 @@ def addTwoPortProbe(cls,probe=makeTwoPortProbe(pc.GSGProbe)):
 
             if label=='side':
 
-                r.source=tuple(pt._find_ports(probe_cell,'GroundRXE',depth=0))
+                r.source=tuple(ppt.find_ports(probe_cell,'GroundRXE',depth=0))
 
             elif label=='straight':
 
@@ -1308,7 +1313,7 @@ def addTwoPortProbe(cls,probe=makeTwoPortProbe(pc.GSGProbe)):
 
             rx_device_ports=[]
 
-            gnd_ports=pt._find_ports(device_cell,'Ground',depth=0)
+            gnd_ports=ppt.find_ports(device_cell,'Ground',depth=0)
 
             if not gnd_ports:
 
@@ -1328,7 +1333,7 @@ def addTwoPortProbe(cls,probe=makeTwoPortProbe(pc.GSGProbe)):
 
                 ext_length=abs(cell.xmin-p.midpoint[0]+self.gnd_routing_width)
 
-                output_cell.add(pt._extend_port(p,
+                output_cell.add(ppt.extend_port(p,
                     width=p.width,
                     length=ext_length,
                     layer=self.gndlefttrace.layer))
@@ -1337,7 +1342,7 @@ def addTwoPortProbe(cls,probe=makeTwoPortProbe(pc.GSGProbe)):
 
                 ext_length=abs(cell.xmax-p.midpoint[0]-self.gnd_routing_width)
 
-                output_cell.add(pt._extend_port(p,
+                output_cell.add(ppt.extend_port(p,
                     width=p.width,
                     length=ext_length,
                     layer=self.gndlefttrace.layer))
@@ -1371,7 +1376,7 @@ def addGroundVias(cls):
 
     return withGroundVia
 
-def connectPorts(cls,tags,layers):
+def connectPorts(cls,tags,layer):
 
     if isinstance(tags,str):
 
@@ -1400,12 +1405,12 @@ def connectPorts(cls,tags,layers):
                 connector=connect_ports(
                     supercell,
                     t,
-                    layers=layers,
+                    layer=layer,
                     distance=self.connector_distance.y)
 
                 cell<<connector
 
-                pt._copy_ports(connector,cell)
+                ppt.copy_ports(connector,cell)
 
             return cell
 
@@ -1417,7 +1422,7 @@ def connectPorts(cls,tags,layers):
 def connect_ports(
     cell : Device,
     tag : str ='top',
-    layers : tuple = (LayoutDefault.layerTop,),
+    layer : int= LayoutDefault.layerTop,
     distance : float = 10.0,
     metal_width: float = None):
     ''' connects all the ports in the cell with name matching a tag.
@@ -1444,11 +1449,11 @@ def connect_ports(
 
     import pirel.pcells as pc
 
-    ports=pt._find_ports(cell,tag,depth=0)
+    ports=ppt.find_ports(cell,tag,depth=0)
 
     ports.sort(key=lambda x: x.midpoint[0])
 
-    ports_centroid=pt._get_centroid_ports(ports)
+    ports_centroid=st.get_centroid_ports(*ports)
 
     if len(ports)==1:
 
@@ -1474,19 +1479,17 @@ def connect_ports(
 
     for p in ports:
 
-        straight_conn=output_cell<<pt._draw_multilayer(
-            'pg.compass',
-            layers,size=(p.width,abs(midpoint_projected.y-p.midpoint[1])))
+        straight_conn=output_cell<<pg.compass(
+            layer=layer,size=(p.width,abs(midpoint_projected.y-p.midpoint[1])))
 
         straight_conn.connect("S",p)
 
-    cross_conn=output_cell<<pt._draw_multilayer(
-        'pg.compass',
-        layers,size=(output_cell.xsize,metal_width))
+    cross_conn=output_cell<<pg.compass(
+        layer=layer,size=(output_cell.xsize,metal_width))
 
     cross_conn.connect('S',new_port,overlap=metal_width)
 
-    output=pt.join(output_cell)
+    output=st.join(output_cell)
 
     output.add_port(new_port)
 
@@ -1510,11 +1513,11 @@ def add_pads(cell,pad,tag='top',exact=False):
 
         for t in tag:
 
-            ports.extend(pt._find_ports(cell,t,depth=0,exact=exact))
+            ports.extend(ppt.find_ports(cell,t,depth=0,exact=exact))
 
     else:
 
-        ports=pt._find_ports(cell,tag,depth=0,exact=exact)
+        ports=ppt.find_ports(cell,tag,depth=0,exact=exact)
 
     pad_cell=Device()
 
@@ -1563,7 +1566,7 @@ def add_vias(cell : Device, bbox, via : pt.LayoutPart, spacing : float = 0,toler
 
         return
 
-    via_cell=pt.draw_array(via.draw(),
+    via_cell=draw_array(via.draw(),
         nvias_x,nvias_y,
         row_spacing=spacing,
         column_spacing=spacing)
@@ -1576,7 +1579,7 @@ def add_vias(cell : Device, bbox, via : pt.LayoutPart, spacing : float = 0,toler
 
     for elem in via_cell.references:
 
-        if not pt.is_cell_inside(elem,cell,tolerance):
+        if not st.is_cell_inside(elem,cell,tolerance):
 
             tbr.append(elem)
 
@@ -1634,6 +1637,78 @@ def _add_default_ground_vias(self,cell):
             self.gndvia,
             spacing=self.gndvia.size*1.25,
             tolerance=self.gndvia.size/2)
+
+def draw_array(
+    cell : Device,
+    x : int, y : int,
+    row_spacing : float = 0 ,
+    column_spacing : float = 0 ) -> Device:
+    ''' returns a spaced matrix of identical cells, including ports in the output cell.
+
+    Parameters
+    ----------
+    cell : phidl.Device
+
+    x : int
+        columns of copies
+
+    y : int
+        rows of copies
+
+    row_spacing: float
+
+    column_spacing: float
+
+    Returns
+    -------
+    cell : phidl.Device.
+    '''
+
+    new_cell=pg.Device(cell.name+"array")
+
+    cell_size=Point(cell.size)+Point(column_spacing,row_spacing)
+
+    for j in range(y):
+
+        for i in range(x):
+
+            if y==1 and x==1:
+
+                ref=new_cell.add_ref(cell,alias=cell.name)
+
+            elif y==1:
+
+                ref=new_cell.add_ref(cell,alias=cell.name+'_'+str(i))
+
+            elif x==1:
+
+                ref=new_cell.add_ref(cell,alias=cell.name+'_'+str(j))
+
+            else:
+
+                ref=new_cell.add_ref(cell,alias=cell.name+'_'+str(i)+'_'+str(j))
+
+            ref.move(
+                destination=(Point(cell_size.x*i,cell_size.y*j)).coord)
+
+            if y==1 and x==1:
+
+                ppt.copy_ports(ref,new_cell)
+
+            elif y==1:
+
+                ppt.copy_ports(ref,new_cell,suffix='_'+str(i))
+
+            elif x==1:
+
+                ppt.copy_ports(ref,new_cell,suffix='_'+str(j))
+
+            else:
+
+                ppt.copy_ports(ref,new_cell,suffix='_'+str(i)+'_'+str(j))
+
+    return new_cell
+
 #
 # _allmodifiers=(
 #     makeScaled,addPad,addPartialEtch,

@@ -1,18 +1,13 @@
-import phidl.geometry as pg
-import phidl.device_layout as dl
-import pirel.pcells as pc
 import pirel.modifiers as pm
-import pirel.tools as pt
-import pirel.addOns.standard_parts as ps
+import pirel.pcells as pc
+import pirel.sketch_tools as st
 
+device_with_probe=pm.addOnePortProbe(pm.makeArray(pm.makeScaled(pc.FBERes),4),pc.GSGProbe)()
 
-# d=pm.Scaled(pc.IDT)
-# ?
-# d.view()
+device_with_probe.anchor.n=1
+device_with_probe.set_params({"AnchorSizeY":2})
+device_with_probe.n_blocks=2
 
-d=pm.connectPorts(pm.makeArray(pc.FBERes),
-    tags=('top','bottom'),
-    layers=(pt.LayoutDefault.layerTop,pt.LayoutDefault.layerBottom),
-    distance=25.0)()
+import pirel.sketch_tools as st
 
-d.view()
+st.check(device_with_probe.draw(),joined=True)

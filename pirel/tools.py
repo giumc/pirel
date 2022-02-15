@@ -274,8 +274,8 @@ class LayoutDefault:
 
     #Probe
 
-    Probesiglayer=(layerTop,)
-    Probegroundlayer=(layerTop,layerBottom)
+    Probesiglayer=layerTop
+    Probegroundlayer={layerTop,layerBottom}
     Probepitch=200.0
     Probesize=Point(100,100)
 
@@ -288,7 +288,7 @@ class LayoutDefault:
 
     Routingtrace_width=80.0
     Routingclearance=((0,0),(0,0))
-    Routinglayer=(layerTop,)
+    Routinglayer=layerTop
     Routingports=(Port(name='1',midpoint=(450,0),\
         width=50,orientation=90),\
             Port(name='2',midpoint=(100,550),\
@@ -299,7 +299,7 @@ class LayoutDefault:
     #MultiRouting
 
     MultiRoutingsources=(Routingports[0],)
-    MultiRoutinglayer=(layerBottom,layerTop)
+    MultiRoutinglayer={layerBottom,layerTop}
     MultiRoutingdestinations=(Port(name='2',midpoint=(100,550),\
         width=50,orientation=90),\
             Port(name='3',midpoint=(200,80),\
@@ -341,7 +341,7 @@ class LayoutDefault:
 
     TextSize=100
     TextLabel='Default'
-    TextLayer=(layerTop,)
+    TextLayer=layerTop
     TextFont=str(pathlib.Path(__file__).parent/'addOns'/'BebasNeue-Regular.otf')
 
     #Npath
@@ -353,13 +353,13 @@ class LayoutDefault:
 
     SMDDistance=Point(0,500)
     SMDSize=Point(200,300)
-    SMDLayer=(layerTop,)
+    SMDLayer=layerTop
 
     #Passivation
 
     PassivationMargin=Point(1.5,1.2)
     PassivationScale=Point(1.8,1.5)
-    PassivationLayer=(layerPassivation,)
+    PassivationLayer=layerPassivation
 
 class _LayoutParam:
 
@@ -395,19 +395,7 @@ class _LayoutParam:
     @value.setter
     def value(self,new_value):
 
-        if isinstance(new_value,self._type) or new_value is None:
-
             self._value=new_value
-
-        else:
-
-            if isinstance(new_value,int) and self._type==float:
-
-                self._value=new_value
-
-            else:
-
-                raise ValueError(f"Cannot assign type {new_value.__class__.__name__} to {self.label}")
 
     @property
     def x(self):
@@ -466,17 +454,41 @@ class _LayoutParam:
 
     __str__=__repr__
 
+class ReturnIterable():
+
+    def __set_name__(self,owner,name):
+
+        self.public_name=name
+
+    def __set__(self,owner,new_value):
+
+        self._value=new_value
+
+    def __get__(self,owner,objtype=None):
+
+        if not hasattr(self,'_value'):
+
+            return ValueError(f"Value not defined for {self.public_name}")
+
+        if self._value is None:
+
+            return None
+
+        else:
+
+            return _return_iterable(self._value)
+
 class LayoutParamInterface:
 
-    def __init__(self,*args):
+    allowed_values=ReturnIterable()
 
-        if args:
+    allowed_types=ReturnIterable()
 
-            self.constraints=args
+    def __init__(self,allowed_values=None,allowed_types=None):
 
-        else :
+        self.allowed_values=allowed_values
 
-            self.constraints=None
+        self.allowed_types=allowed_types
 
     def __set_name__(self,owner,name):
 
@@ -485,12 +497,19 @@ class LayoutParamInterface:
 
     def __set__(self,owner,new_value):
 
-        if self.constraints is not None:
+        if self.allowed_values is not None:
 
-            if not new_value in self.constraints:
+            if not new_value in self.allowed_values:
 
-                raise ValueError(f""" Value {new_value} is not legal for attribute {self.public_name}\n
-                            legal values are {self.constraints}""")
+                raise ValueError(f""" Value {new_value} is not allowed value for attribute {self.public_name}\n
+                            allowed values are {self.allowed_values}""")
+
+        if self.allowed_types is not None:
+
+            if not isinstance(new_value,self.allowed_types):
+
+                raise ValueError(f""" Value {new_value} is not allowed type for attribute {self.public_name}\n
+                            allowed values are {self.allowed_type}""")
 
         if not hasattr(owner,self.private_name):
 
@@ -584,6 +603,8 @@ class LayoutPart(ABC) :
         joined : boolean
             if true, a copy of the flattened&joined cell is displayed.
         '''
+
+        from pirel.sketch_tools import check
 
         check(self.draw(),blocking=blocking,joined=joined,gds=gds)
 
@@ -824,113 +845,6 @@ def _print_ports(device : Device):
 
         print(i,p,'\n')
 
-def join(device : Device) -> Device:
-    ''' returns a copy of device with all polygons joined.
-
-    Parameters
-    ----------
-    device : phidl.Device.
-    '''
-
-    out_cell=pg.union(device,by_layer=True, precision=0.001,join_first=False)
-
-    return out_cell
-
-def _get_corners(device : Device) :
-    ''' get corners of a device.
-
-    Parameters
-    ---------
-    device : phidl.Device
-
-    Returns:
-    ll : pt.Point
-        lower left
-
-    lr : pt.Point
-        lower right
-
-    ul : pt.Point
-        upper left
-
-    ur : pt.Point
-
-    c : pt.Point
-
-    n : pt.point
-
-    s : pt.point
-
-    w : pt.Point
-
-    e : pt.Point.
-    '''
-    bbox=device.bbox
-    ll=Point(bbox[0,0],bbox[0,1])
-    lr=Point(bbox[1,0],bbox[0,1])
-    ul=Point(bbox[0,0],bbox[1,1])
-    ur=Point(bbox[1,0],bbox[1,1])
-    n=Point(device.center[0],bbox[1,1])
-    s=Point(device.center[0],bbox[0,1])
-    w=Point(bbox[0,0],device.center[1])
-    e=Point(bbox[1,0],device.center[1])
-    c=Point(device.center)
-
-    class ReferencePoints():
-        pass
-
-    r=ReferencePoints()
-    r.ll=ll
-    r.lr=lr
-    r.ul=ul
-    r.ur=ur
-    r.c=c
-    r.n=n
-    r.s=s
-    r.w=w
-    r.e=e
-    return r
-
-def check(device : Device, joined=False, blocking=True,gds=False):
-    ''' Shows the device layout.
-
-        If run by terminal, blocks script until window is closed.
-
-        Parameters
-        ----------
-            device : phidl.Device
-
-            joined : boolean (optional, default False)
-                if true, returns a flattened/joined version of device
-
-            gds : boolean
-                if true, view in gdspy viewer
-
-    '''
-    set_quickplot_options(blocking=blocking)
-
-    if joined:
-
-        cell=join(device)
-
-    else:
-
-        cell=device
-
-    if gds:
-
-        lib=gdspy.GdsLibrary()
-
-        gcell=lib.new_cell("Output")
-
-        gcell.add(cell)
-
-        gdspy.LayoutViewer(lib)
-
-    else:
-
-        qp(cell)
-
 def if_match_import(obj : LayoutPart ,param : dict, tag : str ):
     ''' used to load data in subclasses.
 
@@ -1003,7 +917,7 @@ def parallel_res(*args) -> float:
 
     return 1/sum_y
 
-def pirel_cache(fun):
+def _pirel_cache(fun):
 
     from functools import wraps
 
@@ -1047,6 +961,8 @@ def pirel_cache(fun):
 def custom_formatwarning(msg, *args, **kwargs):
     # ignore everything except the message
     return str(msg) + '\n'
+
+warnings.formatwarning = custom_formatwarning
 
 def _get_class_param(cls : LayoutPart.__class__ ) -> list:
 
@@ -1105,17 +1021,29 @@ def _get_hashable_params( obj : LayoutPart , params : list) ->tuple:
 
             paramdict.update({name:_get_hashable_params(value,_get_class_param(value.__class__))})
 
-        else:
+        elif isinstance(value,tuple):
 
-            try:
+            if all([isinstance(x,Port) for x in value]):
 
                 port_list=tuple([(p.name,Point(p.midpoint).coord,p.width,p.orientation) for p in value])
 
                 paramdict.update({name:port_list})
 
-            except Exception:
+            else:
 
                 paramdict.update({name:value})
+
+        elif isinstance(value,list):
+
+            paramdict.update({name:tuple(value)})
+
+        elif isinstance(value, set):
+
+            paramdict.update({name:tuple(sorted(value))})
+
+        else:
+
+            paramdict.update({name:value})
 
     return tuple(paramdict.items())
 
@@ -1161,316 +1089,6 @@ def _check_points_path(*points,trace_width=100):
 
         return out_list
 
-def generate_gds_from_image(path,**kwargs):
-
-    import nazca as nd
-
-    if isinstance(path,pathlib.Path):
-
-        path=str(path.absolute())
-
-    else:
-
-        path=pathlib.Path(path)
-
-    cell=nd.image(path,**kwargs).put()
-
-    path=path.parent/(path.stem+".gds")
-
-    nd.export_gds(filename=str(path.absolute()))
-
-    return path
-
-def import_gds(path,cellname=None,flatten=True,**kwargs):
-
-    if isinstance(path,str):
-
-        path=pathlib.Path(path)
-
-    cell=pg.import_gds(str(path.absolute()))
-
-    if flatten==True:
-        cell.flatten()
-
-    if cellname is not None:
-
-        cell._internal_name=cellname
-
-    return cell
-
-def magic_matrix(cells,master,overlap=Point(0,0)):
-    ''' Arranges N cells in a NxN matrix with staggered position.
-
-    Used in wafer positioning to have N cells in the center of the wafer.
-
-    Parameters
-    ----------
-        cells : list of phidl.Device
-
-        master : phidl.Device
-
-            container of the cell matrix
-
-        overlap : pt.Point (default (0,0))
-
-            overlapping of cells.
-    '''
-
-    from itertools import cycle
-
-    import phidl.device_layout as dl
-
-    g= dl.Group(cells)
-
-    g.align(alignment='ymin')
-    g.align(alignment='xmin')
-
-    l=len(cells)
-
-    indexes=cycle([*range(l)])
-
-    pos_matrix=[]
-
-    for k in range(l):
-
-        pos_matrix.append([next(indexes) for i in range(l)])
-
-        next(indexes)
-
-        for x in range(k):
-
-            next(indexes)
-
-    for j in range(l):
-
-        for i in range(l):
-
-            c=cells[pos_matrix[j][i]]
-
-            origin=Point(c.xmin,c.ymin)
-
-            transl=Point((c.xsize+overlap.x)*i,-(c.ysize+overlap.y)*j)
-
-            c_ref=master<<c
-
-            c_ref.move(origin=origin.coord,\
-                destination=(origin+transl).coord)
-
-    return master
-
-def image_to_gds(p : pathlib.Path ,
-    layer :int = LayoutDefault.layerTop ,
-    *a,**k ):
-
-    try:
-
-        import nazca as nd
-
-    except Exception:
-
-        import subprocess
-
-        import sys
-
-        thispath=pathlib.Path(__file__).parent
-
-        nazcapath=thispath/"addOns"/"nazca"/"nazca-0.5.13.zip"
-
-        subprocess.check_call([sys.executable, "-m", "pip", "install", str(nazcapath.absolute())])
-
-        import nazca as nd
-
-    nd.image(str(p.absolute()),layer=layer, **k).put(0)
-
-    nd.export_gds(filename=str(p.parent/p.stem)+'.gds', flat=True)
-
-def is_cell_inside(
-    cell_test : Device ,
-    cell_ref : Device,
-    tolerance: float =0):
-    ''' Checks whether cell_test is contained in cell_ref.
-
-    Parameters:
-    ---------
-    cell_test : Device
-
-    cell_ref : Device
-
-    tolerance : float (optional)
-
-    Returns:
-        True (if strictly cell_test<cell_ref)
-        False (otherwise).
-
-    Note:
-        if tolerance is not zero, then function returns True if cell<cell_ref+-tolerance
-        in all direction
-    '''
-
-    if tolerance==0:
-
-        return _is_cell_inside(cell_test,cell_ref)
-
-    else:
-
-        shifts_set=np.array([[1,1],[-1,-1],[1,-1],[-1,1]])*tolerance
-
-        for shift in shifts_set:
-
-            cell_test.move(destination=shift)
-
-            if not _is_cell_inside(
-                cell_test,
-                cell_ref):
-
-                cell_test.move(destination=-shift)
-
-                return False
-
-            else:
-
-                cell_test.move(destination=-shift)
-
-        else:
-
-            return True
-
-def _is_cell_inside(cell_test,cell_ref):
-
-    area_pre,area_post=_calculate_pre_post_area(cell_test,cell_ref)
-
-    if round(area_pre,3) >= round(area_post,3)-1e-3:
-
-        return True
-
-    else:
-
-        return False
-
-def is_cell_outside(
-    cell_test : Device ,
-    cell_ref : Device,
-    tolerance: float =0):
-    ''' Checks whether cell_test is not overlap with cell_ref.
-
-    Parameters:
-    ---------
-    cell_test : Device
-
-    cell_ref : Device
-
-    tolerance : float (optional)
-
-    Returns:
-        True (if strictly cell_tot>=cell_test+cell_ref)
-        False (otherwise).
-
-    Note:
-        if tolerance is not zero, then function returns True if cell_tot>=cell_test+cell_ref-tol
-        in all direction
-    '''
-
-    if tolerance==0:
-
-        return _is_cell_outside(cell_test,cell_ref)
-
-    else:
-
-        shifts_set=np.array([[1,1],[-1,-1],[1,-1],[-1,1]])*tolerance
-
-        for shift in shifts_set:
-
-            cell_test.move(destination=shift)
-
-            if not _is_cell_outside(
-                cell_test,
-                cell_ref):
-
-                cell_test.move(destination=-shift)
-
-                return False
-
-            else:
-
-                cell_test.move(destination=-shift)
-
-        else:
-
-            return True
-
-def _is_cell_outside(cell_test,cell_ref):
-
-    area_test=cell_test.area()
-
-    area_ref,area_post=_calculate_pre_post_area(cell_test,cell_ref)
-
-    if round(area_post,3)>=round(area_ref+area_test,3)-1e-3:
-
-        return True
-
-    else:
-
-        return False
-
-def _calculate_pre_post_area(cell_test,cell_ref):
-
-    area_pre=_get_cell_area(cell_ref)
-
-    c_flat=pg.union(cell_ref, by_layer=False, layer=100)
-
-    if isinstance(cell_test,Device):
-
-        c_flat.add_ref(cell_test)
-
-    else:
-
-        if isinstance(cell_test,DeviceReference):
-
-            c_flat.add(cell_test)
-
-    area_post=_get_cell_area(c_flat)
-
-    return area_pre,area_post
-
-def _get_cell_area(cell):
-
-    c_flat=pg.union(cell, by_layer=False, layer=100)
-
-    return c_flat.area()
-
-def _get_centroid(*points):
-
-    x_c=0
-    y_c=0
-
-    if isinstance(points, Point):
-
-        return points
-
-    for p in points:
-
-        x_c=x_c+p.x
-        y_c=y_c+p.y
-
-    return Point(x_c,y_c)/len(points)
-
-def _get_centroid_ports(ports):
-
-    if not ports:
-
-        raise ValueError(f"pt._get_centroid_ports(): no ports with tag {tag} in device {cell.name}")
-
-    ports_centroid=_get_centroid(*[Point(x.midpoint) for x in ports])
-
-    ports_width=np.average([x.width for x in ports])
-
-    ports_orientation=np.average([x.orientation for x in ports])
-
-    return Port(
-        orientation=ports_orientation,
-        width=ports_width,
-        midpoint=ports_centroid.coord)
-
 def pick_callable_param(pars : dict):
 
     out_pars={}
@@ -1482,66 +1100,6 @@ def pick_callable_param(pars : dict):
             out_pars.update({key:value})
 
     return out_pars
-
-def _get_angle(p1,p2):
-
-    if not (isinstance(p1,Point) and isinstance(p2,Point)):
-
-        raise ValueError(f"{p1} and {p2} have to be pirel Points")
-
-    import numpy as np
-
-    ang1 = np.arctan2(p1.y,p1.x)
-
-    ang2 = np.arctan2(p2.y,p2.x)
-
-    return np.rad2deg((ang1 - ang2) % (2 * np.pi))
-
-def _copy_ports(source,dest,prefix='',suffix=''):
-
-    for n,p in source.ports.items():
-
-        dest.add_port(port=p,name=prefix+n+suffix)
-
-def _find_ports(cell,tag,depth=None,exact=False):
-
-    output=[]
-
-    if isinstance(cell,Device):
-
-        for port in cell.get_ports(depth=depth):
-
-            if exact:
-
-                if port.name==tag:
-
-                    output.append(port)
-
-            else:
-
-                if tag in port.name:
-
-                    output.append(port)
-
-        return output
-
-    elif isinstance(cell,DeviceReference):
-
-        for port in cell.ports.values():
-
-            if exact:
-
-                if port.name==tag:
-
-                    output.append(port)
-
-            else:
-
-                if tag in port.name:
-
-                    output.append(port)
-
-        return output
 
 def _view_points(points):
 
@@ -1560,68 +1118,6 @@ def _view_points(points):
     plt.show()
 
     return
-
-def _make_poly_connection(p1,p2,layer):
-
-    d=Device()
-
-    try:
-
-        for l in layer:
-
-            d.add_polygon([p1.endpoints[0],p1.endpoints[1],p2.endpoints[1],p2.endpoints[0]],
-            layer=l)
-            d.add_polygon([p1.endpoints[0],p1.endpoints[1],p2.endpoints[0],p2.endpoints[1]],
-            layer=l)
-
-    except:
-
-        d.add_polygon([p1.endpoints[0],p1.endpoints[1],p2.endpoints[1],p2.endpoints[0]],
-        layer=layer)
-
-        d.add_polygon([p1.endpoints[0],p1.endpoints[1],p2.endpoints[1],p2.endpoints[0]],
-        layer=layer)
-
-
-    return join(d)
-
-def _copy_layer(cell,l1,l2):
-
-    flatcell=join(cell)
-
-    tobecopied=flatcell.get_polygons(byspec=(l1,0))
-
-    cell.add_polygons(tobecopied,l2)
-
-warnings.formatwarning = custom_formatwarning
-
-def _move_relative_to_cell(
-    cell_to_be_moved,
-    cell_ref,
-    anchor_source='ll',
-    anchor_dest='ll',
-    offset=(0,0)):
-
-    a_origin=_anchor_selector(anchor_source,cell_to_be_moved)
-
-    a_end=_anchor_selector(anchor_dest,cell_ref)
-
-    dx=cell_ref.xmax-cell_ref.xmin
-    dy=cell_ref.ymax-cell_ref.ymin
-
-    offset=Point(dx*offset[0],dy*offset[1])
-
-    cell_to_be_moved.move(
-        origin=a_origin.coord,
-        destination=a_end.coord)
-    cell_to_be_moved.move(
-        destination=offset.coord)
-
-def _anchor_selector(text,cell):
-
-    r=_get_corners(cell)
-
-    return r.__getattribute__(text)
 
 def _remove_alias(cell,name):
 
@@ -1656,133 +1152,14 @@ def _bbox_to_tuple(bbox):
     except TypeError:
         return bbox
 
-def _draw_multilayer(command,layers=(1,2),*a,**kw):
+def _return_iterable(value):
 
     try:
 
-        for i,l in enumerate(layers):
+        i=iter(value)
 
-            if i==0:
-
-                conn=eval(command)(layer=l,*a,**kw)
-
-            else:
-
-                conn.absorb(
-                    conn<<eval(command)(layer=l,*a,**kw))
-
-        return conn
+        return value
 
     except TypeError:
 
-        conn=eval(command)(layer=layers,*a,**kw)
-
-        return conn
-
-def draw_array(
-    cell : Device,
-    x : int, y : int,
-    row_spacing : float = 0 ,
-    column_spacing : float = 0 ) -> Device:
-    ''' returns a spaced matrix of identical cells, including ports in the output cell.
-
-    Parameters
-    ----------
-    cell : phidl.Device
-
-    x : int
-        columns of copies
-
-    y : int
-        rows of copies
-
-    row_spacing: float
-
-    column_spacing: float
-
-    Returns
-    -------
-    cell : phidl.Device.
-    '''
-
-    new_cell=pg.Device(cell.name+"array")
-
-    cell_size=Point(cell.size)+Point(column_spacing,row_spacing)
-
-    for j in range(y):
-
-        for i in range(x):
-
-            if y==1 and x==1:
-
-                ref=new_cell.add_ref(cell,alias=cell.name)
-
-            elif y==1:
-
-                ref=new_cell.add_ref(cell,alias=cell.name+'_'+str(i))
-
-            elif x==1:
-
-                ref=new_cell.add_ref(cell,alias=cell.name+'_'+str(j))
-
-            else:
-
-                ref=new_cell.add_ref(cell,alias=cell.name+'_'+str(i)+'_'+str(j))
-
-            ref.move(
-                destination=(Point(cell_size.x*i,cell_size.y*j)).coord)
-
-            if y==1 and x==1:
-
-                _copy_ports(ref,new_cell)
-
-            elif y==1:
-
-                _copy_ports(ref,new_cell,suffix='_'+str(i))
-
-            elif x==1:
-
-                _copy_ports(ref,new_cell,suffix='_'+str(j))
-
-            else:
-
-                _copy_ports(ref,new_cell,suffix='_'+str(i)+'_'+str(j))
-
-    return new_cell
-
-def _extend_port(port,width,length,layer):
-
-    p1=Point(port.midpoint)
-
-    dir=Point(port.normal[1])-Point(port.normal[0])
-
-    p2=p1+dir*length
-
-    p=path.smooth(points=[p1.coord,p2.coord])
-
-    output=Device()
-    try:
-
-        for l in layer:
-
-            output.add(p.extrude(width=width,layer=l))
-
-    except TypeError:
-
-        output.add(p.extrude(width=width,layer=layer))
-
-    return output
-
-def _shift_port(port,dist):
-
-    port_mid_norm=Point(port.normal[1])-Point(port.normal[0])
-
-    midpoint_projected=Point(port.midpoint)+port_mid_norm*dist
-
-    new_port=Port(
-        name=port.name+'shifted',
-        orientation=port.orientation,
-        width=port.width,
-        midpoint=midpoint_projected.coord)
-
-    return new_port
+        return (value,)
