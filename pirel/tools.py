@@ -286,15 +286,16 @@ class LayoutDefault:
 
     #Routing
 
-    Routingtrace_width=80.0
+    Routingtrace_width=None
     Routingclearance=((0,0),(0,0))
     Routinglayer=layerTop
     Routingports=(Port(name='1',midpoint=(450,0),\
         width=50,orientation=90),\
             Port(name='2',midpoint=(100,550),\
             width=50,orientation=90),)
+    Routingtype='manhattan'
+    Routingoverhang=20
     Routingside='auto'
-    Routingoverhang=10.0
 
     #MultiRouting
 

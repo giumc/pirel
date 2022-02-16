@@ -1,5 +1,7 @@
 import pirel.tools as pt
 
+from pirel. tools import LayoutDefault as ld
+
 import pirel.sketch_tools as st
 
 import pirel.port_tools as ppt
@@ -68,13 +70,13 @@ class Text(PartWithLayer):
 
         super().__init__(*a,**kw)
 
-        self.layer=pt.LayoutDefault.TextLayer
+        self.layer=ld.TextLayer
 
-        self.label=pt.LayoutDefault.TextLabel
+        self.label=ld.TextLabel
 
-        self.size=pt.LayoutDefault.TextSize
+        self.size=ld.TextSize
 
-        self.font=pt.LayoutDefault.TextFont
+        self.font=ld.TextFont
 
     def add_to_cell(self,cell,
         angle=0,*a,**kw):
@@ -151,12 +153,12 @@ class IDTSingle(PartWithLayer) :
     def __init__(self,*args,**kwargs):
 
         super().__init__(*args,**kwargs)
-        self.length=pt.LayoutDefault.IDT_y
-        self.pitch=pt.LayoutDefault.IDTpitch
-        self.coverage=pt.LayoutDefault.IDTcoverage
-        self.n=pt.LayoutDefault.IDTn
-        self.layer=pt.LayoutDefault.IDTlayer
-        self.active_area_margin=pt.LayoutDefault.LFEResactive_area_margin
+        self.length=ld.IDT_y
+        self.pitch=ld.IDTpitch
+        self.coverage=ld.IDTcoverage
+        self.n=ld.IDTn
+        self.layer=ld.IDTlayer
+        self.active_area_margin=ld.LFEResactive_area_margin
 
     def draw(self):
         ''' Generates layout cell based on current parameters.
@@ -301,13 +303,13 @@ class IDT(PartWithLayer) :
     def __init__(self,*args,**kwargs):
 
         super().__init__(*args,**kwargs)
-        self.length=pt.LayoutDefault.IDT_y
-        self.pitch=pt.LayoutDefault.IDTpitch
-        self.y_offset=pt.LayoutDefault.IDTy_offset
-        self.coverage=pt.LayoutDefault.IDTcoverage
-        self.n=pt.LayoutDefault.IDTn
-        self.layer=pt.LayoutDefault.IDTlayer
-        self.active_area_margin=pt.LayoutDefault.LFEResactive_area_margin
+        self.length=ld.IDT_y
+        self.pitch=ld.IDTpitch
+        self.y_offset=ld.IDTy_offset
+        self.coverage=ld.IDTcoverage
+        self.n=ld.IDTn
+        self.layer=ld.IDTlayer
+        self.active_area_margin=ld.LFEResactive_area_margin
 
     def draw(self):
         ''' Generates layout cell based on current parameters.
@@ -452,7 +454,7 @@ class PartialEtchIDT(IDT):
 
         super().__init__(*a,**kw)
 
-        self.layer_partialetch=pt.LayoutDefault.layerPartialEtch
+        self.layer_partialetch=ld.layerPartialEtch
 
     def _draw_unit_cell(self):
 
@@ -540,11 +542,11 @@ class Bus(PartWithLayer) :
 
         super().__init__(*args,**kwargs)
 
-        self.layer = pt.LayoutDefault.layerTop
+        self.layer = ld.layerTop
 
-        self.size=copy(pt.LayoutDefault.Bussize)
+        self.size=copy(ld.Bussize)
 
-        self.distance=copy(pt.LayoutDefault.Busdistance)
+        self.distance=copy(ld.Busdistance)
 
     def draw(self):
         ''' Generates layout cell based on current parameters.
@@ -604,11 +606,11 @@ class EtchPit(PartWithLayer) :
 
         super().__init__(*args,**kwargs)
 
-        self.active_area=copy(pt.LayoutDefault.EtchPitactive_area)
+        self.active_area=copy(ld.EtchPitactive_area)
 
-        self.x=pt.LayoutDefault.EtchPit_x
+        self.x=ld.EtchPit_x
 
-        self.layer=pt.LayoutDefault.EtchPitlayer
+        self.layer=ld.EtchPitlayer
 
     def draw(self):
         ''' Generates layout cell based on current parameters.
@@ -679,13 +681,13 @@ class Anchor(PartWithLayer):
 
         super().__init__(*args,**kwargs)
 
-        self.size=pt.LayoutDefault.Anchorsize
-        self.metalized=pt.LayoutDefault.Anchor_metalized
-        self.etch_choice=pt.LayoutDefault.Anchoretch_choice
-        self.etch_x=pt.LayoutDefault.Anchoretch_x
-        self.x_offset=pt.LayoutDefault.Anchorx_offset
-        self.layer=pt.LayoutDefault.Anchorlayer
-        self.etch_layer=pt.LayoutDefault.Anchoretch_layer
+        self.size=ld.Anchorsize
+        self.metalized=ld.Anchor_metalized
+        self.etch_choice=ld.Anchoretch_choice
+        self.etch_x=ld.Anchoretch_x
+        self.x_offset=ld.Anchorx_offset
+        self.layer=ld.Anchorlayer
+        self.etch_layer=ld.Anchoretch_layer
 
     def draw(self):
 
@@ -795,7 +797,7 @@ class MultiAnchor(Anchor):
 
         super().__init__(*a,**kw)
 
-        self.n=pt.LayoutDefault.MultiAnchorn
+        self.n=ld.MultiAnchorn
 
         self.spacing=pt.Point(self.size.x/3,0)
 
@@ -921,10 +923,10 @@ class Via(PartWithLayer):
 
         super().__init__(*args,**kwargs)
 
-        self.layer=pt.LayoutDefault.Vialayer
-        self.shape=pt.LayoutDefault.Viashape
-        self.size=pt.LayoutDefault.Viasize
-        self.conn_layer=(pt.LayoutDefault.layerTop,pt.LayoutDefault.layerBottom)
+        self.layer=ld.Vialayer
+        self.shape=ld.Viashape
+        self.size=ld.Viasize
+        self.conn_layer=(ld.layerTop,ld.layerBottom)
 
     def draw(self):
 
@@ -977,10 +979,10 @@ class Probe(LayoutPart):
 
         super().__init__(*args,**kwargs)
 
-        self.sig_layer=pt.LayoutDefault.Probesiglayer
-        self.ground_layer=pt.LayoutDefault.Probegroundlayer
-        self.pitch=pt.LayoutDefault.Probepitch
-        self.size=pt.LayoutDefault.Probesize
+        self.sig_layer=ld.Probesiglayer
+        self.ground_layer=ld.Probegroundlayer
+        self.pitch=ld.Probepitch
+        self.size=ld.Probesize
 
 class GSProbe(Probe):
     ''' Generates GS pattern.'''
@@ -1086,10 +1088,10 @@ class Pad(PartWithLayer):
     def __init__(self,*args,**kwargs):
 
         super().__init__(*args,**kwargs)
-        self.size=pt.LayoutDefault.Padsize
-        self.layer=pt.LayoutDefault.Padlayer
-        self.distance=copy(pt.LayoutDefault.Paddistance)
-        self.port=pt.LayoutDefault.Padport
+        self.size=ld.Padsize
+        self.layer=ld.Padlayer
+        self.distance=copy(ld.Paddistance)
+        self.port=ld.Padport
 
     def draw(self):
 
@@ -1486,7 +1488,7 @@ def addBottomPlate(cls):
 
             self.plate_over_etch=False
 
-            self.plate_layer=pt.LayoutDefault.FBEResplatelayer
+            self.plate_layer=ld.FBEResplatelayer
 
         def draw(self):
 
@@ -1558,7 +1560,7 @@ class TwoPortRes(FBERes):
 
         self.plate_over_etch=False
 
-        self.plate_layer=pt.LayoutDefault.layerBottom
+        self.plate_layer=ld.layerBottom
 
     def draw(self):
 
@@ -1651,7 +1653,7 @@ class TFERes(LFERes):
 
         super().__init__(*args,**kwargs)
 
-        self.bottom_layer=pt.LayoutDefault.layerBottom
+        self.bottom_layer=ld.layerBottom
 
     def draw(self):
 
@@ -1723,9 +1725,9 @@ class SMD(PartWithLayer):
     def __init__(self,*a,**kw):
 
         super().__init__(*a,**kw)
-        self.layer=pt.LayoutDefault.SMDLayer
-        self.distance=pt.LayoutDefault.SMDDistance
-        self.size=pt.LayoutDefault.SMDSize
+        self.layer=ld.SMDLayer
+        self.distance=ld.SMDDistance
+        self.size=ld.SMDSize
 
     def draw(self):
 
@@ -1778,19 +1780,13 @@ class Routing(PartWithLayer):
         only 'auto','left','right'.
     '''
 
-    _radius=0.1
-
     _num_pts=np.arange(50,1000,20)
-
-    _tol=1e-3
-
-    _simplification=1
 
     clearance=LayoutParamInterface()
 
     overhang=LayoutParamInterface()
 
-    side=LayoutParamInterface(allowed_values={'left','right','auto'})
+    type=LayoutParamInterface(allowed_values={'manhattan','L','U','J','C','V','Z','straight'})
 
     source=LayoutParamInterface()
 
@@ -1798,16 +1794,19 @@ class Routing(PartWithLayer):
 
     trace_width=LayoutParamInterface()
 
+    side=LayoutParamInterface(allowed_values={'auto','left','right'})
+
     def __init__(self,*args,**kwargs):
 
         super().__init__(*args,**kwargs)
-        self.clearance=pt.LayoutDefault.Routingclearance
-        self.side=pt.LayoutDefault.Routingside
-        self.source=pt.LayoutDefault.Routingports[0]
-        self.destination=pt.LayoutDefault.Routingports[1]
-        self.layer=pt.LayoutDefault.Routinglayer
-        self.overhang=pt.LayoutDefault.Routingoverhang
-        self.trace_width=pt.LayoutDefault.Routingtrace_width
+        self.clearance=ld.Routingclearance
+        self.type=ld.Routingtype
+        self.source=ld.Routingports[0]
+        self.destination=ld.Routingports[1]
+        self.layer=ld.Routinglayer
+        self.overhang=ld.Routingoverhang
+        self.trace_width=ld.Routingtrace_width
+        self.side=ld.Routingside
         self._auto_overhang=False
 
     def _check_frame(self):
@@ -2077,7 +2076,7 @@ class Routing(PartWithLayer):
     def _get_max_width(self):
         return max(self.source.width,self.destination.width)
 
-class MultiRouting(Routing):
+# class MultiRouting(Routing):
     ''' Handles routings on multiple ports.
 
     Attributes
@@ -2091,13 +2090,13 @@ class MultiRouting(Routing):
 
         LayoutPart.__init__(self,*a,**k)
 
-        self.source=pt.LayoutDefault.MultiRoutingsources
-        self.destination=pt.LayoutDefault.MultiRoutingdestinations
-        self.clearance=pt.LayoutDefault.Routingclearance
-        self.layer=pt.LayoutDefault.Routinglayer
-        self.side=pt.LayoutDefault.Routingside
-        self.overhang=pt.LayoutDefault.Routingoverhang
-        self.trace_width=pt.LayoutDefault.Routingtrace_width
+        self.source=ld.MultiRoutingsources
+        self.destination=ld.MultiRoutingdestinations
+        self.clearance=ld.Routingclearance
+        self.layer=ld.Routinglayer
+        self.side=ld.Routingside
+        self.overhang=ld.Routingoverhang
+        self.trace_width=ld.Routingtrace_width
         self._auto_overhang=False
 
     @property
@@ -2196,7 +2195,7 @@ class MultiRouting(Routing):
 
         return width
 
-class ParasiticAwareMultiRouting(MultiRouting):
+# class ParasiticAwareMultiRouting(MultiRouting):
 
     @property
     def path(self):
@@ -2335,7 +2334,7 @@ class ParasiticAwareMultiRouting(MultiRouting):
 
                 return res
 
-class PolyRouting(PartWithLayer):
+# class PolyRouting(PartWithLayer):
     ''' Generate direct polygonal routing connection.
 
     Attributes
@@ -2354,9 +2353,9 @@ class PolyRouting(PartWithLayer):
 
         super().__init__(*args,**kwargs)
 
-        self.source=pt.LayoutDefault.Routingports[0]
-        self.destination=pt.LayoutDefault.Routingports[1]
-        self.layer=pt.LayoutDefault.Routinglayer
+        self.source=ld.Routingports[0]
+        self.destination=ld.Routingports[1]
+        self.layer=ld.Routinglayer
 
     def draw(self):
 
@@ -2366,7 +2365,7 @@ class PolyRouting(PartWithLayer):
 
         return d
 
-class PolyMultiRouting(PolyRouting):
+# class PolyMultiRouting(PolyRouting):
     ''' Handles routings on multiple ports.
 
     Attributes
@@ -2380,9 +2379,9 @@ class PolyMultiRouting(PolyRouting):
 
         LayoutPart.__init__(self,*a,**k)
 
-        self.source=pt.LayoutDefault.MultiRoutingsources
-        self.destination=pt.LayoutDefault.MultiRoutingdestinations
-        self.layer=pt.LayoutDefault.Routinglayer
+        self.source=ld.MultiRoutingsources
+        self.destination=ld.MultiRoutingdestinations
+        self.layer=ld.Routinglayer
 
     def draw(self):
 
@@ -2399,7 +2398,7 @@ class PolyMultiRouting(PolyRouting):
         return c
 
 _allclasses=(Text,IDTSingle,IDT,PartialEtchIDT,Bus,EtchPit,Anchor,MultiAnchor,Via,Routing,GSProbe,GSGProbe,
-Pad,ViaInPad,LFERes,TwoDMR,TwoPortRes,TFERes,MultiRouting,ParasiticAwareMultiRouting)
+Pad,ViaInPad,LFERes,TwoDMR,TwoPortRes,TFERes)
 
 for cls in _allclasses:
 

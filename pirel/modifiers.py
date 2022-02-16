@@ -10,9 +10,11 @@ import phidl.geometry as pg
 
 import phidl.routing as pr
 
+from pirel.tools import LayoutDefault as ld
+
 from phidl.device_layout import Port,CellArray,Device,DeviceReference,Group
 
-from pirel.tools import Point,LayoutDefault,LayoutParamInterface,LayoutPart
+from pirel.tools import Point,LayoutParamInterface,LayoutPart
 
 import pirel.addOns.standard_parts as ps
 
@@ -267,7 +269,7 @@ def addLargeGround(probe):
 
             probe.__init__(self,*args,**kwargs)
 
-            self.ground_size=LayoutDefault.LargePadground_size
+            self.ground_size=ld.LargePadground_size
 
         def draw(self):
 
@@ -457,9 +459,9 @@ def makeArray(cls,n=2):
     return Arrayed
 
 def addPassivation(cls,
-    margin=LayoutDefault.PassivationMargin,
-    scale=LayoutDefault.PassivationScale,
-    layer=LayoutDefault.PassivationLayer,
+    margin=ld.PassivationMargin,
+    scale=ld.PassivationScale,
+    layer=ld.PassivationLayer,
     absolute_mode=False):
 
     class Passivated(cls):
@@ -616,7 +618,7 @@ def makeTwoPortProbe(cls):
 
             cls.__init__(self,*a,*kw)
 
-            self.offset=LayoutDefault.TwoPortProbeoffset
+            self.offset=ld.TwoPortProbeoffset
 
         def draw(self):
 
@@ -1422,7 +1424,7 @@ def connectPorts(cls,tags,layer):
 def connect_ports(
     cell : Device,
     tag : str ='top',
-    layer : int= LayoutDefault.layerTop,
+    layer : int= ld.layerTop,
     distance : float = 10.0,
     metal_width: float = None):
     ''' connects all the ports in the cell with name matching a tag.
