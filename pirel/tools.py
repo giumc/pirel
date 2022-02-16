@@ -218,7 +218,7 @@ class LayoutDefault:
     layerVias = 5
     layerPartialEtch = 6
     layerBackSide = 7
-    layerPassivation = 8
+    layerPassivation = layerPartialEtch
     layerMask = 99
 
     #text
@@ -1047,48 +1047,6 @@ def _get_hashable_params( obj : LayoutPart , params : list) ->tuple:
             paramdict.update({name:value})
 
     return tuple(paramdict.items())
-
-def _check_points_path(*points,trace_width=100):
-
-    for i,p in enumerate(points):
-
-        if not isinstance(p,Point):
-
-            raise ValueError("wrong input")
-
-        if i==0:
-
-            pass
-
-        else:
-
-            p_ref=points[i-1]
-
-            dist=p-points[i-1]
-
-            if abs(dist)<trace_width/10:
-
-                p_new=p_ref+p*(trace_width/abs(p))
-
-                if not i==len(points)-1:
-
-                    if points[i+1].x==p:
-
-                        points[i+1]=Point(p_new.x,points[i+1].y)
-
-                    elif points[i+1].y==p:
-
-                        points[i+1]=Point(points[i+1].x,p_new.x)
-
-                points[i]=p_new
-
-        out_list=[]
-
-        for p in points:
-
-            out_list.append(p.coord)
-
-        return out_list
 
 def pick_callable_param(pars : dict):
 

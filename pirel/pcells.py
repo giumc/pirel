@@ -1786,7 +1786,8 @@ class Routing(PartWithLayer):
 
     overhang=LayoutParamInterface()
 
-    type=LayoutParamInterface(allowed_values={'manhattan','L','U','J','C','V','Z','straight'})
+    type=LayoutParamInterface(
+        allowed_values={'manhattan','L','U','J','C','V','Z','straight'})
 
     source=LayoutParamInterface()
 
@@ -1813,56 +1814,65 @@ class Routing(PartWithLayer):
 
         cell=self._draw_frame()
 
-        pt.check(cell)
+        st.check(cell)
 
     def _draw_frame(self):
 
         frame=pg.bbox(self.clearance,layer=self.layer)
 
-        frame.add_port(self.source)
+        for s in pt._return_iterable(self.source):
 
-        frame.add_port(self.destination)
+            frame.add_port(s)
+
+        for d in pt._return_iterable(self.source):
+
+            frame.add_port(d)
 
         return frame
 
     def draw(self):
 
-        p=self.path
+        cell=Device(self.name)
 
-        path_cell=self._make_path_cell(p,self.source,self.destination)
+        for s in pt._return_iterable(self.source):
 
-        path_cell.name=self.name
+            for d in pt._return_iterable(self.destination):
 
-        return path_cell
+                p=self._make_path(s,d)
 
-    def _make_path_cell(self,p,s,d):
+                if self.trace_width is None:
 
-        if self.trace_width is None:
+                    cell.add(p.extrude(
+                        layer=self.layer,
+                        width=[s.width,d.width],
+                        simplify=self._simplification))
 
-            cell=p.extrude(
-                layer=self.layer,
-                width=[s.width,d.width],
-                simplify=self._simplification)
+                else:
 
-        else:
-
-            cell=p.extrude(
-                layer=self.layer,
-                width=self.trace_width,
-                simplify=self._simplification)
+                    cell.add(p.extrude(
+                        layer=self.layer,
+                        width=self.trace_width,
+                        simplify=self._simplification))
 
         return st.join(cell)
 
-    @property
-    def path(self):
+        return path_cell
 
-        s=self.source
+    def _make_path(self,s,d):
 
-        d=self.destination
+        self._check_if_ports_in_clearance(s,d)
 
-        if self._auto_overhang:
+        try:
 
-            self.overhang=self._calculate_overhang(s,d)
+            p=self._draw_non_hindered_path(s,d)
+
+        except ValueError as e_non_hind:
+
+            p=self._draw_hindered_path(s,d,self.side)
+
+        return p
+
+    def _check_if_ports_in_clearance(self,s,d):
 
         if pt.Point(s.midpoint).in_box(self.clearance) :
 
@@ -1872,16 +1882,6 @@ class Routing(PartWithLayer):
 
             # pt.Point(d.midpoint).in_box(self.clearance)
             raise ValueError(f" Destination of routing {d.midpoint} is in clearance area{self.clearance}")
-
-        try:
-
-            p=self._draw_non_hindered_path(s,d)
-
-        except ValueError as e_non_hind:
-
-                p=self._draw_hindered_path(s,d,self.side)
-
-        return p
 
     def _draw_with_frame(self):
 
@@ -1998,33 +1998,6 @@ class Routing(PartWithLayer):
                 pg.bbox(self.clearance,layer=self.layer[0]),
                 tolerance=0)
 
-    def _make_path(self,*points):
-
-        sel_points=list(points)
-
-        for p1,p2 in zip(points, points[1:]):
-
-            if p2==p1:
-
-                sel_points.remove(p2)
-
-        sel_points=pt._check_points_path(*sel_points,trace_width=self._get_max_width())
-
-        for num_pts in self._num_pts:
-
-            try:
-
-                path=pp.smooth(points=sel_points,radius=self._radius,num_pts=num_pts)
-
-                return path
-
-            except :
-
-                pass
-
-        #throws error
-        return pp.smooth(points=sel_points,radius=self._radius,num_pts=self._num_pts[-1])
-
     def set_auto_overhang(self,value):
         ''' Sets automatically the routing overhead as 1/5 of distance between source and destination.
 
@@ -2074,128 +2047,11 @@ class Routing(PartWithLayer):
         return self.path.length()/self._get_max_width()
 
     def _get_max_width(self):
+
+        for s in pt.
         return max(self.source.width,self.destination.width)
 
-# class MultiRouting(Routing):
-    ''' Handles routings on multiple ports.
-
-    Attributes
-    ----------
-    source: tuple of phidl.Port
-
-    destination: tuple of phidl.Port
-
-    '''
-    def __init__(self,*a,**k):
-
-        LayoutPart.__init__(self,*a,**k)
-
-        self.source=ld.MultiRoutingsources
-        self.destination=ld.MultiRoutingdestinations
-        self.clearance=ld.Routingclearance
-        self.layer=ld.Routinglayer
-        self.side=ld.Routingside
-        self.overhang=ld.Routingoverhang
-        self.trace_width=ld.Routingtrace_width
-        self._auto_overhang=False
-
-    @property
-    def path(self):
-
-        p=[]
-
-        for s in pt._return_iterable(self.source):
-
-            for d in pt._return_iterable(self.destination):
-
-                r=self._make_routing(s,d)
-
-                p.append(r.path)
-
-        return p
-
-    def _make_routing(self,s,d):
-
-        r=Routing()
-
-        r.clearance=self.clearance
-
-        r.side=self.side
-
-        r.layer=self.layer
-
-        r.source=s
-
-        r.destination=d
-
-        r.overhang=self.overhang
-
-        r.trace_width=self.trace_width
-
-        if self._auto_overhang:
-
-            r.set_auto_overhang(True)
-
-        return r
-
-    def _draw_frame(self):
-
-        frame=Device()
-
-        for l in self.layer:
-
-            frame<<pg.bbox(self.clearance,layer=l)
-
-        for s in self.source:
-
-            frame.add_port(s)
-
-        for d in self.destination:
-
-            frame.add_port(d)
-
-        return frame
-
-    def draw(self):
-
-        c=Device(name=self.name)
-
-        for s in pt._return_iterable(self.source):
-
-            for d in pt._return_iterable(self.destination):
-
-                r=self._make_routing(s,d)
-
-                c<<self._make_path_cell(r.path,s,d)
-
-        return c
-
-    @property
-    def resistance_squares(self):
-
-        resistance=[]
-
-        for p,q in zip(self.path,self._get_max_width()):
-
-            resistance.append(p.length()/q)
-
-        return resistance
-
-    def _get_max_width():
-
-        width=[]
-
-        for s in self.source:
-
-            for d in self.destination:
-
-                r=self._make_routing(s,d)
-
-                width.append(r._get_max_width())
-
-        return width
-
-# class ParasiticAwareMultiRouting(MultiRouting):
+class ParasiticAwareMultiRouting(MultiRouting):
 
     @property
     def path(self):
