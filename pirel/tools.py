@@ -481,10 +481,6 @@ class ReturnIterable():
 
 class LayoutParamInterface:
 
-    allowed_values=ReturnIterable()
-
-    allowed_types=ReturnIterable()
-
     def __init__(self,allowed_values=None,allowed_types=None):
 
         self.allowed_values=allowed_values
@@ -500,17 +496,17 @@ class LayoutParamInterface:
 
         if self.allowed_values is not None:
 
-            if not new_value in self.allowed_values:
+            if not new_value in _return_iterable(self.allowed_values):
 
                 raise ValueError(f""" Value {new_value} is not allowed value for attribute {self.public_name}\n
                             allowed values are {self.allowed_values}""")
 
         if self.allowed_types is not None:
 
-            if not isinstance(new_value,self.allowed_types):
+            if not isinstance(new_value,_return_iterable(self.allowed_types)):
 
                 raise ValueError(f""" Value {new_value} is not allowed type for attribute {self.public_name}\n
-                            allowed values are {self.allowed_type}""")
+                        allowed values are {self.allowed_type}""")
 
         if not hasattr(owner,self.private_name):
 
@@ -1087,6 +1083,19 @@ def _remove_alias(cell,name):
         if name in alias:
 
             cell.remove(cell[alias])
+
+def _remove_duplicates(points):
+
+    tbr=[]
+
+    for p0,p1 in zip(points,points[1:]):
+
+        if p1.coord==p0.coord:
+
+            tbr.append(p1)
+
+    for p in tbr:
+        points.remove(p)
 
 def _find_alias(cell,name):
 

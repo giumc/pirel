@@ -6,9 +6,11 @@ import pirel.sketch_tools as st
 
 import pirel.port_tools as ppt
 
-from phidl.device_layout import Device, Port, DeviceReference, Group
+from phidl.device_layout import Device, Port, DeviceReference, Group,Path
 
 import phidl.geometry as pg
+
+import phidl.device_layout as dl
 
 import phidl.path as pp
 
@@ -671,7 +673,7 @@ class Anchor(PartWithLayer):
 
     size=LayoutParamInterface()
     metalized=LayoutParamInterface()
-    etch_choice=LayoutParamInterface(True,False)
+    etch_choice=LayoutParamInterface(allowed_values={False,True})
     etch_x=LayoutParamInterface()
     x_offset=LayoutParamInterface()
 
@@ -917,7 +919,7 @@ class Via(PartWithLayer):
 
     size=LayoutParamInterface()
 
-    shape=LayoutParamInterface('square','circle')
+    shape=LayoutParamInterface(allowed_values={'square','circle'})
 
     def __init__(self,*args,**kwargs):
 
@@ -1474,9 +1476,9 @@ def addBottomPlate(cls):
 
     class BottomPlated(cls):
 
-        plate_under_bus=LayoutParamInterface(True,False)
+        plate_under_bus=LayoutParamInterface(allowed_values={True,False})
 
-        plate_over_etch=LayoutParamInterface(True,False)
+        plate_over_etch=LayoutParamInterface(allowed_values={True,False})
 
         plate_layer=LayoutParamInterface()
 
@@ -1767,12 +1769,13 @@ class Routing(PartWithLayer):
     clearance : iterable of two coordinates
         bbox of the obstacle
 
-    source: phidl.Port
+    source: phidl.Port (or iterable of phidl.Port)
 
     overhang: float
         distance to extend port in its direction before routing
+        if None, overhang is set automatically
 
-    destination: phidl.Port
+    destination: phidl.Port (or iterable of phidl.Port)
 
     side : str (can be "auto","left","right")
         where to go if there is an obstacle.
@@ -1824,7 +1827,7 @@ class Routing(PartWithLayer):
 
             frame.add_port(s)
 
-        for d in pt._return_iterable(self.source):
+        for d in pt._return_iterable(self.destination):
 
             frame.add_port(d)
 
@@ -1838,25 +1841,9 @@ class Routing(PartWithLayer):
 
             for d in pt._return_iterable(self.destination):
 
-                p=self._make_path(s,d)
-
-                if self.trace_width is None:
-
-                    cell.add(p.extrude(
-                        layer=self.layer,
-                        width=[s.width,d.width],
-                        simplify=self._simplification))
-
-                else:
-
-                    cell.add(p.extrude(
-                        layer=self.layer,
-                        width=self.trace_width,
-                        simplify=self._simplification))
+                cell.add(self._draw_path_cell(self._make_path(s,d),s,d))
 
         return st.join(cell)
-
-        return path_cell
 
     def _make_path(self,s,d):
 
@@ -1893,25 +1880,25 @@ class Routing(PartWithLayer):
 
     def _draw_non_hindered_path(self,s,d):
 
-        p1,p1_proj,p2_proj,p2=self._calculate_start_end_connection_points()
+        p1,p1_proj,p2_proj,p2=self._calculate_start_end_connection_points(s,d)
 
         for p_mid in (pt.Point(p1_proj.x,p2_proj.y),pt.Point(p2_proj.x,p1_proj.y)):
 
-            try:
+            points=[p1,p1_proj,p_mid,p2_proj,p2]
 
-                p=self._make_path(p1,p1_proj,p_mid,p2_proj,p2)
+            pt._remove_duplicates(points)
 
-                if not self._is_hindered(p):
+            p=Path(tuple([x.coord for x in points]))
 
-                    return p
+            if not self._is_hindered(p,s,d):
 
-            except ValueError as e:
-
-                pass
+                break
 
         else:
 
             raise ValueError("path is hindered")
+
+        return p
 
     def _draw_hindered_path(self,s,d,side='auto'):
 
@@ -1929,7 +1916,7 @@ class Routing(PartWithLayer):
 
             else : return path1
 
-        p1,p1_proj,p2_proj,p2=self._calculate_start_end_connection_points()
+        p1,p1_proj,p2_proj,p2=self._calculate_start_end_connection_points(s,d)
 
         if side=='left':
 
@@ -1955,37 +1942,23 @@ class Routing(PartWithLayer):
 
             points=[p1,p1_proj,p_below_clearance,p_mid2,p_mid3,p2_proj,p2]
 
-            try:
+            pt._remove_duplicates(points)
 
-                p=self._make_path(*points)
+            p=Path(tuple([x.coord for x in points]))
 
-                if not self._is_hindered(p):
+        #     if not self._is_hindered(p,s,d):
+        #
+        #         break
+        #
+        # else:
+        #
+        #     raise ValueError("path is impossible")
 
-                    return p
+        return p
 
-            except ValueError as e:
+    def _is_hindered(self,p,s,d):
 
-                pass
-
-        else:
-            raise ValueError("path is impossible")
-
-    def _is_hindered(self,path):
-
-        s=self.source
-
-        d=self.destination
-
-        test_path_cell=self._make_path_cell(path,s,d)
-
-        try:
-
-            test_path_cell.remove_polygons(
-                lambda pt,lay,dt : lay==any(self.layer[1:]))
-
-        except:
-
-            pass
+        test_path_cell=self._draw_path_cell(p,s,d)
 
         if self.clearance==((0,0),(0,0)):
 
@@ -1993,41 +1966,46 @@ class Routing(PartWithLayer):
 
         else:
 
-            return not pt.is_cell_outside(
-                test_path_cell,
-                pg.bbox(self.clearance,layer=self.layer[0]),
+            return not st.is_cell_outside(
+                pg.union(test_path_cell),
+                pg.bbox(self.clearance,layer=self.layer),
                 tolerance=0)
 
-    def set_auto_overhang(self,value):
-        ''' Sets automatically the routing overhead as 1/5 of distance between source and destination.
+    def _draw_path_cell(self,p,s,d):
 
-        Parameters
-        ----------
-            value : boolean.
-        '''
+        if self.trace_width is None:
 
-        if isinstance(value,bool):
-            self._auto_overhang=value
+            return p.extrude(
+                layer=self.layer,
+                width=[s.width,d.width])
+
         else:
-            raise ValueError("set_auto_overhang accepts True/False")
 
-    def _calculate_start_end_connection_points(self):
+            return p.extrude(
+                layer=self.layer,
+                width=self.trace_width)
 
-        s=self.source
-
-        d=self.destination
+    def _calculate_start_end_connection_points(self,s,d):
 
         p1=pt.Point(s.midpoint)
 
         p2=pt.Point(d.midpoint)
 
+        if self.overhang is None:
+
+            overhang=self._calculate_overhang(s,d)
+
+        else:
+
+            overhang=self.overhang
+
         dt1_norm=pt.Point(s.normal[1])-pt.Point(s.normal[0])
 
-        p1_proj=p1+dt1_norm*self.overhang
+        p1_proj=p1+dt1_norm*overhang
 
         dt2_norm=pt.Point(d.normal[1])-pt.Point(d.normal[0])
 
-        p2_proj=p2+dt2_norm*self.overhang
+        p2_proj=p2+dt2_norm*overhang
 
         return p1,p1_proj,p2_proj,p2
 
@@ -2048,210 +2026,147 @@ class Routing(PartWithLayer):
 
     def _get_max_width(self):
 
-        for s in pt.
-        return max(self.source.width,self.destination.width)
-
-class ParasiticAwareMultiRouting(MultiRouting):
-
-    @property
-    def path(self):
-
-        numports=len(self.destination)
-
-        if numports == 1 or numports == 2 :
-
-            return super().path
-
-        else :
-
-            p=[]
-
-            if numports %2 == 0:
-
-                midport=int(numports/2)
-
-                base_routing=deepcopy(self)
-
-                base_routing.destination=tuple(self.destination[midport-1:midport+1])
-
-                for dest,nextdest in zip(self.destination,self.destination[1:]):
-
-                    if dest in base_routing.destination :
-
-                        if nextdest in base_routing.destination:
-
-                            p.extend(base_routing.path)
-
-                        else:
-
-                            p.append(self._draw_non_hindered_path(dest,nextdest))
-
-                    else:
-
-                        p.append(self._draw_non_hindered_path(dest,nextdest))
-
-                return p
-
-            elif numports %2 == 1:
-
-                midport=int((numports-1)/2)
-
-                base_routing=deepcopy(self)
-
-                base_routing.destination=(self.destination[midport],)
-
-                for dest,nextdest in zip(self.destination,self.destination[1:]):
-
-                    if dest in base_routing.destination :
-
-                        p.extend(base_routing.path)
-
-                        p.append(self._draw_non_hindered_path(dest,nextdest))
-
-                    else:
-
-                        p.append(self._draw_non_hindered_path(dest,nextdest))
-
-                return p
-
-    def _make_paware_connection(self,s,d):
-
-        p1=pt.Point(s.midpoint)
-
-        p2=pt.Point(d.midpoint)
-
-        p1=p0+pt.Point(0,self.overhang)
-
-        p2=pt.Point(d.midpoint[0],p1.y)
-
-        p3=pt.Point(p2.x,d.midpoint[1])
-
-        return self._make_path(p0,p1,p2,p3)
-
-    def _make_path_cell(self,p,s,d):
-
-        cell=Device()
-
-        for l in self.layer:
-
-            cell<<p.extrude(
-                layer=l,
-                width=np.min([s.width,d.width]),
-                simplify=self._simplification)
-
-        return st.join(cell)
-
-    @property
-    def resistance_squares(self):
-
-        p=self.path
-
-        numpaths=len(p)
-
-        if numpaths==1 or numpaths==2:
-
-            return super().resistance_squares
-
-        else:
-
-            original_res=super().resistance_squares
-
-            res=[]
-
-            if numpaths%2==0:
-
-                midpoint=int(numpaths/2)
-
-                for x in range(numpaths):
-
-                    if x==midpoint-1 or x==midpoint:
-
-                        res.append(original_res[x])
-
-                    else:
-
-                        res.append(original_res[x]-self._yovertravel(self.destination[x])/self._get_max_width()[x])
-
-                return res
-
-            if numpaths%2==1:
-
-                midpoint=int((numpaths-1)/2)
-
-                for x in range(numpaths):
-
-                    if x==midpoint:
-
-                        res.append(original_res[x])
-
-                    else:
-
-                        res.append(original_res[x]-self._yovertravel(self.destination[x])/self.trace_width)
-
-                return res
-
-# class PolyRouting(PartWithLayer):
-    ''' Generate direct polygonal routing connection.
-
-    Attributes
-    ----------
-
-    source: phidl.Port
-
-    destination: phidl.Port.
-    '''
-
-    source=LayoutParamInterface()
-
-    destination=LayoutParamInterface()
-
-    def __init__(self,*args,**kwargs):
-
-        super().__init__(*args,**kwargs)
-
-        self.source=ld.Routingports[0]
-        self.destination=ld.Routingports[1]
-        self.layer=ld.Routinglayer
-
-    def draw(self):
-
-        d=pr.route_quad(self.source,self.destination,layer=self.layer)
-
-        d.name=self.name
-
-        return d
-
-# class PolyMultiRouting(PolyRouting):
-    ''' Handles routings on multiple ports.
-
-    Attributes
-    ----------
-    source: tuple of phidl.Port
-
-    destination: tuple of phidl.Port
-
-    '''
-    def __init__(self,*a,**k):
-
-        LayoutPart.__init__(self,*a,**k)
-
-        self.source=ld.MultiRoutingsources
-        self.destination=ld.MultiRoutingdestinations
-        self.layer=ld.Routinglayer
-
-    def draw(self):
-
-        c=Device(self.name)
-
-        for l in self.layer:
-
-            for s in self.source:
-
-                for d in self.destination:
-
-                    c.absorb(c<<pr.route_quad(s,d,layer=l))
-
-        return c
+        width=0
+
+        for s in pt._return_iterable(self.source):
+
+            for d  in pt._return_iterable(self.destination):
+
+                if s.width>width :
+
+                    width=s.width
+
+                if d.width>width:
+
+                    width=d.width
+
+        return width
+#
+# class ParasiticAwareMultiRouting(MultiRouting):
+#
+#     @property
+#     def path(self):
+#
+#         numports=len(self.destination)
+#
+#         if numports == 1 or numports == 2 :
+#
+#             return super().path
+#
+#         else :
+#
+#             p=[]
+#
+#             if numports %2 == 0:
+#
+#                 midport=int(numports/2)
+#
+#                 base_routing=deepcopy(self)
+#
+#                 base_routing.destination=tuple(self.destination[midport-1:midport+1])
+#
+#                 for dest,nextdest in zip(self.destination,self.destination[1:]):
+#
+#                     if dest in base_routing.destination :
+#
+#                         if nextdest in base_routing.destination:
+#
+#                             p.extend(base_routing.path)
+#
+#                         else:
+#
+#                             p.append(self._draw_non_hindered_path(dest,nextdest))
+#
+#                     else:
+#
+#                         p.append(self._draw_non_hindered_path(dest,nextdest))
+#
+#                 return p
+#
+#             elif numports %2 == 1:
+#
+#                 midport=int((numports-1)/2)
+#
+#                 base_routing=deepcopy(self)
+#
+#                 base_routing.destination=(self.destination[midport],)
+#
+#                 for dest,nextdest in zip(self.destination,self.destination[1:]):
+#
+#                     if dest in base_routing.destination :
+#
+#                         p.extend(base_routing.path)
+#
+#                         p.append(self._draw_non_hindered_path(dest,nextdest))
+#
+#                     else:
+#
+#                         p.append(self._draw_non_hindered_path(dest,nextdest))
+#
+#                 return p
+#
+#     def _make_paware_connection(self,s,d):
+#
+#         p1=pt.Point(s.midpoint)
+#
+#         p2=pt.Point(d.midpoint)
+#
+#         p1=p0+pt.Point(0,self.overhang)
+#
+#         p2=pt.Point(d.midpoint[0],p1.y)
+#
+#         p3=pt.Point(p2.x,d.midpoint[1])
+#
+#         return self._make_path(p0,p1,p2,p3)
+#
+#     @property
+#     def resistance_squares(self):
+#
+#         p=self.path
+#
+#         numpaths=len(p)
+#
+#         if numpaths==1 or numpaths==2:
+#
+#             return super().resistance_squares
+#
+#         else:
+#
+#             original_res=super().resistance_squares
+#
+#             res=[]
+#
+#             if numpaths%2==0:
+#
+#                 midpoint=int(numpaths/2)
+#
+#                 for x in range(numpaths):
+#
+#                     if x==midpoint-1 or x==midpoint:
+#
+#                         res.append(original_res[x])
+#
+#                     else:
+#
+#                         res.append(original_res[x]-self._yovertravel(self.destination[x])/self._get_max_width()[x])
+#
+#                 return res
+#
+#             if numpaths%2==1:
+#
+#                 midpoint=int((numpaths-1)/2)
+#
+#                 for x in range(numpaths):
+#
+#                     if x==midpoint:
+#
+#                         res.append(original_res[x])
+#
+#                     else:
+#
+#                         res.append(original_res[x]-self._yovertravel(self.destination[x])/self.trace_width)
+#
+#                 return res
 
 _allclasses=(Text,IDTSingle,IDT,PartialEtchIDT,Bus,EtchPit,Anchor,MultiAnchor,Via,Routing,GSProbe,GSGProbe,
 Pad,ViaInPad,LFERes,TwoDMR,TwoPortRes,TFERes)

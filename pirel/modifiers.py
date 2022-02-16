@@ -836,8 +836,8 @@ def addOnePortProbe(cls,probe=pc.GSGProbe):
                 supercomp.update({
                     "Probe":probe,
                     "SigTrace":pc.Routing,
-                    "GndLeftTrace":pc.MultiRouting,
-                    "GndRightTrace":pc.MultiRouting,
+                    "GndLeftTrace":pc.Routing,
+                    "GndRightTrace":pc.Routing,
                     "GndVia":pc.Via})
 
             else:
@@ -921,7 +921,7 @@ def addOnePortProbe(cls,probe=pc.GSGProbe):
 
                     groundroute.clearance=bbox
 
-                    groundroute.set_auto_overhang(True)
+                    groundroute.overhang=None
 
                     groundroute.trace_width=self.gnd_routing_width
 
@@ -967,6 +967,8 @@ def addOnePortProbe(cls,probe=pc.GSGProbe):
 
                 routing_cell=Device()
 
+                import pdb; pdb.set_trace()
+                
                 routing_cell.absorb(routing_cell<<self.gndlefttrace.draw())
 
                 routing_cell.absorb(routing_cell<<self.gndrighttrace.draw())
@@ -989,7 +991,7 @@ def addOnePortProbe(cls,probe=pc.GSGProbe):
 
             sig_trace.trace_width=self._calc_sig_routing_width(sig_trace.source,sig_trace.destination)
 
-            sig_trace.set_auto_overhang(True)
+            sig_trace.overhang=None
 
         def _calc_sig_routing_width(self,pad_port,device_port):
 
@@ -1112,8 +1114,8 @@ def addTwoPortProbe(cls,probe=makeTwoPortProbe(pc.GSGProbe)):
                     "Probe":probe,
                     "Sig1Trace":pc.Routing,
                     "Sig2Trace":pc.Routing,
-                    "GndLeftTrace":pc.MultiRouting,
-                    "GndRightTrace":pc.MultiRouting,
+                    "GndLeftTrace":pc.Routing,
+                    "GndRightTrace":pc.Routing,
                     "GndVia":pc.Via})
 
             else:
@@ -1168,7 +1170,7 @@ def addTwoPortProbe(cls,probe=makeTwoPortProbe(pc.GSGProbe)):
 
                     rx_device_ports.append(p_adj)
 
-            r=pc.MultiRouting()
+            r=pc.Routing()
 
             r.layer=self.gndlefttrace.layer
 
@@ -1263,7 +1265,6 @@ def addTwoPortProbe(cls,probe=makeTwoPortProbe(pc.GSGProbe)):
 
                             groundroute.destination=(probe_cell.ports['GroundRXE_2'],)
 
-                    # groundroute.set_auto_overhang(True)
 
             elif isinstance(self.probe,pc.GSProbe):
 
@@ -1281,7 +1282,7 @@ def addTwoPortProbe(cls,probe=makeTwoPortProbe(pc.GSGProbe)):
 
                 sig_trace.layer=self.probe.sig_layer
 
-                sig_trace.set_auto_overhang(True)
+                sig_trace.overhang=None
 
             self.sig1trace.source=probe.ports["SigN_1"]
 
