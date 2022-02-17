@@ -228,17 +228,17 @@ def get_centroid_ports(*ports):
 def get_angle(p1,p2):
     '''Calculates angle between two pt.Points'''
 
-    if not (isinstance(p1,Point) and isinstance(p2,Point)):
-
-        raise ValueError(f"{p1} and {p2} have to be pirel Points")
+    # if not (isinstance(p1,Point) and isinstance(p2,Point)):
+    #
+    #     import pdb; pdb.set_trace()
+    #
+    #     raise ValueError(f"{p1} and {p2} have to be pirel Points")
 
     import numpy as np
 
-    ang1 = np.arctan2(p1.y,p1.x)
+    p_diff=p2-p1
 
-    ang2 = np.arctan2(p2.y,p2.x)
-
-    return np.rad2deg((ang1 - ang2) % (2 * np.pi))
+    return np.rad2deg(np.arctan2(p_diff.y,p_diff.x) % (2 * np.pi))
 
 def copy_layer(cell,l1,l2):
     ''' Copy each polygon in cell from layer l1 to layer l2.
@@ -284,9 +284,9 @@ def move_relative_to_cell(
     '''
 
 
-    a_origin=_anchor_selector(anchor_source,cell_to_be_moved)
+    a_origin=get_anchor(anchor_source,cell_to_be_moved)
 
-    a_end=_anchor_selector(anchor_dest,cell_ref)
+    a_end=get_anchor(anchor_dest,cell_ref)
 
     dx=cell_ref.xmax-cell_ref.xmin
     dy=cell_ref.ymax-cell_ref.ymin

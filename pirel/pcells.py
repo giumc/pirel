@@ -99,13 +99,13 @@ class Text(PartWithLayer):
         try:
 
             text_cell_ref.rotate(
-                center=pt._anchor_selector(kw['anchor_source'],text_cell_ref).coord,
+                center=st.get_anchor(kw['anchor_source'],text_cell_ref).coord,
                 angle=angle)
 
         except:
 
             text_cell_ref.rotate(
-                center=pt._anchor_selector('ll',text_cell_ref).coord,
+                center=st.get_anchor('ll',text_cell_ref).coord,
                 angle=angle)
 
         st.move_relative_to_cell(text_cell_ref,cell,**kw)
@@ -1888,6 +1888,8 @@ class Routing(PartWithLayer):
 
             pt._remove_duplicates(points)
 
+            pt._remove_backward_points(points)
+
             p=Path(tuple([x.coord for x in points]))
 
             if not self._is_hindered(p,s,d):
@@ -1943,6 +1945,8 @@ class Routing(PartWithLayer):
             points=[p1,p1_proj,p_below_clearance,p_mid2,p_mid3,p2_proj,p2]
 
             pt._remove_duplicates(points)
+
+            pt._remove_backward_points(points)
 
             p=Path(tuple([x.coord for x in points]))
 

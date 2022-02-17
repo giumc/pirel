@@ -1097,6 +1097,36 @@ def _remove_duplicates(points):
     for p in tbr:
         points.remove(p)
 
+def _remove_backward_points(points):
+
+    import pirel.sketch_tools as st
+
+    if len(points)>=3:
+
+        a0=st.get_angle(points[0],points[1])%360
+
+        a1=st.get_angle(points[1],points[2])%360
+
+        if a1==(a0+180)%360:
+
+            if len(points)>3:
+
+                points_corr=points[0:2]+points[3::]
+
+            else:
+
+                return points[0:2]
+
+            return _remove_backward_points(points_corr)
+
+        else:
+
+            return points[0:1]+_remove_backward_points(points[1:])
+
+    else:
+
+        return points
+
 def _find_alias(cell,name):
 
     list=[]

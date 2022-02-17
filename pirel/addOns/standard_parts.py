@@ -18,6 +18,10 @@ import pirel.tools as pt
 
 import pirel.pcells as pc
 
+import pirel.sketch_tools as st
+
+import pirel.port_tools as pp
+
 def resistivity_test_cell():
 
     """Create cell with standard Resisistivity Test
@@ -33,7 +37,7 @@ def resistivity_test_cell():
 
         cell=pg.import_gds(infile,cellname='TestCell')
 
-        cell=pt.join(cell)
+        cell=st.join(cell)
 
         cell.name='ResistivityTest'
 
@@ -146,7 +150,7 @@ def verniers(scale=[1, 0.5, 0.1],layers=[1,2],label='TE',text_size=20,reversed=F
 
         xcell<<x
 
-    xcell=pt.join(xcell)
+    xcell=st.join(xcell)
 
     vern_x=cell<<xcell
     vern_y=cell<<xcell
@@ -174,7 +178,7 @@ def verniers(scale=[1, 0.5, 0.1],layers=[1,2],label='TE',text_size=20,reversed=F
     cell<<label
     cell<<cutlab
 
-    cell=pt.join(cell)
+    cell=st.join(cell)
 
     return cell
 
@@ -207,7 +211,7 @@ def chip_frame(
 
         text_cell=name.draw()
 
-        pt._move_relative_to_cell(cell<<text_cell,cell,**text_pos)
+        st.move_relative_to_cell(cell<<text_cell,cell,**text_pos)
 
     return cell
 
@@ -288,7 +292,7 @@ def alignment_marks_4layers(scale=[0.2,0.5,1]):
 
     text=pc.Text()
     text.size=300
-    text.layer=(BElayer,TElayer,ETCHlayer,PETCHlayer,VIAlayer)
+    text.layer={BElayer,TElayer,ETCHlayer,PETCHlayer,VIAlayer}
     text.label="Align to BE"
 
     t1=text.draw()
@@ -301,7 +305,7 @@ def alignment_marks_4layers(scale=[0.2,0.5,1]):
     align6=verniers(scale,layers=[TElayer,ETCHlayer],label='ETCH')
     align7=verniers(scale,layers=[TElayer,PETCHlayer],label='PASS')
 
-    text.layer=(TElayer,ETCHlayer,PETCHlayer,VIAlayer)
+    text.layer={TElayer,ETCHlayer,PETCHlayer,VIAlayer}
     text.label='Align to TE'
     t2=text.draw()
 
@@ -315,7 +319,7 @@ def alignment_marks_4layers(scale=[0.2,0.5,1]):
     align11=verniers(scale,layers=[Zerolayer,ETCHlayer],label='ETCH')
     align12=verniers(scale,layers=[Zerolayer,PETCHlayer],label='PASS')
 
-    text.layer=(Zerolayer,BElayer,TElayer,ETCHlayer,PETCHlayer,VIAlayer)
+    text.layer={Zerolayer,BElayer,TElayer,ETCHlayer,PETCHlayer,VIAlayer}
     text.label="Align to Pad"
 
     t3=text.draw()
