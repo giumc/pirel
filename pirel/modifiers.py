@@ -754,7 +754,15 @@ def addOnePortProbe(cls,probe=pc.GSGProbe):
                     cell,
                     'side')
 
-                routing_cell=self._draw_ground_routing()
+                try:
+
+                    routing_cell=self._draw_ground_routing()
+
+                except:
+
+                    import pdb; pdb.set_trace()
+
+                    self._draw_ground_routing()
 
             _add_default_ground_vias(self,routing_cell)
 
@@ -967,8 +975,6 @@ def addOnePortProbe(cls,probe=pc.GSGProbe):
 
                 routing_cell=Device()
 
-                import pdb; pdb.set_trace()
-                
                 routing_cell.absorb(routing_cell<<self.gndlefttrace.draw())
 
                 routing_cell.absorb(routing_cell<<self.gndrighttrace.draw())
@@ -1192,13 +1198,7 @@ def addTwoPortProbe(cls,probe=makeTwoPortProbe(pc.GSGProbe)):
 
             r.side='left'
 
-            try:
-
-                output_cell.absorb(output_cell<<r.draw())
-
-            except Exception:
-
-                import pdb; pdb.set_trace()
+            output_cell.absorb(output_cell<<r.draw())
 
             ## right connections
 
@@ -1632,7 +1632,7 @@ def add_passivation(cell,margin,scale,layer,absolute_mode=False):
 
 def _add_default_ground_vias(self,cell):
 
-    return
+    # return
     if hasattr(self,'gndvia'):
 
         add_vias(cell,

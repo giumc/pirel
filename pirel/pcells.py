@@ -1718,8 +1718,6 @@ class SMD(PartWithLayer):
     distance :pt.Point.
     '''
 
-
-
     size=LayoutParamInterface()
 
     distance=LayoutParamInterface()
@@ -1784,6 +1782,8 @@ class Routing(PartWithLayer):
     '''
 
     _num_pts=np.arange(50,1000,20)
+
+    _tolerance=1
 
     clearance=LayoutParamInterface()
 
@@ -1888,19 +1888,15 @@ class Routing(PartWithLayer):
 
             pt._remove_duplicates(points)
 
-            pt._remove_backward_points(points)
+            points=pt._remove_backward_points(points)
 
             p=Path(tuple([x.coord for x in points]))
 
             if not self._is_hindered(p,s,d):
 
-                break
+                return p
 
-        else:
-
-            raise ValueError("path is hindered")
-
-        return p
+        raise ValueError("non-hindered path is impossible")
 
     def _draw_hindered_path(self,s,d,side='auto'):
 
@@ -1946,19 +1942,15 @@ class Routing(PartWithLayer):
 
             pt._remove_duplicates(points)
 
-            pt._remove_backward_points(points)
+            points=pt._remove_backward_points(points)
 
             p=Path(tuple([x.coord for x in points]))
 
-        #     if not self._is_hindered(p,s,d):
-        #
-        #         break
-        #
-        # else:
-        #
-        #     raise ValueError("path is impossible")
+            if not self._is_hindered(p,s,d):
 
-        return p
+                return p
+
+        raise ValueError("hindered path is impossible")
 
     def _is_hindered(self,p,s,d):
 
