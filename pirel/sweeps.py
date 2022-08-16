@@ -2,6 +2,7 @@
 from phidl.device_layout import Group,Device
 
 import phidl.geometry as pg
+
 import test
 
 import matplotlib.pyplot as plt
@@ -19,6 +20,12 @@ import pathlib
 import pirel.pcells as pc
 
 import pirel.tools as pt
+
+from pirel.tools import LayoutPart
+
+from pirel.tools import LayoutDefault as ld
+
+import pirel.sketch_tools as st
 
 plt.style.use(str((pathlib.Path(__file__).parent/'addOns'/'pltstl.mplstyle').absolute()))
 
@@ -415,7 +422,7 @@ class SweepParam:
 
 class _SweepParamValidator:
 
-    def __init__(self,def_param=pt.LayoutDefault.Arrayx_param):
+    def __init__(self,def_param=ld.Arrayx_param):
 
         self.default_value=SweepParam(def_param)
 
@@ -435,7 +442,7 @@ class _SweepParamValidator:
 
     def __set__(self,obj,layout_param):
 
-        if not isinstance(obj, pt.LayoutPart):
+        if not isinstance(obj, LayoutPart):
 
             raise ValueError("{} needs to derive from LayoutPart".format(obj))
 
@@ -474,7 +481,7 @@ class _SweepParamValidator:
 
         self._valid_names=opts
 
-class PArray(pt.LayoutPart):
+class PArray(LayoutPart):
     """ Create a parametric array of cells.
 
         Parameters
@@ -503,7 +510,7 @@ class PArray(pt.LayoutPart):
                 to control text appearance.
     """
 
-    x_param=_SweepParamValidator(pt.LayoutDefault.Arrayx_param)
+    x_param=_SweepParamValidator(ld.Arrayx_param)
 
     def __init__(self,device,x_param,base_params=None,*a,**k):
 
@@ -517,7 +524,7 @@ class PArray(pt.LayoutPart):
 
             self.base_params=base_params
 
-        self.x_spacing=pt.LayoutDefault.Arrayx_spacing
+        self.x_spacing=ld.Arrayx_spacing
 
         self.labels_top=None
 
@@ -602,7 +609,7 @@ class PArray(pt.LayoutPart):
     @device.setter
     def device(self,value):
 
-        if not isinstance(value,pt.LayoutPart):
+        if not isinstance(value,LayoutPart):
 
             raise Exception("{} is an invalid entry for object of {}".format(value,self.device.__class__.__name__))
 
@@ -650,7 +657,7 @@ class PArray(pt.LayoutPart):
 
                 device.set_params(self.base_params)
 
-            new_cell=pt.join(device.draw())
+            new_cell=st.join(device.draw())
 
             new_cell.name=self.name+"_"+str(index+1)
 
@@ -836,14 +843,14 @@ class PArray(pt.LayoutPart):
 
 class PMatrix(PArray):
 
-    y_param=_SweepParamValidator(pt.LayoutDefault.Matrixy_param)
+    y_param=_SweepParamValidator(ld.Matrixy_param)
 
     def __init__(self,device,x_param,y_param,*a,**k):
 
         super().__init__(device,x_param,*a,**k)
 
         self._pack=False
-        self.y_spacing=pt.LayoutDefault.Matrixy_spacing
+        self.y_spacing=ld.Matrixy_spacing
         self.y_param=y_param
         self.labels_top=None
         self.labels_bottom=None
@@ -1091,7 +1098,7 @@ def export_matrix_data(pmatrix,param=None,path='./'):
 
         Parameters
         ----------
-            pmatrix : pt.LayoutPart (with table property)
+            pmatrix : LayoutPart (with table property)
 
                 pmatrix.name will be used as file name
 

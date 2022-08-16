@@ -7,9 +7,10 @@ import pirel.addOns.standard_parts as ps5
 
 
 #
-# gsg=pc.GSGProbe()
+gsg=pc.GSGProbe()
 
-# gsg.view()
+gsg.sig_layer={3,4}
+gsg.view(gds=True)
 # a=pc.Anchor()
 # print(a)
 # a.view()
@@ -25,23 +26,17 @@ import pirel.addOns.standard_parts as ps5
 # ma.spacing=pt.Point(20,0)
 # print(ma)
 # ma.view()
+
+# tdmr=pc.TwoDMR()
 #
-# idt=pc.IDTSingle()
-# idt.view()
+# tdmr.idt.pitch=10
+# tdmr.anchor.n=1
 #
-# idt=pc.IDT()
-# idt.view()
-
-tdmr=pc.TwoDMR()
-
-tdmr.idt.pitch=10
-tdmr.anchor.n=1
-
-print(tdmr)
-
-tdmr.view()
-
-exit()
+# print(tdmr)
+#
+# tdmr.view()
+#
+# exit()
 #
 # tdmr.view()
 #
@@ -70,6 +65,7 @@ tfe=pc.TFERes()
 tfe.anchor.n=2
 
 tfe["AnchorSpacingX"]=30
+
 tfe.view()
 # #
 # probedtfe=pm.addTwoPortProbe(pc.TFERes)()

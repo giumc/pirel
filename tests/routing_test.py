@@ -3,6 +3,7 @@ import phidl.device_layout as dl
 import pirel.pcells as pc
 import pirel.modifiers as pm
 import pirel.tools as pt
+import pirel.sketch_tools as st
 import pirel.addOns.standard_parts as ps
 
 import traceback
@@ -32,7 +33,7 @@ route.overhang=50
 route.side='right'
 
 cell=pg.bbox(bbox)
-# pt.check(route._draw_frame())
+# st.check(route._draw_frame())
 cell<<route.draw()
 
-pt.check(cell)
+st.check(cell)

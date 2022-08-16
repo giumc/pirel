@@ -6,6 +6,8 @@ import phidl.device_layout as dl
 
 from phidl.device_layout import Group,Device,DeviceReference
 
+from pirel.tools import LayoutDefault as ld
+
 import pathlib
 
 import gdspy
@@ -15,6 +17,10 @@ import numpy as np
 import pirel.tools as pt
 
 import pirel.pcells as pc
+
+import pirel.sketch_tools as st
+
+import pirel.port_tools as pp
 
 def resistivity_test_cell():
 
@@ -31,7 +37,7 @@ def resistivity_test_cell():
 
         cell=pg.import_gds(infile,cellname='TestCell')
 
-        cell=pt.join(cell)
+        cell=st.join(cell)
 
         cell.name='ResistivityTest'
 
@@ -144,7 +150,7 @@ def verniers(scale=[1, 0.5, 0.1],layers=[1,2],label='TE',text_size=20,reversed=F
 
         xcell<<x
 
-    xcell=pt.join(xcell)
+    xcell=st.join(xcell)
 
     vern_x=cell<<xcell
     vern_y=cell<<xcell
@@ -172,7 +178,7 @@ def verniers(scale=[1, 0.5, 0.1],layers=[1,2],label='TE',text_size=20,reversed=F
     cell<<label
     cell<<cutlab
 
-    cell=pt.join(cell)
+    cell=st.join(cell)
 
     return cell
 
@@ -180,7 +186,7 @@ def chip_frame(
     size=(20e3,20e3),
     street_width=150,
     street_length=1e3,
-    layer=pt.LayoutDefault.layerTop,
+    layer=ld.layerTop,
     name=None,
     text_pos={'anchor_source':'s','anchor_dest':'s'}):
 
@@ -205,7 +211,7 @@ def chip_frame(
 
         text_cell=name.draw()
 
-        pt._move_relative_to_cell(cell<<text_cell,cell,**text_pos)
+        st.move_relative_to_cell(cell<<text_cell,cell,**text_pos)
 
     return cell
 
@@ -213,9 +219,9 @@ def align_TE_on_via():
 
     cell=dl.Device("Align TE on VIA")
 
-    circle=pg.circle(radius=50,layer=pt.LayoutDefault.layerVias)
+    circle=pg.circle(radius=50,layer=ld.layerVias)
 
-    cross=pg.cross(width=30,length=250,layer=pt.LayoutDefault.layerVias)
+    cross=pg.cross(width=30,length=250,layer=ld.layerVias)
 
     g=Group([circle,cross])
 
@@ -223,9 +229,9 @@ def align_TE_on_via():
     g.align(alignment='y')
     circle.add(cross)
 
-    viapattern=pg.union(circle,'A+B',layer=pt.LayoutDefault.layerVias)
+    viapattern=pg.union(circle,'A+B',layer=ld.layerVias)
 
-    TEpattern=pg.union(circle,'A+B',layer=pt.LayoutDefault.layerTop).copy('tmp',scale=0.8)
+    TEpattern=pg.union(circle,'A+B',layer=ld.layerTop).copy('tmp',scale=0.8)
 
     cell.add(viapattern)
     cell.add(TEpattern)
@@ -271,22 +277,22 @@ def alignment_marks_4layers(scale=[0.2,0.5,1]):
 
         return DeviceReference(cell)
 
-    BElayer=pt.LayoutDefault.layerBottom
-    TElayer=pt.LayoutDefault.layerTop
-    VIAlayer=pt.LayoutDefault.layerVias
-    ETCHlayer=pt.LayoutDefault.layerEtch
-    PETCHlayer=pt.LayoutDefault.layerPartialEtch
-    Zerolayer=pt.LayoutDefault.layerPad
+    BElayer=ld.layerBottom
+    TElayer=ld.layerTop
+    VIAlayer=ld.layerVias
+    ETCHlayer=ld.layerEtch
+    PETCHlayer=ld.layerPartialEtch
+    Zerolayer=ld.layerPad
 
     align1=verniers(scale,layers=[BElayer,VIAlayer],label='VIA',reversed=True)
     align_ph=pg.bbox(align1.bbox) #only for space
     align2=verniers(scale,layers=[BElayer,TElayer],label='TE')
     align3=verniers(scale,layers=[BElayer,ETCHlayer],label='ETCH')
-    align4=verniers(scale,layers=[BElayer,PETCHlayer],label='PETCH')
+    align4=verniers(scale,layers=[BElayer,PETCHlayer],label='PASS')
 
     text=pc.Text()
     text.size=300
-    text.layer=(BElayer,TElayer,ETCHlayer,PETCHlayer,VIAlayer)
+    text.layer={BElayer,TElayer,ETCHlayer,PETCHlayer,VIAlayer}
     text.label="Align to BE"
 
     t1=text.draw()
@@ -297,9 +303,9 @@ def alignment_marks_4layers(scale=[0.2,0.5,1]):
 
     align5=verniers(scale,layers=[TElayer,VIAlayer],label='VIA',reversed=True)
     align6=verniers(scale,layers=[TElayer,ETCHlayer],label='ETCH')
-    align7=verniers(scale,layers=[TElayer,PETCHlayer],label='PETCH')
+    align7=verniers(scale,layers=[TElayer,PETCHlayer],label='PASS')
 
-    text.layer=(TElayer,ETCHlayer,PETCHlayer,VIAlayer)
+    text.layer={TElayer,ETCHlayer,PETCHlayer,VIAlayer}
     text.label='Align to TE'
     t2=text.draw()
 
@@ -311,9 +317,9 @@ def alignment_marks_4layers(scale=[0.2,0.5,1]):
     align9=verniers(scale,layers=[Zerolayer,BElayer],label='BE')
     align10=verniers(scale,layers=[Zerolayer,TElayer],label='TE')
     align11=verniers(scale,layers=[Zerolayer,ETCHlayer],label='ETCH')
-    align12=verniers(scale,layers=[Zerolayer,PETCHlayer],label='PETCH')
+    align12=verniers(scale,layers=[Zerolayer,PETCHlayer],label='PASS')
 
-    text.layer=(Zerolayer,BElayer,TElayer,ETCHlayer,PETCHlayer,VIAlayer)
+    text.layer={Zerolayer,BElayer,TElayer,ETCHlayer,PETCHlayer,VIAlayer}
     text.label="Align to Pad"
 
     t3=text.draw()
@@ -403,12 +409,12 @@ def mask_names(
         "Via Layer","Etch Layer",
         "PartialEtch Layer","Pad Layer"),
     layers=(
-        pt.LayoutDefault.layerBottom,
-        pt.LayoutDefault.layerTop,
-        pt.LayoutDefault.layerVias,
-        pt.LayoutDefault.layerEtch,
-        pt.LayoutDefault.layerPartialEtch,
-        pt.LayoutDefault.layerPad),
+        ld.layerBottom,
+        ld.layerTop,
+        ld.layerVias,
+        ld.layerEtch,
+        ld.layerPartialEtch,
+        ld.layerPad),
     size=250):
     """ Prints array of strings on different layers.
 
