@@ -383,7 +383,7 @@ def makeArray(cls,n=2):
 
                 rx_ports.remove(rx_ports[-1])
 
-            polyconn=pc.PolyRouting()
+            polyconn=pc.Routing()
 
             polyconn.layer=self.plate_layer
 
@@ -564,7 +564,7 @@ def makeFixture(cls,style='open'):
 
                         subcell.remove_polygons(lambda x,y,z : y==self.idt.layer)
 
-                        trace_cell=pc.PolyRouting()
+                        trace_cell=Routing()
 
                         trace_cell.source=subcell.ports['top']
 
@@ -759,8 +759,6 @@ def addOnePortProbe(cls,probe=pc.GSGProbe):
                     routing_cell=self._draw_ground_routing()
 
                 except:
-
-                    import pdb; pdb.set_trace()
 
                     self._draw_ground_routing()
 
@@ -1061,6 +1059,8 @@ def addTwoPortProbe(cls,probe=makeTwoPortProbe(pc.GSGProbe)):
 
             self._setup_ground_routing(device_ref,probe_ref,'side')
 
+            breakpoint()
+            
             routing_cell=self._draw_ground_routing()
 
             self._setup_signal_routing(cell)
@@ -1264,7 +1264,6 @@ def addTwoPortProbe(cls,probe=makeTwoPortProbe(pc.GSGProbe)):
                             groundroute.source=(probe_cell.ports['GroundRXE_1'],)
 
                             groundroute.destination=(probe_cell.ports['GroundRXE_2'],)
-
 
             elif isinstance(self.probe,pc.GSProbe):
 

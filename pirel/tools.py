@@ -334,6 +334,8 @@ class LayoutDefault:
     Padport=Port(name='top',midpoint=(50,50),width=100,\
         orientation=-90)
 
+    TwoPortResGroundConnLength=10
+    
     #TwoPortProbe
 
     TwoPortProbeoffset=Point(0,200)
