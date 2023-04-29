@@ -21,6 +21,8 @@ import pirel.pcells as pc
 
 import pirel.tools as pt
 
+import pirel.sketch_tools as pst
+
 plt.style.use(str((pathlib.Path(__file__).parent/'addOns'/'pltstl.mplstyle').absolute()))
 
 from math import ceil,floor
@@ -651,7 +653,7 @@ class PArray(pt.LayoutPart):
 
                 device.set_params(self.base_params)
 
-            new_cell=pt.join(device.draw())
+            new_cell=pst.join(device.draw())
 
             new_cell.name=self.name+"_"+str(index+1)
 
