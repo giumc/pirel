@@ -130,7 +130,7 @@ def check(device : Device, joined=False, blocking=True,gds=False):
 
 def generate_gds_from_image(path,**kwargs):
 
-    import nazca as nd
+    import nazca as nd # type: ignore
 
     if isinstance(path,pathlib.Path):
 

@@ -3,7 +3,7 @@ from phidl.device_layout import Group,Device
 
 import phidl.geometry as pg
 
-import test
+import pdb, warnings
 
 import matplotlib.pyplot as plt
 
@@ -15,7 +15,7 @@ from matplotlib.ticker import LinearLocator
 
 import numpy as np
 
-import pathlib
+import pathlib, os
 
 import pirel.pcells as pc
 
@@ -387,7 +387,7 @@ class SweepParam:
 
         if n>=len(self):
 
-            warning.warn(f""" SweepParam.subset : {n} larger than SweepParam length ({len(self)})""")
+            warnings.warn(f""" SweepParam.subset : {n} larger than SweepParam length ({len(self)})""")
 
             return self
 
@@ -411,7 +411,7 @@ class SweepParam:
 
             if not len(new_values)==n:
 
-                import test; test.set_trace()
+                import pdb;pdb.set_trace()
                 raise ValueError("bug in subset creation, wrong length")
 
             else:

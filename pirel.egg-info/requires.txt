@@ -1,4 +1,0 @@
-phidl
-jupyter
-jupyterlab
-pandas

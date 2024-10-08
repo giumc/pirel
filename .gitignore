@@ -8,13 +8,13 @@
 *.so
 
 # Distribution / packaging
-bin/
-build/
+bin/*
+build/*
 develop-eggs/
-dist/
-eggs/
-lib/
-lib64/
+dist/*
+eggs/*
+lib/*
+lib64/*
 parts/
 sdist/
 var/

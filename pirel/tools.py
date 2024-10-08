@@ -980,7 +980,7 @@ def _get_class_that_defined_method(meth):
 
     if isinstance(meth, functools.partial):
 
-        return get_class_that_defined_method(meth.func)
+        return get_class_that_defined_method(meth.func) # type: ignore
 
     if inspect.ismethod(meth) or (inspect.isbuiltin(meth) and getattr(meth, '__self__', None) is not None and getattr(meth.__self__, '__class__', None)):
 

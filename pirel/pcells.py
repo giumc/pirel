@@ -1302,6 +1302,8 @@ class LFERes(LayoutPart):
     def area_aspect_ratio(self):
 
         LFERes._set_relations(self)
+        
+        cell=self.draw()
 
         width=cell.xsize-2*self.etchpit.x
 
@@ -1460,6 +1462,8 @@ class TwoDMR(LayoutPart):
     def area_aspect_ratio(self):
 
         LFERes._set_relations(self)
+        
+        cell=self.draw()
 
         width=cell.xsize-2*self.etchpit.x
 
@@ -1552,101 +1556,6 @@ def addBottomPlate(cls):
 
 FBERes=addBottomPlate(LFERes)
 
-class TwoPortRes(FBERes):
-
-    def __init__(self,*a,**k):
-
-        super().__init__(*a,**k)
-
-        self.plate_under_bus=True
-
-        self.plate_over_etch=False
-
-        self.plate_layer=ld.layerBottom
-
-    def draw(self):
-
-        cell=Device()
-
-        cell.name=self.name
-
-        supercell=FBERes.draw(self)
-
-        super_ref=cell.add_ref(supercell,alias='FBERes')
-
-        lfe_cell=supercell['LFERes'].parent
-
-        for label in ('AnchorBottom','AnchorTop'):
-
-            anchor_ref=lfe_cell[label]
-
-            anchor_metal=cell.add_polygon(
-                anchor_ref.get_polygons(
-                    by_spec=(self.idt.layer,0)),
-                layer=self.plate_layer)
-
-        ppt.copy_ports(supercell,cell)
-
-        self._make_ground_connections(cell)
-
-        return cell
-
-    def _bbox_mod(self,bbox):
-
-        ll=pt.Point(bbox[0])
-
-        ur=pt.Point(bbox[1])
-
-        return ((ll.x+self.anchor.metalized.x+0.005,ll.y),
-                (ur.x-self.anchor.metalized.x-0.005,ur.y))
-
-    def _make_ground_connections(self,cell):
-
-        r=st.get_corners(cell)
-
-        margin=pt.Point(self.anchor.size.x-self.anchor.metalized.x,0)
-
-        cell.add_port(
-            name='GroundLX',
-            midpoint=(r.w-margin).coord,
-            width=r.ul.y-r.ll.y,
-            orientation=180)
-
-        cell.add_port(
-            name='GroundRX',
-            midpoint=(r.e+margin).coord,
-            width=r.ur.y-r.lr.y,
-            orientation=0)
-
-        ground_port_lx=cell.ports["GroundLX"]
-        ground_port_rx=cell.ports["GroundRX"]
-
-        for corner,sig,tag in zip([r.ll,r.lr,r.ul,r.ur],[-1,1,-1,1],['bottom','bottom','top','top']):
-
-            cell_ports=ppt.find_ports(cell,tag,depth=0)
-
-            conn_width=cell_ports[0].width
-
-            if tag=='top':
-
-                orient=90
-
-            elif tag=='bottom':
-                orient=270
-
-            conn_port=Port(
-                width=conn_width,
-                midpoint=(corner+sig*pt.Point(conn_width/2,0)+sig*margin).coord,
-                orientation=orient)
-
-            rou=MultiRouting()
-            rou.layer=(self.plate_layer,)
-            rou.source=tuple(cell_ports)
-            rou.destination=(conn_port,)
-            rou.overhang=conn_width
-            rou.trace_width=None
-            cell.add(rou.draw())
-
 class TFERes(LFERes):
 
     bottom_layer=LayoutParamInterface()
@@ -1737,11 +1646,11 @@ class SMD(PartWithLayer):
             pg.compass(
                 size=self.size.coord,
                 layer=self.layer),
-            alias='layer'+str(l))
+            alias='layer'+str(self.layer))
 
         cell=Device(name=self.name)
 
-        ppt.copy_ports(pg.compass(size=self.size.coord,layer=l),unit_pad)
+        ppt.copy_ports(pg.compass(size=self.size.coord,layer=self.layer),unit_pad)
 
         p1=cell.add_ref(unit_pad,alias='Pad_1')
         p2=cell.add_ref(unit_pad,alias='Pad_2')
@@ -2037,135 +1946,9 @@ class Routing(PartWithLayer):
                     width=d.width
 
         return width
-#
-# class ParasiticAwareMultiRouting(MultiRouting):
-#
-#     @property
-#     def path(self):
-#
-#         numports=len(self.destination)
-#
-#         if numports == 1 or numports == 2 :
-#
-#             return super().path
-#
-#         else :
-#
-#             p=[]
-#
-#             if numports %2 == 0:
-#
-#                 midport=int(numports/2)
-#
-#                 base_routing=deepcopy(self)
-#
-#                 base_routing.destination=tuple(self.destination[midport-1:midport+1])
-#
-#                 for dest,nextdest in zip(self.destination,self.destination[1:]):
-#
-#                     if dest in base_routing.destination :
-#
-#                         if nextdest in base_routing.destination:
-#
-#                             p.extend(base_routing.path)
-#
-#                         else:
-#
-#                             p.append(self._draw_non_hindered_path(dest,nextdest))
-#
-#                     else:
-#
-#                         p.append(self._draw_non_hindered_path(dest,nextdest))
-#
-#                 return p
-#
-#             elif numports %2 == 1:
-#
-#                 midport=int((numports-1)/2)
-#
-#                 base_routing=deepcopy(self)
-#
-#                 base_routing.destination=(self.destination[midport],)
-#
-#                 for dest,nextdest in zip(self.destination,self.destination[1:]):
-#
-#                     if dest in base_routing.destination :
-#
-#                         p.extend(base_routing.path)
-#
-#                         p.append(self._draw_non_hindered_path(dest,nextdest))
-#
-#                     else:
-#
-#                         p.append(self._draw_non_hindered_path(dest,nextdest))
-#
-#                 return p
-#
-#     def _make_paware_connection(self,s,d):
-#
-#         p1=pt.Point(s.midpoint)
-#
-#         p2=pt.Point(d.midpoint)
-#
-#         p1=p0+pt.Point(0,self.overhang)
-#
-#         p2=pt.Point(d.midpoint[0],p1.y)
-#
-#         p3=pt.Point(p2.x,d.midpoint[1])
-#
-#         return self._make_path(p0,p1,p2,p3)
-#
-#     @property
-#     def resistance_squares(self):
-#
-#         p=self.path
-#
-#         numpaths=len(p)
-#
-#         if numpaths==1 or numpaths==2:
-#
-#             return super().resistance_squares
-#
-#         else:
-#
-#             original_res=super().resistance_squares
-#
-#             res=[]
-#
-#             if numpaths%2==0:
-#
-#                 midpoint=int(numpaths/2)
-#
-#                 for x in range(numpaths):
-#
-#                     if x==midpoint-1 or x==midpoint:
-#
-#                         res.append(original_res[x])
-#
-#                     else:
-#
-#                         res.append(original_res[x]-self._yovertravel(self.destination[x])/self._get_max_width()[x])
-#
-#                 return res
-#
-#             if numpaths%2==1:
-#
-#                 midpoint=int((numpaths-1)/2)
-#
-#                 for x in range(numpaths):
-#
-#                     if x==midpoint:
-#
-#                         res.append(original_res[x])
-#
-#                     else:
-#
-#                         res.append(original_res[x]-self._yovertravel(self.destination[x])/self.trace_width)
-#
-#                 return res
 
 _allclasses=(Text,IDTSingle,IDT,PartialEtchIDT,Bus,EtchPit,Anchor,MultiAnchor,Via,Routing,GSProbe,GSGProbe,
-Pad,ViaInPad,LFERes,TwoDMR,TwoPortRes,TFERes)
+Pad,ViaInPad,LFERes,TwoDMR,TFERes)
 
 for cls in _allclasses:
 
