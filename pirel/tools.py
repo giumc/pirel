@@ -659,6 +659,21 @@ class LayoutPart(ABC) :
         '''
         pass
 
+    def draw_with_labels(self,layer=None):
+        ''' Draws and add one label per port on the cell '''
+        cell=self.draw()
+        
+        if layer is None:
+            
+            layer=self.layer
+            
+        for p in cell.ports.values():
+        
+            cell.add_label(p.name,p.midpoint,layer=layer)
+            
+        return cell
+        
+        
     def get_params(self):
         ''' Returns a dict with param names : param values. '''
 
