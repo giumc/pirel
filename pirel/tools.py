@@ -673,7 +673,6 @@ class LayoutPart(ABC) :
             
         return cell
         
-        
     def get_params(self):
         ''' Returns a dict with param names : param values. '''
 
@@ -820,7 +819,7 @@ class LayoutPart(ABC) :
     def __getattr__(self,name):
 
         for p , c in self.get_components().items():
-
+            
             if name.startswith(p):
 
                 return getattr(getattr(self,p.lower()),name.replace(p,""))
@@ -844,7 +843,7 @@ class LayoutPart(ABC) :
     def __setitem__(self,key,value):
 
         self.set_params({key:value})
-
+        
 def _print_ports(device : Device):
     ''' print a list of ports in the cell.
 

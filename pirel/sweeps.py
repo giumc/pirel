@@ -15,6 +15,8 @@ from matplotlib.ticker import LinearLocator
 
 import numpy as np
 
+import pandas as pd
+
 import pathlib, os
 
 import pirel.pcells as pc
@@ -536,7 +538,7 @@ class PArray(LayoutPart):
     def device(self):
 
         return self._device
-
+    
     @property
     def table(self):
 
@@ -558,6 +560,8 @@ class PArray(LayoutPart):
 
                 device._set_params(param(i))
 
+            device._set_params({"Name":base_params["Name"]+"_"+str(i)})
+                
             device.draw()
 
             df=device.export_all()
@@ -572,7 +576,7 @@ class PArray(LayoutPart):
 
             print("Generating table, item {} of {}\r".format(print_index,len(param)),end="")
 
-            data_tot=data_tot.append(Series(df,name=index))
+            data_tot=pd.concat([data_tot,Series(df,name=index)],axis=1)
 
             device._set_params(base_params)
 
@@ -617,7 +621,7 @@ class PArray(LayoutPart):
 
             self._device=value
 
-            self.device.name=self.name
+            # self.device.name=self.name
 
     def get_params(self):
 
@@ -1010,6 +1014,8 @@ class PMatrix(PArray):
             for i in range(len(x_param)):
 
                 device._set_params(x_param(i))
+                
+                device._set_params({"Name":df_original["Name"]+"_"+str(j)+"_"+str(i)})
 
                 device.draw()
 
@@ -1029,7 +1035,7 @@ class PMatrix(PArray):
 
                 print_index+=1
 
-                data_tot=data_tot.append(Series(df,name=index))
+                data_tot=pd.concat([data_tot,Series(df,name=index)],axis=1)
 
         device._set_params(df_original)
 
@@ -1093,7 +1099,7 @@ class PMatrix(PArray):
 
         return fig
 
-def export_matrix_data(pmatrix,param=None,path='./'):
+def export_matrix_data(pmatrix,param=None,type='csv',path='./'):
     ''' Writes PArray/PMatrix data in a .xlsx file.
 
         Parameters
@@ -1117,8 +1123,14 @@ def export_matrix_data(pmatrix,param=None,path='./'):
         path=pathlib.Path(path)
 
     t_mat1=pmatrix.table
+    
+    if type=='csv':
 
-    t_mat1.to_excel( path / " ".join([pmatrix.name,".xlsx"]))
+        t_mat1.to_csv( path / " ".join([pmatrix.name,".csv"]))
+    
+    else:
+        
+        t_mat1.to_excel( path / " ".join([pmatrix.name,".xlsx"]))
 
     if param is not None:
 
