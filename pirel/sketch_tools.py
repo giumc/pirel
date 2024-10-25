@@ -88,7 +88,7 @@ def get_corners(device : Device) :
     r.e=e
     return r
 
-def check(device : Device, joined=False, blocking=True,gds=False):
+def check(device : Device, joined=False, blocking=True,gds=False,*a,**kw):
     ''' Shows the device layout.
 
         If run by terminal, blocks script until window is closed.
@@ -104,7 +104,7 @@ def check(device : Device, joined=False, blocking=True,gds=False):
                 if true, view in gdspy viewer
 
     '''
-    set_quickplot_options(blocking=blocking)
+    set_quickplot_options(blocking=blocking,*a,**kw)
 
     if joined:
 

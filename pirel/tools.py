@@ -583,7 +583,7 @@ class LayoutPart(ABC) :
 
             setattr(self,p.lower(),cls(name=self.name+p))
 
-    def view(self, gds=False,blocking=True,joined=False):
+    def view(self, gds=False,blocking=True,joined=False,*a,**kw):
         ''' Visualize cell layout with current parameters.
 
         Parameters
@@ -603,7 +603,7 @@ class LayoutPart(ABC) :
 
         from pirel.sketch_tools import check
 
-        check(self.draw(),blocking=blocking,joined=joined,gds=gds)
+        check(self.draw(),blocking=blocking,joined=joined,gds=gds,*a,**kw)
 
     def _bbox_mod(self,bbox):
         ''' Default method that returns bbox for the class .

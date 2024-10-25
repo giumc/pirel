@@ -1683,7 +1683,7 @@ class SMD(PartWithLayer):
 
         self.distance=pt.Point(0,400)
 
-class Routing(PartWithLayer):
+class Routing(PartWithLayer):   
     ''' Generate automatic routing connection
 
     Attributes
