@@ -122,6 +122,23 @@ class Text(PartWithLayer):
             text=self.label,
             font=self.font)
 
+class Rect(PartWithLayer):
+    
+    y =LayoutParamInterface()
+
+    x =LayoutParamInterface()
+    
+    def __init__(self,*a,**kw):
+        
+        super().__init__(*a,**kw)
+        
+        self.y=1
+        self.x=2
+        
+    def draw(self):
+        
+        return pg.rectangle(size=(self.x,self.y),layer=self.layer)
+    
 class IDTSingle(PartWithLayer) :
     ''' Generates interdigitated structure.
 
@@ -537,8 +554,6 @@ class Bus(PartWithLayer) :
     size=LayoutParamInterface()
 
     distance=LayoutParamInterface()
-
-
 
     def __init__(self,*args,**kwargs):
 
@@ -1947,7 +1962,7 @@ class Routing(PartWithLayer):
 
         return width
 
-_allclasses=(Text,IDTSingle,IDT,PartialEtchIDT,Bus,EtchPit,Anchor,MultiAnchor,Via,Routing,GSProbe,GSGProbe,
+_allclasses=(Text,Rect,IDTSingle,IDT,PartialEtchIDT,Bus,EtchPit,Anchor,MultiAnchor,Via,Routing,GSProbe,GSGProbe,
 Pad,ViaInPad,LFERes,TwoDMR,TFERes)
 
 for cls in _allclasses:
