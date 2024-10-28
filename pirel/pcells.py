@@ -137,7 +137,11 @@ class Rect(PartWithLayer):
         
     def draw(self):
         
-        return pg.rectangle(size=(self.x,self.y),layer=self.layer)
+        cell=Device(name=self.name)
+        for l in self.layer:
+            cell<<pg.rectangle(size=(self.x,self.y),layer=l)
+        cell.flatten()
+        return cell
     
 class IDTSingle(PartWithLayer) :
     ''' Generates interdigitated structure.
@@ -435,11 +439,11 @@ class IDT(PartWithLayer) :
 
     def _draw_unit_cell(self):
 
+        unitcell=Device()
+        
         rect=pg.rectangle(
             size=(self.coverage*self.pitch,self.length),
             layer=self.layer)
-
-        unitcell=Device()
 
         r1=unitcell << rect
 
@@ -541,7 +545,7 @@ class PartialEtchIDT(IDT):
 
         return IDT.draw.__wrapped__(self)
 
-class Bus(PartWithLayer) :
+class Bus(PartWithLayer):
     ''' Generates pair of bus structure.
 
     Attributes
@@ -575,20 +579,22 @@ class Bus(PartWithLayer) :
         cell : phidl.Device.
         '''
 
-        pad=pg.rectangle(
-            size=self.size.coord,
-            layer=self.layer)
-
         cell=Device(self.name)
+        
+        for l in self.layer:
+                        
+            pad=pg.rectangle(
+                size=self.size.coord,
+                layer=l)
 
-        r1=cell<<pad
-        cell.absorb(r1)
-        r2=cell <<pad
+            r1=cell<<pad
+            cell.absorb(r1)
+            r2=cell <<pad
 
-        r2.move(
-            destination=self.distance.coord)
+            r2.move(
+                destination=self.distance.coord)
 
-        cell.absorb(r2)
+            cell.absorb(r2)
 
         cell.add_port(name='conn',
         midpoint=pt.Point(self.size.x/2,self.size.y).coord,
@@ -946,21 +952,26 @@ class Via(PartWithLayer):
         self.conn_layer=(ld.layerTop,ld.layerBottom)
 
     def draw(self):
+        
+        cell=Device(name=self.name)
 
-        if self.shape=='square':
+        for l in self.layer:
 
-            cell=pg.rectangle(size=(self.size,self.size),
-                layer=self.layer)
+            if self.shape=='square':
 
-        elif self.shape=='circle':
+                cell<<pg.rectangle(size=(self.size,self.size),
+                    layer=l)
 
-            cell=pg.circle(radius=self.size/2,\
-            layer=self.layer)
+            elif self.shape=='circle':
 
-        else:
+                cell<<pg.circle(radius=self.size/2,\
+                layer=l)
 
-            raise ValueError("Via shape can be \'square\' or \'circle\'")
+            else:
 
+                raise ValueError("Via shape can be \'square\' or \'circle\'")
+
+        cell.flatten()
         cell.add_port(Port(name='conn',\
         midpoint=cell.center,\
         width=cell.xmax-cell.xmin,\
