@@ -124,22 +124,19 @@ class Text(PartWithLayer):
 
 class Rect(PartWithLayer):
     
-    y =LayoutParamInterface()
-
-    x =LayoutParamInterface()
+    size=LayoutParamInterface()
     
     def __init__(self,*a,**kw):
         
         super().__init__(*a,**kw)
         
-        self.y=1
-        self.x=2
+        self.size=pt.Point(10,10)
         
     def draw(self):
         
         cell=Device(name=self.name)
 
-        cell<<pg.rectangle(size=(self.x,self.y),layer=self.layer)
+        cell<<pg.rectangle(size=(self.size.coord),layer=self.layer)
         
         cell.flatten()
         
@@ -560,6 +557,8 @@ class Bus(PartWithLayer):
     size=LayoutParamInterface()
 
     distance=LayoutParamInterface()
+    
+    mirror=LayoutParamInterface()
 
     def __init__(self,*args,**kwargs):
 
@@ -570,6 +569,7 @@ class Bus(PartWithLayer):
         self.size=copy(ld.Bussize)
 
         self.distance=copy(ld.Busdistance)
+        self.mirror=("Off","Off")
 
     def draw(self):
         ''' Generates layout cell based on current parameters.
@@ -583,17 +583,18 @@ class Bus(PartWithLayer):
 
         cell=Device(self.name)
         
-        pad=pg.rectangle(
-            size=self.size.coord,
-            layer=self.layer)
+        pad=self._draw_unit_cell()
 
         r1=cell<<pad
         cell.absorb(r1)
         r2=cell <<pad
-
+        if self.mirror[0]=="On":
+            r2.mirror(p1=(r1.x,r1.y),p2=(r1.x,r1.ymin))
+        if self.mirror[1]=="On":
+            r2.mirror(p1=(r1.x,r1.y),p2=(r1.xmin,r1.y))
         r2.move(
             destination=self.distance.coord)
-
+        
         cell.absorb(r2)
 
         cell.add_port(name='conn',
@@ -602,6 +603,11 @@ class Bus(PartWithLayer):
         orientation=90)
 
         return cell
+    
+    def _draw_unit_cell(self):
+        return pg.rectangle(
+            size=self.size.coord,
+            layer=self.layer)
 
     @property
     def resistance_squares(self):
@@ -1974,8 +1980,8 @@ class Routing(PartWithLayer):
 _allclasses=(Text,Rect,IDTSingle,IDT,PartialEtchIDT,Bus,EtchPit,Anchor,MultiAnchor,Via,Routing,GSProbe,GSGProbe,
 Pad,ViaInPad,LFERes,TwoDMR,TFERes)
 
-for cls in _allclasses:
+# for cls in _allclasses:
 
-    cls.draw=pt._pirel_cache(cls.draw)
+#     cls.draw=pt._pirel_cache(cls.draw)
 
-    cls() # to init _params_dict
+#     cls() # to init _params_dict
