@@ -124,20 +124,23 @@ class Text(PartWithLayer):
 
 class Rect(PartWithLayer):
     
-    y =LayoutParamInterface()
-
-    x =LayoutParamInterface()
+    size=LayoutParamInterface()
     
     def __init__(self,*a,**kw):
         
         super().__init__(*a,**kw)
         
-        self.y=1
-        self.x=2
+        self.size=pt.Point(10,10)
         
     def draw(self):
         
-        return pg.rectangle(size=(self.x,self.y),layer=self.layer)
+        cell=Device(name=self.name)
+
+        cell<<pg.rectangle(size=(self.size.coord),layer=self.layer)
+        
+        cell.flatten()
+        
+        return cell
     
 class IDTSingle(PartWithLayer) :
     ''' Generates interdigitated structure.
@@ -435,11 +438,11 @@ class IDT(PartWithLayer) :
 
     def _draw_unit_cell(self):
 
+        unitcell=Device()
+        
         rect=pg.rectangle(
             size=(self.coverage*self.pitch,self.length),
             layer=self.layer)
-
-        unitcell=Device()
 
         r1=unitcell << rect
 
@@ -541,7 +544,7 @@ class PartialEtchIDT(IDT):
 
         return IDT.draw.__wrapped__(self)
 
-class Bus(PartWithLayer) :
+class Bus(PartWithLayer):
     ''' Generates pair of bus structure.
 
     Attributes
@@ -554,6 +557,8 @@ class Bus(PartWithLayer) :
     size=LayoutParamInterface()
 
     distance=LayoutParamInterface()
+    
+    mirror=LayoutParamInterface()
 
     def __init__(self,*args,**kwargs):
 
@@ -564,6 +569,7 @@ class Bus(PartWithLayer) :
         self.size=copy(ld.Bussize)
 
         self.distance=copy(ld.Busdistance)
+        self.mirror=("Off","Off")
 
     def draw(self):
         ''' Generates layout cell based on current parameters.
@@ -575,19 +581,20 @@ class Bus(PartWithLayer) :
         cell : phidl.Device.
         '''
 
-        pad=pg.rectangle(
-            size=self.size.coord,
-            layer=self.layer)
-
         cell=Device(self.name)
+        
+        pad=self._draw_unit_cell()
 
         r1=cell<<pad
         cell.absorb(r1)
         r2=cell <<pad
-
+        if self.mirror[0]=="On":
+            r2.mirror(p1=(r1.x,r1.y),p2=(r1.x,r1.ymin))
+        if self.mirror[1]=="On":
+            r2.mirror(p1=(r1.x,r1.y),p2=(r1.xmin,r1.y))
         r2.move(
             destination=self.distance.coord)
-
+        
         cell.absorb(r2)
 
         cell.add_port(name='conn',
@@ -596,6 +603,11 @@ class Bus(PartWithLayer) :
         orientation=90)
 
         return cell
+    
+    def _draw_unit_cell(self):
+        return pg.rectangle(
+            size=self.size.coord,
+            layer=self.layer)
 
     @property
     def resistance_squares(self):
@@ -946,21 +958,24 @@ class Via(PartWithLayer):
         self.conn_layer=(ld.layerTop,ld.layerBottom)
 
     def draw(self):
-
+        
+        cell=Device(name=self.name)
+        
         if self.shape=='square':
 
-            cell=pg.rectangle(size=(self.size,self.size),
+            cell<<pg.rectangle(size=(self.size,self.size),
                 layer=self.layer)
 
         elif self.shape=='circle':
 
-            cell=pg.circle(radius=self.size/2,\
+            cell<<pg.circle(radius=self.size/2,\
             layer=self.layer)
 
         else:
 
             raise ValueError("Via shape can be \'square\' or \'circle\'")
 
+        cell.flatten()
         cell.add_port(Port(name='conn',\
         midpoint=cell.center,\
         width=cell.xmax-cell.xmin,\
@@ -1965,8 +1980,8 @@ class Routing(PartWithLayer):
 _allclasses=(Text,Rect,IDTSingle,IDT,PartialEtchIDT,Bus,EtchPit,Anchor,MultiAnchor,Via,Routing,GSProbe,GSGProbe,
 Pad,ViaInPad,LFERes,TwoDMR,TFERes)
 
-for cls in _allclasses:
+# for cls in _allclasses:
 
-    cls.draw=pt._pirel_cache(cls.draw)
+#     cls.draw=pt._pirel_cache(cls.draw)
 
-    cls() # to init _params_dict
+#     cls() # to init _params_dict

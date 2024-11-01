@@ -153,7 +153,7 @@ class Point:
 
     def __repr__(self):
 
-        return f"x={self.x} y ={self.y}"
+        return f"x={self.x} y={self.y}"
 
     __radd__ = __add__
 
